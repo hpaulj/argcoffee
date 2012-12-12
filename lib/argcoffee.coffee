@@ -6,7 +6,7 @@
  * Inherited from [[ActionContainer]]
  ###
 DEBUG = console.log
-#DEBUG = () ->
+DEBUG = () ->
 
 util = require('util') # node
 assert = require('assert')
@@ -28,6 +28,13 @@ Namespace::isset = (key) ->
     this[key]?
 Namespace::get = (key, defaultValue) ->
     this[key] ? defaultValue
+    
+# argparse separates these exports from definion of ArgumentParser
+exports.Namespace = Namespace
+exports.HelpFormatter = HelpFormatter
+exports.Const = $$
+exports.Action = require(adir+'action')
+
 
 # cast ActionContainer into the Coffeescript 'class' form
 class _ActionsContainer extends ActionContainer
@@ -744,79 +751,9 @@ class ArgumentParser extends _ActionsContainer
             msg = "invalid choice: #{value} (choose from #{action.choices})"
             @error(action, msg)
             
-    # =======================
-    # Help-formatting methods
-    # =======================
-    ###
-    def format_usage(self):
-        formatter = self._get_formatter()
-        formatter.add_usage(self.usage, self._actions,
-                            self._mutually_exclusive_groups)
-        return formatter.format_help()
-
-    def format_help(self):
-        formatter = self._get_formatter()
-
-        # usage
-        formatter.add_usage(self.usage, self._actions,
-                            self._mutually_exclusive_groups)
-
-        # description
-        formatter.add_text(self.description)
-
-        # positionals, optionals and user-defined groups
-        for action_group in self._action_groups:
-            formatter.start_section(action_group.title)
-            formatter.add_text(action_group.description)
-            formatter.add_arguments(action_group._group_actions)
-            formatter.end_section()
-
-        # epilog
-        formatter.add_text(self.epilog)
-
-        # determine help from format above
-        return formatter.format_help()
-
-    def format_version(self):
-        import warnings
-        warnings.warn(
-            'The format_version method is deprecated -- the "version" '
-            'argument to ArgumentParser is no longer supported.',
-            DeprecationWarning)
-        formatter = self._get_formatter()
-        formatter.add_text(self.version)
-        return formatter.format_help()
-
-    def _get_formatter(self):
-        return self.formatter_class(prog=self.prog)
-
-    # =====================
-    # Help-printing methods
-    # =====================
-    def print_usage(self, file=None):
-        if file is None:
-            file = _sys.stdout
-        self._print_message(self.format_usage(), file)
-
-    def print_help(self, file=None):
-        if file is None:
-            file = _sys.stdout
-        self._print_message(self.format_help(), file)
-
-    def print_version(self, file=None):
-        import warnings
-        warnings.warn(
-            'The print_version method is deprecated -- the "version" '
-            'argument to ArgumentParser is no longer supported.',
-            DeprecationWarning)
-        self._print_message(self.format_version(), file)
-
-    def _print_message(self, message, file=None):
-        if message:
-            if file is None:
-                file = _sys.stderr
-            file.write(message)
-    ###
+    # ===============
+    # Help formatting methods
+    # ===============
     # adapt from javascript version   
     
     format_usage: () ->
@@ -889,7 +826,8 @@ class ArgumentParser extends _ActionsContainer
     parseArgs: (args) -> @parse_args(args)  
     parseKnownArgs: (args) -> @parse_known_args(args)
     add_argument: (args..., options) ->
-        # Python like arguments
+        # Python like arguments; 
+        # options still needs to be specified, even if only {}
         @addArgument(args, options)
         
 # =====================
@@ -909,6 +847,105 @@ _get_action_name = (argument) ->
         return null
 
 exports.ArgumentParser = ArgumentParser
+
+# =============================
+# Utility functions and classes
+# =============================
+
+###
+used as base for Namespace; appears to do the same as JS object display
+class _AttributeHolder(object):
+    """Abstract base class that provides __repr__.
+
+    The __repr__ method returns a string in the format::
+        ClassName(attr=name, attr=name, ...)
+    The attributes are determined either by a class-level attribute,
+    '_kwarg_names', or by inspecting the instance __dict__.
+    """
+
+    def __repr__(self):
+        type_name = type(self).__name__
+        arg_strings = []
+        for arg in self._get_args():
+            arg_strings.append(repr(arg))
+        for name, value in self._get_kwargs():
+            arg_strings.append('%s=%r' % (name, value))
+        return '%s(%s)' % (type_name, ', '.join(arg_strings))
+
+    def _get_kwargs(self):
+        return sorted(self.__dict__.items())
+
+    def _get_args(self):
+        return []
+###
+
+_ensure_value = (namespace, name, value) ->
+    if getattr(namespace, name, null) is null
+        setattr(namespace, name, value)
+    return getattr(namespace, name)
+    
+# basic methods in Python, used to access Namespace 
+# with these do we need a special Namespace class?
+getattr = (obj, key, defaultValue) ->
+    obj[key] ? defaultValue
+setattr = (obj, key, value) ->
+    obj[key] = value
+hasattr = (obj, key) ->
+    obj[key]?
+    
+# should I make None a syn of null?
+
+
+# ==============
+# Type classes
+# ==============
+
+class FileClass # Type
+    ###Factory for creating file object types
+
+    Instances of FileType are typically passed as type= arguments to the
+    ArgumentParser add_argument() method.
+
+    Keyword Arguments:
+        - mode -- A string indicating how the file is to be opened. Accepts the
+            same values as the builtin open() function.
+        - bufsize -- The file's desired buffer size. Accepts the same values as
+            the builtin open() function.
+    ###
+    fs = require('fs') # nodejs
+    constructor: (@mode='r') ->
+        # py uses mode, nodejs uses flags
+        # py uses a bufsize, nodejs does not
+        # nodejs has nonsyn version of open, but that requires a callback
+        # with nodejs emphasis on nonsyc operations, this class might not be that useful
+        # requires a new; maybe make a factory fn
+
+    call: (string) ->
+        # the special argument "-" means sys.std{in,out}
+        openfn = fs.openSync
+        if string == '-'
+            if 'r' in @mode
+                return process.stdin
+            else if 'w' in @mode
+                return process.stdout
+            else
+                msg = "argument '-' with mode #{@mode}"
+                raise ValueError(msg)
+
+        # all other arguments are used as file names
+        return openfn(string, @mode)
+
+FileType = (mode) ->
+    # callable fun that can be used by Action store
+    ft = new FileClass(mode)
+    fn = (string) ->
+        ft.call(string)
+    return fn
+# use: parser.add_argument('--outfile',{type:ap.FileType('w')})
+# args.outfile should then be a writable filehandle
+exports.FileType = FileType
+        
+
 
 
 TEST = if not module.parent? then true else false
@@ -958,11 +995,40 @@ if TEST and 1
     parser.add_argument('-z','--zzz',{action:'storeTrue'})
 
     if process.argv.length==2
-        args = ['123.5']
-    console.log parser.parse_known_args(args)
-    console.log parser.parseArgs(args)
-    
+        argv = ['123.5']
+    else 
+        argv = null
+    console.log parser.parse_known_args(argv)
+    args = parser.parseArgs(argv)
+    console.log args
+    # test python like namespace fns
+    console.log getattr(args,'pos')
+    console.log getattr(args,'foo','missing'), hasattr(args,'foo')
+    setattr(args,'foo','found')
+    console.log getattr(args,'foo'), args
 
-# mutually exclusive groups stub
 # args from files
-# python can also open a file (just type 'open'?)
+
+# py parse_args takes an optional Namespace arg; it can be a simple object
+# so why can't it be a JS object?  Do we need the 'set' and 'isset' methods?
+# Class Namespace; constructor takes an obj; fn: set, get, isset, unset
+# the action subclasses use: namespace.set(this.dest, values)
+# c = new Namespace({foo:null,pos:[]})
+# parser.parse_args([], c) 
+# will set values in c; 
+# namespace.set(this.dest, values)
+# could change to namespace[this.dest]=values
+# (with added ability to set from object, and use 'null' to delete
+# get() - getattr with default
+# why not equivalents to py setattr,getattr,hasattr,delattr
+# also _ensure_value(namespace, self.dest, [])
+# var(namespace).setdefault()
+
+# I keep calling parser=ap.ArgumentParser(); omitting the new
+
+# bugs from the doc_examples
+# cannot deduce dest from '-x'
+# try/catch does not capture parse_args('-h')
+# how to print_help for subparser?
+# problems with defaults
+
