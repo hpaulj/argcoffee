@@ -12,10 +12,8 @@ test_attributes = (parser) ->
     print 'p._opt:',parser._optionals._hasNegativeNumberOptionals
     print 'p._pos:',parser._positionals._hasNegativeNumberOptionals
     assert.equal(parser._hasNegativeNumberOptionals,parser._optionals._hasNegativeNumberOptionals)
-try
-  ArgumentParser = require('./argcoffee').ArgumentParser
-catch error
-  ArgumentParser = require('../lib/argcoffee').ArgumentParser
+
+ArgumentParser = require('../lib/argparse').ArgumentParser
 parser = new ArgumentParser({
     debug: true,  # give error traceback
     description: 'Argparse example: negative arguments'
