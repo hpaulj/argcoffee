@@ -103,12 +103,14 @@ parent_parser.add_argument('--parent', {type:'int'})
 
 foo_parser = new ArgumentParser({parents:[parent_parser]})
 foo_parser.add_argument('foo',{})
-foo_parser.parse_args(['--parent', '2', 'XXX'])
+print foo_parser.parse_args(['--parent', '2', 'XXX'])
 
 
 bar_parser = new ArgumentParser({parents:[parent_parser]})
 bar_parser.add_argument('--bar',{})
-bar_parser.parse_args(['--bar', 'YYY'])
+print bar_parser.parse_args(['--bar', 'YYY'])
+
+bar_parser.print_help()
 
 header 'formater class'
 parser = new ArgumentParser({
@@ -387,13 +389,7 @@ parser.add_argument('--foo', {action:'storeTrue',\
         help:'foo the bars before frobbling'})
 parser.add_argument('bar', {nargs:'+',\
         help:'one of the bars to be frobbled'})
-###
-try
-    parser.parse_args('-h'.split(' '))
-catch error
-    print 'capture help exit\n'
-# this does not capture the exit as in python
-###
+# parser.parse_args('-h'.split(' '))  # tries to exti
 parser.print_help()
 
 parser = new ArgumentParser({prog:'frobble'})
@@ -602,18 +598,11 @@ try
     parser.print_help()
 catch error
     print 'capture help exit'
-###
-try
-    print parser.parse_args(['a', '--help'])
-catch error
-    print 'help exit'
-try
-    print parser.parse_args(['b', '--help'])
-catch error
-    print 'help exit'
-# this isn't catching the help exit
-# how to call subparser help?    
-###
+    
+parser_a.print_help()
+# parser.parse_args(['a', '--help']) # equiv w/o the exit
+parser_b.print_help()
+
 
 parser = new ArgumentParser(description:'with subparsers')
 subparsers = parser.add_subparsers({title:'subcommands',\
@@ -621,11 +610,7 @@ subparsers = parser.add_subparsers({title:'subcommands',\
                                    help:'additional help'})
 subparsers.addParser('foo',{})
 subparsers.addParser('bar',{})
-try
-    #parser.parse_args(['-h'])
-    parser.print_help()
-catch error
-    print 'help exit'
+parser.print_help()
 
 # sub-command functions
 foo = (args) ->

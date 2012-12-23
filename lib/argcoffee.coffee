@@ -22,18 +22,49 @@ _.str = require('underscore.string')
 adir = './'
 adir = '../node_modules/argparse/lib/'
 $$ = require(adir+'const')
-ActionContainer = require(adir+'action_container')
+
+if false
+  ActionContainer = require(adir+'action_container')
+else
+  _ActionsContainer = require('./argcontainer')._ActionsContainer
 argumentErrorHelper = require(adir+'argument/error')
 HelpFormatter = require(adir+'help/formatter')
-Namespace = require(adir+'namespace')
 
-# redefine a couple of namespace methods
+if false
+  Namespace = require(adir+'namespace')
+else
+  class Namespace # or just a simple object
+  
+# (re)define a few namespace methods
 Namespace::isset = (key) ->
     this[key]?
 Namespace::get = (key, defaultValue) ->
     this[key] ? defaultValue
+Namespace::set = (key, value) ->
+  this[key] = value 
 Namespace::repr = () ->
     'Namespace'+ util.inspect(@)
+# a Namespace is only created here (or by user)
+# so we can rework it here, without attention to what's on the argparse file
+    
+if DEBUG and 0
+  np = new Namespace()
+  console.log np
+  console.log np.repr()
+  console.log np.isset('test')
+  console.log np.get('test','default')
+  np.set('test','something')
+  np.set('foo', null)
+  console.log np.isset('test')
+  console.log np.get('test','default')
+  console.log np.repr()
+
+  
+# the Namespace set does not set a 'null' value
+# it also tries to set an object 'key'; where is this needed?
+# lets try something closer to  py setattr(obj,key,value)
+# does change here affect a Namespace object called by a diff file?
+
     
 # argparse separates these exports from definion of ArgumentParser
 exports.Namespace = Namespace
@@ -41,10 +72,10 @@ exports.HelpFormatter = HelpFormatter
 exports.Const = $$
 exports.Action = require(adir+'action')
 
-
-# cast ActionContainer into the Coffeescript 'class' form
-class _ActionsContainer extends ActionContainer
-util.inherits(_ActionsContainer, ActionContainer)
+if not _ActionsContainer?
+  # cast ActionContainer into the Coffeescript 'class' form
+  class _ActionsContainer extends ActionContainer
+  util.inherits(_ActionsContainer, ActionContainer)
 
 class ArgumentParser extends _ActionsContainer
     constructor: (options={}) ->
@@ -110,7 +141,7 @@ class ArgumentParser extends _ActionsContainer
             })
                 
         for parent in @parents
-            @_addContainerActions(parent)
+            (@_addContainerActions ? @_add_container_actions)(parent)
             if parent._defaults?
                 for defaultKey of parent._defaults
                     if parent._defaults[defaultKey]? # has defaultKey # own?
@@ -174,7 +205,8 @@ class ArgumentParser extends _ActionsContainer
         return action
 
     _addAction: (action) ->   # use camel because AC does
-        if action.isOptional() # option_strings
+        if action.isOptional() # optionStrings.length>0
+            assert(action.optionStrings)
             # DEBUG 'opt action:',action.dest
             this._optionals._addAction(action)
         else
@@ -217,6 +249,7 @@ class ArgumentParser extends _ActionsContainer
                         if _.isString(_default)
                             _default = @_get_value(action, _default)
                         namespace.set(action.dest, _default)
+                      
         DEBUG 'with defaults:',namespace.repr()
         # add any parser defaults that aren't present
         for dest of @_defaults
@@ -225,7 +258,7 @@ class ArgumentParser extends _ActionsContainer
         
         # parse the arguments and exit if there are any errors
         if true  # try
-            DEBUG 'initial argse', args, namespace.repr()
+            DEBUG 'initial args', args, namespace.repr()
             [namespace, args] = @_parse_known_args(args, namespace)
             if namespace.isset($$._UNRECOGNIZED_ARGS_ATTR)
                 args.push(namespace.get($$._UNRECOGNIZED_ARGS_ATTR))
@@ -248,7 +281,8 @@ class ArgumentParser extends _ActionsContainer
         actionConflicts = {}
         actionHash = (action) ->
             return action.getName()
-        for mutex_group in this._mutuallyExclusiveGroups
+        mxgroups = this._mutuallyExclusiveGroups ? this._mutually_exclusive_groups
+        for mutex_group in mxgroups
             group_actions = mutex_group._groupActions
             for mutex_action, i in group_actions
                 key =  actionHash(mutex_action) 
@@ -319,7 +353,7 @@ class ArgumentParser extends _ActionsContainer
             # get the optional identified at this index
             option_tuple = option_string_indices[start_index]
             [action, option_string, explicit_arg] = option_tuple
-
+            DEBUG 'option tuple:', [action.dest, option_string, explicit_arg]
             # identify additional optionals in the same arg string
             # (e.g. -xyz is the same as -x -y -z if no args are required)
             match_argument = @_match_argument
@@ -346,7 +380,7 @@ class ArgumentParser extends _ActionsContainer
                         char = option_string[0]
                         option_string = char + explicit_arg[0]
                         new_explicit_arg = explicit_arg[1...] || null 
-                        optionals_map = @_optionStringActions
+                        optionals_map = @_optionStringActions ? @_option_string_actions
                         if optionals_map[option_string]?
                             action = optionals_map[option_string]
                             explicit_arg = new_explicit_arg
@@ -479,7 +513,7 @@ class ArgumentParser extends _ActionsContainer
   
         # make sure all required groups had one option present
         action_used = false
-        for group in this._mutuallyExclusiveGroups
+        for group in this._mutuallyExclusiveGroups ? this._mutually_exclusive_groups
             if group.required
                 DEBUG 'group required'
                 for action in group._groupActions
@@ -558,8 +592,9 @@ class ArgumentParser extends _ActionsContainer
             return null
 
         # if the option string is present in the parser, return the action
-        if @_optionStringActions[arg_string]?
-            action = @_optionStringActions[arg_string]
+        actions = @_optionStringActions ? @_option_string_actions
+        if actions[arg_string]?
+            action = actions[arg_string]
             return [action, arg_string, null]
 
         # if it's just a single character, it was meant to be positional
@@ -570,8 +605,8 @@ class ArgumentParser extends _ActionsContainer
         if '=' in arg_string
             [option_string, explicit_arg] = arg_string.split('=')
             # may be a difference in 'split limit' between languages
-            if @_optionStringActions[option_string]?
-                action = @_optionStringActions[option_string]
+            if aActions[option_string]?
+                action = actions[option_string]
                 return [action, option_string, explicit_arg]
 
         # search through all possible prefixes of the option string
@@ -619,9 +654,10 @@ class ArgumentParser extends _ActionsContainer
             else
                 option_prefix = option_string
                 explicit_arg = null
-            for option_string of @_optionStringActions
+            actions = @_optionStringActions ? @_option_string_actions
+            for option_string of actions
                 if _.str.startsWith(option_string, option_prefix)
-                    action = @_optionStringActions[option_string]
+                    action = actions[option_string]
                     tup = [action, option_string, explicit_arg]
                     result.push(tup)
 
@@ -634,13 +670,14 @@ class ArgumentParser extends _ActionsContainer
             short_option_prefix = option_string[...2]
             short_explicit_arg = option_string[2..]
 
-            for option_string of @_optionStringActions
+            actions = @_optionStringActions ? @_option_string_actions
+            for option_string of actions
                 if option_string == short_option_prefix
-                    action = @_optionStringActions[option_string]
+                    action = actions[option_string]
                     tup = [action, option_string, short_explicit_arg]
                     result.push(tup)
                 else if _.str.startsWith(option_string,option_prefix)
-                    action = @_optionStringActions[option_string]
+                    action = actions[option_string]
                     tup = [action, option_string, explicit_arg]
                     result.push(tup)
 
@@ -686,9 +723,9 @@ class ArgumentParser extends _ActionsContainer
             # nargs_pattern = '(-*%s-*)' % '-*'.join('A' * nargs)
             nargs_pattern = "(-*#{('A' for i in [0...nargs]).join('')}-*)"
         # if this is an optional action, -- is not allowed
-        if action.option_strings
-            nargs_pattern = nargs_pattern.replace('-*', '')
-            nargs_pattern = nargs_pattern.replace('-', '')
+        if action.optionStrings.length>0 # an optional
+            nargs_pattern = nargs_pattern.replace(/-\*/g, '')
+            nargs_pattern = nargs_pattern.replace(/-/g, '')
 
         # return the pattern
         DEBUG nargs, nargs_pattern
@@ -707,7 +744,7 @@ class ArgumentParser extends _ActionsContainer
         # optional argument produces a default when not present
         if arg_strings.length==0 and action.nargs == $$.OPTIONAL
             DEBUG 'doing ?'
-            if action.optionStrings.length
+            if action.optionStrings.length>0
                 value = action.constant
             else
                 value = action.defaultValue
@@ -841,7 +878,7 @@ class ArgumentParser extends _ActionsContainer
         # usage
         formatter.addUsage(@usage, @_actions, [])
         formatter.addText(@description)
-        for actionGroup in @_actionGroups
+        for actionGroup in (@_actionGroups ? @_action_groups)
             formatter.startSection(actionGroup.title)
             formatter.addText(actionGroup.description)
             formatter.addArguments(actionGroup._groupActions)
@@ -889,7 +926,11 @@ class ArgumentParser extends _ActionsContainer
                 @_printMessage(message)
             else
                 @_printMessage(message, process.stderr)
-        process.exit(status)
+        if @debug
+            # capture exit, such as from action help
+            throw new Error('Exit captured')
+        else
+            process.exit(status)
         
     _printMessage: (message, stream=process.stdout) ->
         if message
@@ -901,15 +942,16 @@ class ArgumentParser extends _ActionsContainer
     parseArgs: (args, namespace=null) -> @parse_args(args, namespace)  
     parseKnownArgs: (args, namespace=null) -> @parse_known_args(args, namespace)
     addSubparsers: (args) -> @add_subparsers(args)
-    add_argument: (args..., options) ->
-        # Python like arguments; 
-        # if last arg is a string, assume it is one of the 'args'
-        # and options is an empty object
-        if _.isString(options)
-          # assume 
-          args.push(options)
-          options = {}
-        @addArgument(args, options)
+    if not @::add_argument?
+      add_argument: (args..., options) ->
+          # Python like arguments; 
+          # if last arg is a string, assume it is one of the 'args'
+          # and options is an empty object
+          if _.isString(options)
+            # assume 
+            args.push(options)
+            options = {}
+          @addArgument(args, options)
         
 # =====================
 # Options and Arguments
@@ -918,8 +960,8 @@ class ArgumentParser extends _ActionsContainer
 _get_action_name = (argument) ->
     if argument is null
         return null
-    else if argument.option_strings
-        return  argument.option_strings.join('/')
+    else if argument.optionStrings.length>0
+        return  argument.optionStrings.join('/')
     else if argument.metavar not in [null, $$.SUPPRESS]
         return argument.metavar
     else if argument.dest not in [null, $$.SUPPRESS]
@@ -1030,9 +1072,10 @@ exports.FileType = FileType
 
 
 TEST = if not module.parent? then true else false
-if TEST and 0       
+if TEST and 0
     parser = new ArgumentParser()
     console.log 'obj:',util.inspect(parser,false,0)
+    console.log parser._action_groups
     parser.format_help()
     parser.add_subparsers({})
     console.log 'class:', 
@@ -1043,7 +1086,7 @@ if TEST and 0
 
     #console.log parser.formatHelp()
 
-if TEST and 0
+if TEST and 0  # not working w/ new container
     parentParser = new ArgumentParser({add_help: false, description: 'parent'})
     parentParser.addArgument(['--x'])
     parentParser._defaults = {x:true} # test the propagation to child
@@ -1075,7 +1118,7 @@ if TEST and 1
     parser.add_argument('foo', {nargs:'*', defaultValue:42})
     parser.addArgument(['-x','--xxx'],{action:'storeTrue'})
     parser.addArgument(['-y'],{dest:'yyy', nargs:1})
-    parser.add_argument('-z','--zzz',{action:'storeTrue'})
+    parser.add_argument('-z','--zzz',{action:'storeFalse'})
     parser.add_argument('-d',{defaultValue:'DEFAULT'})
 
     if process.argv.length==2
