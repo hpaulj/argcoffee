@@ -141,7 +141,10 @@ class ArgumentParser extends _ActionsContainer
             })
                 
         for parent in @parents
-            (@_addContainerActions ? @_add_container_actions)(parent)
+            if @_addContainerActions?
+              @_addContainerActions(parent)
+            else
+              @_add_container_actions(parent)
             if parent._defaults?
                 for defaultKey of parent._defaults
                     if parent._defaults[defaultKey]? # has defaultKey # own?
@@ -192,14 +195,24 @@ class ArgumentParser extends _ActionsContainer
         if not options.prog?
             formatter = @_getFormatter()
             positionals = @_get_positional_actions()
-            groups = @_mutuallyExclusiveGroups
+            groups = @_mutuallyExclusiveGroups ? @_mutually_exclusive_groups
             formatter.addUsage(@usage, positionals, groups, '')
             options['prog'] = _.str.strip(formatter.formatHelp())
 
         # create the parsers action and add it to the positionals list
-        ParsersClass = @_popActionClass(options, 'parsers')
+        # ParsersClass = (@_popActionClass ? @_pop_action_class)(options, 'parsers')
+        if @_popActionClass?
+          ParsersClass = @_popActionClass(options, 'parsers')
+        else
+          ParsersClass = @_pop_action_class(options, 'parsers')
+        
         action = new ParsersClass(options)
-        @_subparsers._addAction(action)
+        DEBUG action.nargs
+        DEBUG @_subparsers.__super__
+        if @_subparsers._addAction?
+          @_subparsers._addAction(action)
+        else
+          @_subparsers._add_action(action)
 
         # return the created parsers action
         return action
@@ -281,7 +294,7 @@ class ArgumentParser extends _ActionsContainer
         actionConflicts = {}
         actionHash = (action) ->
             return action.getName()
-        mxgroups = this._mutuallyExclusiveGroups ? this._mutually_exclusive_groups
+        mxgroups = @_mutuallyExclusiveGroups ? @_mutually_exclusive_groups
         for mutex_group in mxgroups
             group_actions = mutex_group._groupActions
             for mutex_action, i in group_actions
@@ -513,7 +526,7 @@ class ArgumentParser extends _ActionsContainer
   
         # make sure all required groups had one option present
         action_used = false
-        for group in this._mutuallyExclusiveGroups ? this._mutually_exclusive_groups
+        for group in @_mutuallyExclusiveGroups ? @_mutually_exclusive_groups
             if group.required
                 DEBUG 'group required'
                 for action in group._groupActions
@@ -881,7 +894,7 @@ class ArgumentParser extends _ActionsContainer
         for actionGroup in (@_actionGroups ? @_action_groups)
             formatter.startSection(actionGroup.title)
             formatter.addText(actionGroup.description)
-            formatter.addArguments(actionGroup._groupActions)
+            formatter.addArguments(actionGroup._groupActions ? actionGroup._group_actions)
             formatter.endSection()
         formatter.addText(@epilog)
         return formatter.formatHelp()
@@ -1072,10 +1085,10 @@ exports.FileType = FileType
 
 
 TEST = if not module.parent? then true else false
-if TEST and 0
+if TEST and 1
     parser = new ArgumentParser()
-    console.log 'obj:',util.inspect(parser,false,0)
-    console.log parser._action_groups
+    #console.log 'obj:',util.inspect(parser,false,0)
+    #console.log parser._action_groups[0]
     parser.format_help()
     parser.add_subparsers({})
     console.log 'class:', 
@@ -1083,10 +1096,11 @@ if TEST and 0
     console.log 'proto'
     console.log ArgumentParser.prototype
     console.log ArgumentParser.prototype.constructor.super_
-
+    console.log ArgumentParser.prototype.constructor.__super__
+    console.log '====================================='
     #console.log parser.formatHelp()
 
-if TEST and 0  # not working w/ new container
+if TEST and 1  # not working w/ new container
     parentParser = new ArgumentParser({add_help: false, description: 'parent'})
     parentParser.addArgument(['--x'])
     parentParser._defaults = {x:true} # test the propagation to child
@@ -1104,7 +1118,8 @@ if TEST and 0  # not working w/ new container
         # _actions is shared among parser and groups
         # _groupActions are different
         # console.log (action.dest for action in childParser._get_optional_actions())
-
+    console.log '====================================='
+    
 if TEST and 1
     int1 = (arg) ->
         result = parseInt(arg,10)
@@ -1136,8 +1151,8 @@ if TEST and 1
     console.log getattr(args,'foo','missing'), hasattr(args,'foo')
     setattr(args,'foo','found')
     console.log getattr(args,'foo'), args
-    ###
-if TEST and 0
+    console.log '====================================='
+if TEST and 1
     parser = new ArgumentParser({debug: true});
     subparsers = parser.addSubparsers({
         title: 'subcommands',

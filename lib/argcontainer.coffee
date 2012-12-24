@@ -4,7 +4,7 @@
 # may need to do action group at the same time
 ###
 
-if true # not module.parent?
+if not module.parent?
     DEBUG = (arg...) ->
       arg.unshift('====> ')
       console.log arg...
@@ -196,15 +196,14 @@ class _ActionsContainer
   addArgument: (args, options) -> @add_argument(args..., options)
 
   add_argument_group: (options) ->
-        group = _ArgumentGroup(this, options)
+        group = new _ArgumentGroup(this, options)
         @_action_groups.push(group)
         return group
   addArgumentGroup: (options) -> @add_argument_group(options)
 
   add_mutually_exclusive_group: (options) ->
         group = new _MutuallyExclusiveGroup(self, options)
-        #@_mutually_exclusive_groups.push(group)
-        @_mutuallyExclusiveGroups.push(group)
+        @_mutually_exclusive_groups.push(group)
         return group
   addMutuallyExclusiveGroup: (options) -> @add_mutually_exclusive_group(options)
   
@@ -239,7 +238,7 @@ class _ActionsContainer
   _add_container_actions: (container) =>
         # collect groups by titles
         title_group_map = {}
-        DEBUG @_action_groups
+        DEBUG @
         for group in @_action_groups
             if group.title of title_group_map
                 msg = "cannot merge actions - two groups are named #{group.title}"
@@ -270,7 +269,7 @@ class _ActionsContainer
         # add container's mutually exclusive groups
         # NOTE: if add_mutually_exclusive_group ever gains title= and
         # description= then this code will need to be expanded as above
-        for group in container._mutuallyExclusiveGroups
+        for group in container._mutually_exclusive_groups
             mutex_group = @add_mutually_exclusive_group(
                 required=group.required)
 
@@ -386,7 +385,7 @@ class _ActionsContainer
             throw new Error(msg)
 
   _check_conflict: (action) ->
-
+        DEBUG 'check', action
         # find all options that conflict with this option
         confl_optionals = []
         for option_string in action.optionStrings
@@ -442,7 +441,7 @@ class _ArgumentGroup extends _ActionsContainer
         # super_init = super(_ArgumentGroup, self).__init__
         # _ActionsContainer.call(this, options)
         # super_init(description=description, **kwargs)
-
+        super(options)
         # group attributes
         @title = options.title
         @_group_actions = []
@@ -453,19 +452,19 @@ class _ArgumentGroup extends _ActionsContainer
         @_option_string_actions = container._option_string_actions
         @_defaults = container._defaults
         @_hasNegativeNumberOptionals = container._hasNegativeNumberOptionals
-        @_mutuallyExclusiveGroups = container._mutuallyExclusiveGroups
+        @_mutually_exclusive_groups = container._mutually_exclusive_groups
 
         @_container = container;
 
     _add_action: (action) ->
         #action = super(_ArgumentGroup, self)._add_action(action)
-        action = @__super__._add_action.call(this, action) # _super?
+        action = super(action)
         @_group_actions.push(action)
         return action
 
     _remove_action: (action) ->
         #super(_ArgumentGroup, self)._remove_action(action)
-        @__super__._removeAction.call(this, action)
+        super(action)
         @_group_actions.remove(action) # TODO, [].remove not valid JS
 
 
@@ -473,7 +472,8 @@ class _MutuallyExclusiveGroup extends _ArgumentGroup
 
     constructor: (container, options) ->
         # def __init__(self, container, required=False):
-        _ArgumentGroup.call(this, acoptions)
+        # _ArgumentGroup.call(this, acoptions)
+        super(options)
         # super(_MutuallyExclusiveGroup, self).__init__(container)
         @required = options.required
         @_container = container
@@ -482,12 +482,14 @@ class _MutuallyExclusiveGroup extends _ArgumentGroup
         if action.required
             msg = 'mutually exclusive arguments must be optional'
             raise new Error(msg)
-        action = @_container._add_action(action)
+        # action = @_container._add_action(action)
+        action = super(action)
         @_group_actions.push(action)
         return action
 
     _remove_action: (action) ->
-        @_container._remove_action(action)
+        super(action)
+        #@_container._remove_action(action)
         @_group_actions.remove(action) # TODO
 
 
