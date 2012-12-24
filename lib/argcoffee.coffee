@@ -85,11 +85,11 @@ class ArgumentParser extends _ActionsContainer
         @parents=options.parents ? []
         @formatter_class=options.formatter_class ? HelpFormatter
         @fromfile_prefix_chars = options.fromfile_prefix_chars ? null
-        @add_help = options.add_help ? true
+        @add_help = options.addHelp ? options.add_help ? true
         @debug = options.debug ? false
     
         @description=options.description ? null
-        @prefix_chars=options.prefix_chars ? '-'
+        @prefix_chars=options.prefixChars ? options.prefix_chars ? '-'
         @argument_default=options.argument_default ? null
         @conflict_handler=options.conflict_handler ? 'error'
         acoptions = {
@@ -296,7 +296,7 @@ class ArgumentParser extends _ActionsContainer
             return action.getName()
         mxgroups = @_mutuallyExclusiveGroups ? @_mutually_exclusive_groups
         for mutex_group in mxgroups
-            group_actions = mutex_group._groupActions
+            group_actions = mutex_group._groupActions ? mutex_group._group_actions
             for mutex_action, i in group_actions
                 key =  actionHash(mutex_action) 
                 if not actionConflicts[key]?
@@ -366,7 +366,7 @@ class ArgumentParser extends _ActionsContainer
             # get the optional identified at this index
             option_tuple = option_string_indices[start_index]
             [action, option_string, explicit_arg] = option_tuple
-            DEBUG 'option tuple:', [action.dest, option_string, explicit_arg]
+            #DEBUG 'option tuple:', [action.dest, option_string, explicit_arg]
             # identify additional optionals in the same arg string
             # (e.g. -xyz is the same as -x -y -z if no args are required)
             match_argument = @_match_argument
@@ -529,7 +529,8 @@ class ArgumentParser extends _ActionsContainer
         for group in @_mutuallyExclusiveGroups ? @_mutually_exclusive_groups
             if group.required
                 DEBUG 'group required'
-                for action in group._groupActions
+                gactions = group._groupActions ? group._group_actions
+                for action in gactions
                     if action in seen_non_default_actions
                         action_used = true
                         break
@@ -537,7 +538,7 @@ class ArgumentParser extends _ActionsContainer
                 # if no actions were used, report the error
                 if not action_used
                     DEBUG 'not action used'
-                    names = (action.getName() for action in group._groupActions \
+                    names = (action.getName() for action in gactions \
                         when action.help != $$.SUPPRESS)
                         msg = "one of the arguments #{names.join(' ')} is required"
                         @error(msg)
@@ -618,7 +619,7 @@ class ArgumentParser extends _ActionsContainer
         if '=' in arg_string
             [option_string, explicit_arg] = arg_string.split('=')
             # may be a difference in 'split limit' between languages
-            if aActions[option_string]?
+            if actions[option_string]?
                 action = actions[option_string]
                 return [action, option_string, explicit_arg]
 
@@ -1085,7 +1086,7 @@ exports.FileType = FileType
 
 
 TEST = if not module.parent? then true else false
-if TEST and 1
+if TEST and 0
     parser = new ArgumentParser()
     #console.log 'obj:',util.inspect(parser,false,0)
     #console.log parser._action_groups[0]
@@ -1100,7 +1101,7 @@ if TEST and 1
     console.log '====================================='
     #console.log parser.formatHelp()
 
-if TEST and 1  # not working w/ new container
+if TEST and 0
     parentParser = new ArgumentParser({add_help: false, description: 'parent'})
     parentParser.addArgument(['--x'])
     parentParser._defaults = {x:true} # test the propagation to child
@@ -1108,7 +1109,7 @@ if TEST and 1  # not working w/ new container
     childParser = new ArgumentParser({description:'child',parents:[parentParser]})
     childParser.addArgument(['--y'])
     childParser.addArgument(['xxx'])
-    #console.log childParser.formatHelp()
+    console.log childParser.formatHelp()
     if 0
         console.log 'parent:',util.inspect(parentParser,false,0)
         console.log 'child:',util.inspect(childParser,false,0)
@@ -1120,7 +1121,7 @@ if TEST and 1  # not working w/ new container
         # console.log (action.dest for action in childParser._get_optional_actions())
     console.log '====================================='
     
-if TEST and 1
+if TEST and 0
     int1 = (arg) ->
         result = parseInt(arg,10)
         if (isNaN(result))
@@ -1143,7 +1144,7 @@ if TEST and 1
         argv = null
     console.log parser
     console.log parser.parse_known_args(argv)
-    ###
+    
     args = parser.parseArgs(argv)
     console.log args
     # test python like namespace fns
@@ -1152,7 +1153,7 @@ if TEST and 1
     setattr(args,'foo','found')
     console.log getattr(args,'foo'), args
     console.log '====================================='
-if TEST and 1
+if TEST and 0
     parser = new ArgumentParser({debug: true});
     subparsers = parser.addSubparsers({
         title: 'subcommands',
@@ -1165,10 +1166,24 @@ if TEST and 1
     c2.addArgument([ '--baz' ], {});
     Nsp = new Namespace()
     Nsp.set('dummy','foobar')
-    #args = parser.parse_args('c1 --foo 5'.split(' '), Nsp)
-    #args = parser.parseArgs('c1 --foo 5'.split(' '), Nsp);
-    args = parser.parseArgs([])
+    args = parser.parse_args('c1 --foo 5'.split(' '), Nsp)
+    args = parser.parseArgs('c1 --foo 5'.split(' '), Nsp);
+    #args = parser.parseArgs([])
     console.log args
+    
+    console.log '====================================='
+if TEST and 1
+    parser = new ArgumentParser({debug: true});
+    parser.addArgument(['-1'], {dest: 'one'});
+    parser.addArgument(['foo'], {nargs: '?'});
+    # negative number options present, so -1 is an option
+    args = parser.parseArgs(['-1', 'X']);
+    # Namespace(foo=None, one='X')
+    assert.equal(args.one, 'X');
+    # negative number options present, so -2 is an option
+    console.log parser.parseArgs(['-z'])
+    console.log parser.parseArgs(['-2']);
+
     
 # args from files
 

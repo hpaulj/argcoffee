@@ -627,12 +627,12 @@ subparsers = parser.add_subparsers()
 parser_foo = subparsers.addParser('foo')
 parser_foo.add_argument('-x', {type:'int', defaultValue:1})
 parser_foo.add_argument('y', {type:'float'})
-parser_foo.setDefaults({func:foo})
+parser_foo.set_defaults({func:foo})
 
 # create the parser for the "bar" command
 parser_bar = subparsers.addParser('bar')
 parser_bar.add_argument('z',{})
-parser_bar.setDefaults({func:bar})
+parser_bar.set_defaults({func:bar})
 
 try
     parser.print_help()
@@ -709,7 +709,7 @@ if parser.addMutuallyExclusiveGroup?
       print 'no allow both'
   
   parser = new ArgumentParser({prog:'PROG', debug: true})
-  group = parser.addMutuallyExclusiveGroup(true) #(required=true)
+  group = parser.addMutuallyExclusiveGroup({required:true})
   group.addArgument(['--foo'], {action:'storeTrue'})
   group.addArgument(['--bar'], {action:'storeFalse'})
   try
@@ -722,12 +722,12 @@ if parser.addMutuallyExclusiveGroup?
 header 'parser defaults'
 parser = new ArgumentParser()
 parser.add_argument('foo', {type:'int'})
-parser.setDefaults(bar:42, {baz:'badger'})
+parser.set_defaults(bar:42, {baz:'badger'})
 print parser.parse_args(['736'])
 
 parser = new ArgumentParser()
 parser.add_argument('--foo', {defaultValue:'bar'})
-parser.setDefaults({foo:'spam'})
+parser.set_defaults({foo:'spam'})
 print parser.parse_args([])
 
 

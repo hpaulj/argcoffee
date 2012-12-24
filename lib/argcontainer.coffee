@@ -43,7 +43,7 @@ class _ActionsContainer
 
         @description = options.description
         @argumentDefault = options.argumentDefault
-        @prefix_chars = options.prefixChars
+        @prefix_chars = options.prefixChars ? options.prefix_chars
         @conflictHandler = options.conflictHandler
 
         # set up registries
@@ -110,14 +110,15 @@ class _ActionsContainer
         for action in @_actions
             if action.dest of options
                 action.default = options[action.dest]
-
+  setDefaults: (options) -> @set_defaults(options)
+    
   get_default: (dest) ->
         for action in @_actions
-            if action.dest == dest and action.defaultValue is not null
+            if action.dest == dest and action.defaultValue != null
                 return action.defaultValue
         #return @_defaults.get(dest, null)
         return @_defaults[dest] ? null
-
+  getDefault: (dest) -> @get_default(dest)
 
     # =======================
     # Adding argument actions
@@ -201,8 +202,8 @@ class _ActionsContainer
         return group
   addArgumentGroup: (options) -> @add_argument_group(options)
 
-  add_mutually_exclusive_group: (options) ->
-        group = new _MutuallyExclusiveGroup(self, options)
+  add_mutually_exclusive_group: (options={}) ->
+        group = new _MutuallyExclusiveGroup(this, options)
         @_mutually_exclusive_groups.push(group)
         return group
   addMutuallyExclusiveGroup: (options) -> @add_mutually_exclusive_group(options)
@@ -223,7 +224,7 @@ class _ActionsContainer
         for option_string in action.optionStrings
             if option_string.match(@_negative_number_matcher)
                 if not _.any(@_hasNegativeNumberOptionals)
-                    @_hasNegativeNumberOptionals.push(True)
+                    @_hasNegativeNumberOptionals.push(true)
 
         # return the created action
         return action
@@ -329,7 +330,7 @@ class _ActionsContainer
             # error on strings that don't start with an appropriate prefix
             if not option_string[0] in @prefix_chars
                 msg = "invalid option string #{option_string}: '
-                        'must start with a character #{@prefixChars}"
+                        'must start with a character #{@prefix_chars}"
                 throw new Error(msg)
 
             # strings starting with two prefix characters are long options
@@ -375,12 +376,12 @@ class _ActionsContainer
 
   _get_handler: () ->
         # determine function from conflict handler string
-        return @conflictHandler == 'error'
+        #return @conflictHandler == 'error'
         # skip more elaborate test for now
-        handler_func_name = "@_handle_conflict_#{@conflictHandler}"
+        handler_func_name = "_handle_conflict_#{@conflictHandler}"
         try
-            return getattr(this, handler_func_name) # TODO
-        catch AttributeError
+            return @[handler_func_name]
+        catch error
             msg = "invalid conflict_resolution value: #{@conflictHandler}"
             throw new Error(msg)
 
@@ -434,7 +435,7 @@ class _ArgumentGroup extends _ActionsContainer
     constructor: (container, options={}) ->
         # def __init__(self, container, title=None, description=None, **kwargs):
         # add any missing keyword arguments by checking the container
-        options.prefixChars = options.prefixChars ? container.prefixChars
+        options.prefix_chars = options.prefixChars ? container.prefix_chars
         options.argumentDefault = options.argumentDefault ? container.argumentDefault
         options.conflict_handler = options.conflict_handler ? container.conflict_handler
     
@@ -473,7 +474,7 @@ class _MutuallyExclusiveGroup extends _ArgumentGroup
     constructor: (container, options) ->
         # def __init__(self, container, required=False):
         # _ArgumentGroup.call(this, acoptions)
-        super(options)
+        super(container, options)
         # super(_MutuallyExclusiveGroup, self).__init__(container)
         @required = options.required
         @_container = container
@@ -482,9 +483,9 @@ class _MutuallyExclusiveGroup extends _ArgumentGroup
         if action.required
             msg = 'mutually exclusive arguments must be optional'
             raise new Error(msg)
-        # action = @_container._add_action(action)
+        #action = @_container._add_action(action)
         action = super(action)
-        @_group_actions.push(action)
+        #@_group_actions.push(action)
         return action
 
     _remove_action: (action) ->

@@ -27,7 +27,7 @@ describe('ArgumentParser', function () {
       // what to test for in help?
       // parser.print_help()
       // does group make an difference in parseArgs output?
-      assert(group._groupActions.length, 2);
+      assert(group._group_actions.length, 2);
     });
 
     it('2 group test', function () {
@@ -37,8 +37,8 @@ describe('ArgumentParser', function () {
       group2 = parser.addArgumentGroup({title: 'group2', description: 'group2 description'});
       group2.addArgument(['--bar'], {help: 'bar help'});
       //parser.print_help();
-      assert(group1._groupActions.length, 1);
-      assert(parser._actionGroups.length, 4); // group1, group2, positionals, optionals
+      assert(group1._group_actions.length, 1);
+      assert(parser._action_groups.length, 4); // group1, group2, positionals, optionals
     });
 
     it('mutually exclusive group test', function () {
@@ -96,7 +96,7 @@ describe('ArgumentParser', function () {
       group.addArgument(['--foo'], {action: 'storeTrue'});
       group.addArgument(['--bar'], {action: 'storeFalse'});
       assert.equal(group.required, true);
-      assert.equal(group._groupActions.length, 2);
+      assert.equal(group._group_actions.length, 2);
       assert.throws(
         function () {
           args = parser.parseArgs([]);
