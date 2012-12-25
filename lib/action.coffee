@@ -1,9 +1,31 @@
+
+if not module.parent?
+    DEBUG = (arg...) ->
+      arg.unshift('====> ')
+      console.log arg...
+else
+    DEBUG = () ->
+
+util = require('util') # node
+assert = require('assert')
+path = require('path')
+_ = require('underscore')
+_.str = require('underscore.string')
+
+adir = './'
+adir = '../node_modules/argparse/lib/'
+
+# Constants
+$$ = require(adir+'const');
+
+
 # ==============
 # Action classes
 # ==============
 
-class Action(_AttributeHolder):
-    """Information about how to convert command line strings to Python objects.
+class Action
+    # py uses an _AttributeHolder to provide a format
+    ###Information about how to convert command line strings to Python objects.
 
     Action objects are used by an ArgumentParser to represent the information
     needed to parse a single argument from one or more strings from the
@@ -49,32 +71,23 @@ class Action(_AttributeHolder):
 
         - help -- The help string describing the argument.
 
-        - metavar -- The name to be used for the option's argument with the
+        - metavar -- The name to be used for the options argument with the
             help string. If None, the 'dest' value will be used as the name.
-    """
+    ###
 
-    def __init__(self,
-                 option_strings,
-                 dest,
-                 nargs=None,
-                 const=None,
-                 default=None,
-                 type=None,
-                 choices=None,
-                 required=False,
-                 help=None,
-                 metavar=None):
-        self.option_strings = option_strings
-        self.dest = dest
-        self.nargs = nargs
-        self.const = const
-        self.default = default
-        self.type = type
-        self.choices = choices
-        self.required = required
-        self.help = help
-        self.metavar = metavar
+    constructor: (options) ->
+        @option_strings = options.option_strings
+        @dest = options.dest
+        @nargs = options.nargs ? null
+        @const = options.const ? null
+        @default = options. default ? null
+        @type = options.type ? null
+        @choices = options.choices ? null
+        @required = options.required ? false
+        @help = options.help ? null
+        @metavar = options.metavar ? null
 
+    ###
     def _get_kwargs(self):
         names = [
             'option_strings',
@@ -88,14 +101,14 @@ class Action(_AttributeHolder):
             'metavar',
         ]
         return [(name, getattr(self, name)) for name in names]
+    ###
+    __call__: (parser, namespace, values, option_string=null) ->
+        raise new Error(_('.__call__() not defined'))
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        raise NotImplementedError(_('.__call__() not defined'))
 
+class _StoreAction extends Action
 
-class _StoreAction(Action):
-
-    def __init__(self,
+    constructor: (options) ->
                  option_strings,
                  dest,
                  nargs=None,
@@ -110,8 +123,8 @@ class _StoreAction(Action):
             raise ValueError('nargs for store actions must be > 0; if you '
                              'have nothing to store, actions such as store '
                              'true or store const may be more appropriate')
-        if const is not None and nargs != OPTIONAL:
-            raise ValueError('nargs must be %r to supply const' % OPTIONAL)
+        if const is not None and nargs != $$.OPTIONAL:
+            raise new Error("nargs must be #{$$.OPTIONAL} to supply const")
         super(_StoreAction, self).__init__(
             option_strings=option_strings,
             dest=dest,
@@ -124,13 +137,13 @@ class _StoreAction(Action):
             help=help,
             metavar=metavar)
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest, values)
+    __call__: (parser, namespace, values, option_string=null) ->
+        setattr(namespace, @dest, values)
 
 
-class _StoreConstAction(Action):
+class _StoreConstAction extends Action
 
-    def __init__(self,
+    constructor: (options) ->
                  option_strings,
                  dest,
                  const,
@@ -147,13 +160,13 @@ class _StoreConstAction(Action):
             required=required,
             help=help)
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest, self.const)
+    __call__: (parser, namespace, values, option_string=null) ->
+        setattr(namespace, @dest, @const)
 
 
-class _StoreTrueAction(_StoreConstAction):
+class _StoreTrueAction extends _StoreConstAction
 
-    def __init__(self,
+    constructor: (options) ->
                  option_strings,
                  dest,
                  default=False,
@@ -168,9 +181,9 @@ class _StoreTrueAction(_StoreConstAction):
             help=help)
 
 
-class _StoreFalseAction(_StoreConstAction):
+class _StoreFalseAction extends _StoreConstAction
 
-    def __init__(self,
+    constructor: (options) ->
                  option_strings,
                  dest,
                  default=True,
@@ -185,9 +198,9 @@ class _StoreFalseAction(_StoreConstAction):
             help=help)
 
 
-class _AppendAction(Action):
+class _AppendAction extends Action
 
-    def __init__(self,
+    constructor: (options) ->
                  option_strings,
                  dest,
                  nargs=None,
@@ -202,8 +215,8 @@ class _AppendAction(Action):
             raise ValueError('nargs for append actions must be > 0; if arg '
                              'strings are not supplying the value to append, '
                              'the append const action may be more appropriate')
-        if const is not None and nargs != OPTIONAL:
-            raise ValueError('nargs must be %r to supply const' % OPTIONAL)
+        if const is not None and nargs != $$.OPTIONAL:
+            raise new Error("nargs must be #{$$.OPTIONAL} to supply const")
         super(_AppendAction, self).__init__(
             option_strings=option_strings,
             dest=dest,
@@ -216,15 +229,15 @@ class _AppendAction(Action):
             help=help,
             metavar=metavar)
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        items = _copy.copy(_ensure_value(namespace, self.dest, []))
+    __call__: (parser, namespace, values, option_string=null) ->
+        items = _copy.copy(_ensure_value(namespace, @dest, []))
         items.append(values)
-        setattr(namespace, self.dest, items)
+        setattr(namespace, @dest, items)
 
 
-class _AppendConstAction(Action):
+class _AppendConstAction extends Action
 
-    def __init__(self,
+    constructor: (options) ->
                  option_strings,
                  dest,
                  const,
@@ -242,15 +255,15 @@ class _AppendConstAction(Action):
             help=help,
             metavar=metavar)
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        items = _copy.copy(_ensure_value(namespace, self.dest, []))
-        items.append(self.const)
-        setattr(namespace, self.dest, items)
+    __call__: (parser, namespace, values, option_string=null) ->
+        items = _copy.copy(_ensure_value(namespace, @dest, []))
+        items.append(@const)
+        setattr(namespace, @dest, items)
 
 
-class _CountAction(Action):
+class _CountAction extends Action
 
-    def __init__(self,
+    constructor: (options) ->
                  option_strings,
                  dest,
                  default=None,
@@ -264,17 +277,17 @@ class _CountAction(Action):
             required=required,
             help=help)
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        new_count = _ensure_value(namespace, self.dest, 0) + 1
-        setattr(namespace, self.dest, new_count)
+    __call__: (parser, namespace, values, option_string=null) ->
+        new_count = _ensure_value(namespace, @dest, 0) + 1
+        setattr(namespace, @dest, new_count)
 
 
-class _HelpAction(Action):
+class _HelpAction extends Action
 
-    def __init__(self,
+    constructor: (options) ->
                  option_strings,
-                 dest=SUPPRESS,
-                 default=SUPPRESS,
+                 dest=$$.SUPPRESS,
+                 default=$$.SUPPRESS,
                  help=None):
         super(_HelpAction, self).__init__(
             option_strings=option_strings,
@@ -283,14 +296,14 @@ class _HelpAction(Action):
             nargs=0,
             help=help)
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    __call__: (parser, namespace, values, option_string=null) ->
         parser.print_help()
         parser.exit()
 
 
-class _VersionAction(Action):
+class _VersionAction extends Action
 
-    def __init__(self,
+    constructor: (options) ->
                  option_strings,
                  version=None,
                  dest=SUPPRESS,
@@ -302,10 +315,10 @@ class _VersionAction(Action):
             default=default,
             nargs=0,
             help=help)
-        self.version = version
+        @version = version
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        version = self.version
+    __call__: (parser, namespace, values, option_string=null) ->
+        version = @version
         if version is None:
             version = parser.version
         formatter = parser._get_formatter()
@@ -313,15 +326,16 @@ class _VersionAction(Action):
         parser.exit(message=formatter.format_help())
 
 
-class _SubParsersAction(Action):
+class _SubParsersAction extends Action
 
-    class _ChoicesPseudoAction(Action):
+    class _ChoicesPseudoAction extends Action
 
-        def __init__(self, name, help):
+        constructor: (options) -> 
+            name, help):
             sup = super(_SubParsersAction._ChoicesPseudoAction, self)
             sup.__init__(option_strings=[], dest=name, help=help)
 
-    def __init__(self,
+    constructor: (options) ->
                  option_strings,
                  prog,
                  parser_class,
@@ -329,51 +343,51 @@ class _SubParsersAction(Action):
                  help=None,
                  metavar=None):
 
-        self._prog_prefix = prog
-        self._parser_class = parser_class
-        self._name_parser_map = _collections.OrderedDict()
-        self._choices_actions = []
+        @_prog_prefix = prog
+        @_parser_class = parser_class
+        @_name_parser_map = _collections.OrderedDict()
+        @_choices_actions = []
 
         super(_SubParsersAction, self).__init__(
             option_strings=option_strings,
             dest=dest,
             nargs=PARSER,
-            choices=self._name_parser_map,
+            choices=@_name_parser_map,
             help=help,
             metavar=metavar)
 
     def add_parser(self, name, **kwargs):
         # set prog from the existing prefix
         if kwargs.get('prog') is None:
-            kwargs['prog'] = '%s %s' % (self._prog_prefix, name)
+            kwargs['prog'] = '%s %s' % (@_prog_prefix, name)
 
         # create a pseudo-action to hold the choice help
         if 'help' in kwargs:
             help = kwargs.pop('help')
-            choice_action = self._ChoicesPseudoAction(name, help)
-            self._choices_actions.append(choice_action)
+            choice_action = @_ChoicesPseudoAction(name, help)
+            @_choices_actions.append(choice_action)
 
         # create the parser and add it to the map
-        parser = self._parser_class(**kwargs)
-        self._name_parser_map[name] = parser
+        parser = @_parser_class(**kwargs)
+        @_name_parser_map[name] = parser
         return parser
 
     def _get_subactions(self):
-        return self._choices_actions
+        return @_choices_actions
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    __call__: (parser, namespace, values, option_string=null) ->
         parser_name = values[0]
         arg_strings = values[1:]
 
         # set the parser name if requested
-        if self.dest is not SUPPRESS:
-            setattr(namespace, self.dest, parser_name)
+        if @dest is not SUPPRESS:
+            setattr(namespace, @dest, parser_name)
 
         # select the parser
         try:
-            parser = self._name_parser_map[parser_name]
+            parser = @_name_parser_map[parser_name]
         except KeyError:
-            tup = parser_name, ', '.join(self._name_parser_map)
+            tup = parser_name, ', '.join(@_name_parser_map)
             msg = _('unknown parser %r (choices: %s)') % tup
             raise ArgumentError(self, msg)
 
@@ -382,6 +396,6 @@ class _SubParsersAction(Action):
         # level parser can decide what to do with them
         namespace, arg_strings = parser.parse_known_args(arg_strings, namespace)
         if arg_strings:
-            vars(namespace).setdefault(_UNRECOGNIZED_ARGS_ATTR, [])
-            getattr(namespace, _UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
+            vars(namespace).setdefault($$._UNRECOGNIZED_ARGS_ATTR, [])
+            getattr(namespace, $$._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
 
