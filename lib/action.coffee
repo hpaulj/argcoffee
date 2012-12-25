@@ -50,17 +50,17 @@ class Action
             with the default, a single value will be produced, while with
             nargs=1, a list containing a single value will be produced.
 
-        - const -- The value to be produced if the option is specified and the
+        - constant -- The value to be produced if the option is specified and the
             option uses an action that takes no values.
 
-        - default -- The value to be produced if the option is not specified.
+        - defaultValue -- The value to be produced if the option is not specified.
 
         - type -- The type which the command-line arguments should be converted
             to, should be one of 'string', 'int', 'float', 'complex' or a
-            callable object that accepts a single string argument. If None,
+            callable object that accepts a single string argument. If null,
             'string' is assumed.
 
-        - choices -- A container of values that should be allowed. If not None,
+        - choices -- A container of values that should be allowed. If not null,
             after a command-line argument has been converted to the appropriate
             type, an exception will be raised if it is not a member of this
             collection.
@@ -72,15 +72,15 @@ class Action
         - help -- The help string describing the argument.
 
         - metavar -- The name to be used for the options argument with the
-            help string. If None, the 'dest' value will be used as the name.
+            help string. If null, the 'dest' value will be used as the name.
     ###
 
     constructor: (options) ->
-        @option_strings = options.option_strings
+        @optionStrings = options.option_strings ? options.optionStrings
         @dest = options.dest
         @nargs = options.nargs ? null
-        @const = options.const ? null
-        @default = options. default ? null
+        @constant = options.constant ? null
+        @defaultValue = options. defaultValue ? null
         @type = options.type ? null
         @choices = options.choices ? null
         @required = options.required ? false
@@ -93,8 +93,8 @@ class Action
             'option_strings',
             'dest',
             'nargs',
-            'const',
-            'default',
+            'constant',
+            'defaultValue',
             'type',
             'choices',
             'help',
@@ -104,298 +104,219 @@ class Action
     ###
     __call__: (parser, namespace, values, option_string=null) ->
         raise new Error(_('.__call__() not defined'))
+    call: (parser, namespace, values, option_string=null) ->
+        @__call__(parser, namespace, values, option_string=null)
 
+    getName: () ->
+        # not in py, but used by the JS version that this was built on
+        # is this unique enough to use as hash key?
+        if @optionStrings.length>0
+            @.optionsStrings.join('/')
+        else if @metavar ? @.metavar != $$.SUPPRESS
+            @.metavar
+        else if @dest ? @dest != $$.SUPPRESS
+            @.dest
+            
+    @isOptional: () ->
+        # convenience used by argparse
+        not @isPositional()
+        
+    @isPositional: () ->
+        @optionStrings.length == 0
 
 class _StoreAction extends Action
 
     constructor: (options) ->
-                 option_strings,
-                 dest,
-                 nargs=None,
-                 const=None,
-                 default=None,
-                 type=None,
-                 choices=None,
-                 required=False,
-                 help=None,
-                 metavar=None):
-        if nargs == 0:
-            raise ValueError('nargs for store actions must be > 0; if you '
-                             'have nothing to store, actions such as store '
-                             'true or store const may be more appropriate')
-        if const is not None and nargs != $$.OPTIONAL:
-            raise new Error("nargs must be #{$$.OPTIONAL} to supply const")
-        super(_StoreAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            nargs=nargs,
-            const=const,
-            default=default,
-            type=type,
-            choices=choices,
-            required=required,
-            help=help,
-            metavar=metavar)
+        if options.nargs == 0
+            raise new ValueError('nargs for store actions must be > 0; if you ' +\
+                             'have nothing to store, actions such as store ' +\
+                             'true or store constant may be more appropriate')
+        if optons.constant != null and options.nargs != $$.OPTIONAL
+            raise new Error("nargs must be #{$$.OPTIONAL} to supply constant")
+        super(options)
 
     __call__: (parser, namespace, values, option_string=null) ->
-        setattr(namespace, @dest, values)
-
+        namespace.set(@dest, values)
 
 class _StoreConstAction extends Action
 
     constructor: (options) ->
-                 option_strings,
-                 dest,
-                 const,
-                 default=None,
-                 required=False,
-                 help=None,
-                 metavar=None):
-        super(_StoreConstAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            nargs=0,
-            const=const,
-            default=default,
-            required=required,
-            help=help)
-
+        options.nargs = 0
+        # sqawk if options.constant not provided?
+        # type, choices ignored (error if given?)
+        super(options)
+        
     __call__: (parser, namespace, values, option_string=null) ->
-        setattr(namespace, @dest, @const)
-
+        namespace.set(@dest, @constant)
 
 class _StoreTrueAction extends _StoreConstAction
 
     constructor: (options) ->
-                 option_strings,
-                 dest,
-                 default=False,
-                 required=False,
-                 help=None):
-        super(_StoreTrueAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            const=True,
-            default=default,
-            required=required,
-            help=help)
-
+        options.constant = true
+        super(options)
 
 class _StoreFalseAction extends _StoreConstAction
 
     constructor: (options) ->
-                 option_strings,
-                 dest,
-                 default=True,
-                 required=False,
-                 help=None):
-        super(_StoreFalseAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            const=False,
-            default=default,
-            required=required,
-            help=help)
-
+        options.constant = false
+        super(options)
 
 class _AppendAction extends Action
 
     constructor: (options) ->
-                 option_strings,
-                 dest,
-                 nargs=None,
-                 const=None,
-                 default=None,
-                 type=None,
-                 choices=None,
-                 required=False,
-                 help=None,
-                 metavar=None):
-        if nargs == 0:
-            raise ValueError('nargs for append actions must be > 0; if arg '
-                             'strings are not supplying the value to append, '
-                             'the append const action may be more appropriate')
-        if const is not None and nargs != $$.OPTIONAL:
-            raise new Error("nargs must be #{$$.OPTIONAL} to supply const")
-        super(_AppendAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            nargs=nargs,
-            const=const,
-            default=default,
-            type=type,
-            choices=choices,
-            required=required,
-            help=help,
-            metavar=metavar)
+        if options.nargs == 0
+            raise new Error('nargs for append actions must be > 0; if arg ' + \
+                             'strings are not supplying the value to append, ' + \
+                             'the append constant action may be more appropriate')
+        if options.constant != null and nargs != $$.OPTIONAL
+            raise new Error("nargs must be #{$$.OPTIONAL} to supply constant")
+        super(options)
 
     __call__: (parser, namespace, values, option_string=null) ->
-        items = _copy.copy(_ensure_value(namespace, @dest, []))
-        items.append(values)
-        setattr(namespace, @dest, items)
+        items = _.clone(_ensure_value(namespace, @dest, []))
+        items.push(values)
+        namespace.set(@dest, items)
 
 
 class _AppendConstAction extends Action
 
     constructor: (options) ->
-                 option_strings,
-                 dest,
-                 const,
-                 default=None,
-                 required=False,
-                 help=None,
-                 metavar=None):
-        super(_AppendConstAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            nargs=0,
-            const=const,
-            default=default,
-            required=required,
-            help=help,
-            metavar=metavar)
+        if options.constant ?
+            super(options)
+        else
+            raise new Error('constant required for AppendConstAction')
 
     __call__: (parser, namespace, values, option_string=null) ->
-        items = _copy.copy(_ensure_value(namespace, @dest, []))
-        items.append(@const)
-        setattr(namespace, @dest, items)
+        items = _.clone(_ensure_value(namespace, @dest, []))
+        items.append(@constant)
+        namespace.set(@dest, items)
 
 
 class _CountAction extends Action
 
     constructor: (options) ->
-                 option_strings,
-                 dest,
-                 default=None,
-                 required=False,
-                 help=None):
-        super(_CountAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            nargs=0,
-            default=default,
-            required=required,
-            help=help)
+        # nargs ignored
+        options.nargs = 0
+        # constant, type, choices ignmored
+        super(options)
 
     __call__: (parser, namespace, values, option_string=null) ->
         new_count = _ensure_value(namespace, @dest, 0) + 1
-        setattr(namespace, @dest, new_count)
+        namespace.set(@dest, new_count)
 
 
 class _HelpAction extends Action
 
     constructor: (options) ->
-                 option_strings,
-                 dest=$$.SUPPRESS,
-                 default=$$.SUPPRESS,
-                 help=None):
-        super(_HelpAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            default=default,
-            nargs=0,
-            help=help)
+        options.dest ?= $$.SUPPRESS
+        options.defaultValue ?= $$.SUPPRESS
+        options.nargs = 0
+        super(options)
 
     __call__: (parser, namespace, values, option_string=null) ->
         parser.print_help()
-        parser.exit()
+        if parser.debug
+            console.log 'Help pseudo exit'
+        else
+            parser.exit()
 
 
 class _VersionAction extends Action
 
     constructor: (options) ->
-                 option_strings,
-                 version=None,
-                 dest=SUPPRESS,
-                 default=SUPPRESS,
-                 help="show program's version number and exit"):
-        super(_VersionAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            default=default,
-            nargs=0,
-            help=help)
+        options.version ?=null
+        options.dest ?= $$.SUPPRESS
+        options.defaultValue ?= $$.SUPPRESS
+        options.help ?="show program's version number and exit"
+        super(options)
         @version = version
 
     __call__: (parser, namespace, values, option_string=null) ->
         version = @version
-        if version is None:
-            version = parser.version
+        version ?= parser.version
         formatter = parser._get_formatter()
         formatter.add_text(version)
-        parser.exit(message=formatter.format_help())
+        parser.exit(formatter.format_help())
 
 
 class _SubParsersAction extends Action
 
+    ###
     class _ChoicesPseudoAction extends Action
 
         constructor: (options) -> 
             name, help):
             sup = super(_SubParsersAction._ChoicesPseudoAction, self)
             sup.__init__(option_strings=[], dest=name, help=help)
-
+    ###
     constructor: (options) ->
-                 option_strings,
-                 prog,
-                 parser_class,
-                 dest=SUPPRESS,
-                 help=None,
-                 metavar=None):
-
         @_prog_prefix = prog
         @_parser_class = parser_class
-        @_name_parser_map = _collections.OrderedDict()
+        @_name_parser_map = {} # _collections.OrderedDict()
         @_choices_actions = []
 
-        super(_SubParsersAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            nargs=PARSER,
-            choices=@_name_parser_map,
-            help=help,
-            metavar=metavar)
+        options.dest = options.dest ? $$.SUPPRESS
+        options.nargs = $$.PARSER
+        options.choices = @_name_parser_map
+        super(options)
 
-    def add_parser(self, name, **kwargs):
+    add_parser: (name, options) ->
         # set prog from the existing prefix
-        if kwargs.get('prog') is None:
-            kwargs['prog'] = '%s %s' % (@_prog_prefix, name)
+        options.prog ?= "#{@_prog_prefix} #{name}"
 
         # create a pseudo-action to hold the choice help
-        if 'help' in kwargs:
-            help = kwargs.pop('help')
+        if options.help?
+            help = options.help
+            delete options.help
             choice_action = @_ChoicesPseudoAction(name, help)
-            @_choices_actions.append(choice_action)
+            @_choices_actions.push(choice_action)
 
         # create the parser and add it to the map
-        parser = @_parser_class(**kwargs)
+        parser = @_parser_class(options)
         @_name_parser_map[name] = parser
         return parser
 
-    def _get_subactions(self):
-        return @_choices_actions
+    _get_subactions: () ->
+        @_choices_actions
 
     __call__: (parser, namespace, values, option_string=null) ->
         parser_name = values[0]
-        arg_strings = values[1:]
+        arg_strings = values[1..]
 
         # set the parser name if requested
-        if @dest is not SUPPRESS:
-            setattr(namespace, @dest, parser_name)
+        if @dest != $$.SUPPRESS
+            namespace.set(@dest, parser_name)
 
         # select the parser
-        try:
-            parser = @_name_parser_map[parser_name]
-        except KeyError:
-            tup = parser_name, ', '.join(@_name_parser_map)
-            msg = _('unknown parser %r (choices: %s)') % tup
-            raise ArgumentError(self, msg)
+        
+        parser = @_name_parser_map[parser_name] ? null
+        if parser == null
+            choices = _.keys(@.name_parser.map).join(', ')
+            msg = "unknown parser #{parse_name} (choices: #{choices})"
+            raise new Error(msg)
 
         # parse all the remaining options into the namespace
         # store any unrecognized options on the object, so that the top
         # level parser can decide what to do with them
-        namespace, arg_strings = parser.parse_known_args(arg_strings, namespace)
-        if arg_strings:
-            vars(namespace).setdefault($$._UNRECOGNIZED_ARGS_ATTR, [])
-            getattr(namespace, $$._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
+        [namespace, arg_strings] = parser.parse_known_args(arg_strings, namespace)
+        if arg_strings
+            raise new Error('subparser call incomplete')
+            #vars(namespace).setdefault($$._UNRECOGNIZED_ARGS_ATTR, [])
+            # getattr(namespace, $$._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
+            #namespace.get($$._UNRECOGNIZED_ARGS_ATTR)
 
+_ensure_value = (namespace, name, value) ->
+    if getattr(namespace, name, null) is null
+        setattr(namespace, name, value)
+    return getattr(namespace, name)
+    
+# basic methods in Python, used to access Namespace 
+# with these do we need a special Namespace class?
+getattr = (obj, key, defaultValue) ->
+    obj[key] ? defaultValue
+setattr = (obj, key, value) ->
+    obj[key] = value
+hasattr = (obj, key) ->
+    obj[key]?
+    
+# should I make None a syn of null?
