@@ -24,18 +24,30 @@ adir = '../node_modules/argparse/lib/'
 $$ = require(adir+'const');
 
 # Actions
-ActionHelp = require(adir+'action/help');
-ActionAppend = require(adir+'action/append');
-ActionAppendConstant = require(adir+'action/append/constant');
-ActionCount = require(adir+'action/count');
-ActionStore = require(adir+'action/store');
-ActionStoreConstant = require(adir+'action/store/constant');
-ActionStoreTrue = require(adir+'action/store/true');
-ActionStoreFalse = require(adir+'action/store/false');
-ActionVersion = require(adir+'action/version');
-ActionSubparsers = require(adir+'action/subparsers');
-
-
+if false
+  ActionHelp = require(adir+'action/help');
+  ActionAppend = require(adir+'action/append');
+  ActionAppendConstant = require(adir+'action/append/constant');
+  ActionCount = require(adir+'action/count');
+  ActionStore = require(adir+'action/store');
+  ActionStoreConstant = require(adir+'action/store/constant');
+  ActionStoreTrue = require(adir+'action/store/true');
+  ActionStoreFalse = require(adir+'action/store/false');
+  ActionVersion = require(adir+'action/version');
+  ActionSubparsers = require(adir+'action/subparsers');
+else
+  action = require('./action')
+  ActionHelp = action.ActionHelp
+  ActionAppend = action.ActionAppend
+  ActionAppendConstant = action.ActionAppendConstant
+  ActionCount = action.ActionCount
+  ActionStore = action.ActionStore
+  ActionStoreConstant = action.ActionStoreConstant
+  ActionStoreTrue = action.ActionStoreTrue
+  ActionStoreFalse = action.ActionStoreFalse
+  ActionVersion = action.ActionVersion
+  ActionSubparsers = action.ActionSubparsers
+  
 class _ActionsContainer
   constructor: (options={}) ->
     # description, prefixChars, argumentDefault, conflictHandler):

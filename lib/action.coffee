@@ -1,7 +1,7 @@
 
 if not module.parent?
     DEBUG = (arg...) ->
-      arg.unshift('====> ')
+      arg.unshift('A===> ')
       console.log arg...
 else
     DEBUG = () ->
@@ -103,7 +103,7 @@ class Action
         return [(name, getattr(self, name)) for name in names]
     ###
     __call__: (parser, namespace, values, option_string=null) ->
-        raise new Error(_('.__call__() not defined'))
+        throw new Error(_('.__call__() not defined'))
     call: (parser, namespace, values, option_string=null) ->
         @__call__(parser, namespace, values, option_string=null)
 
@@ -111,28 +111,28 @@ class Action
         # not in py, but used by the JS version that this was built on
         # is this unique enough to use as hash key?
         if @optionStrings.length>0
-            @.optionsStrings.join('/')
+            @.optionStrings.join('/')
         else if @metavar ? @.metavar != $$.SUPPRESS
             @.metavar
         else if @dest ? @dest != $$.SUPPRESS
             @.dest
             
-    @isOptional: () ->
+    isOptional: () ->
         # convenience used by argparse
         not @isPositional()
         
-    @isPositional: () ->
+    isPositional: () ->
         @optionStrings.length == 0
 
 class _StoreAction extends Action
 
     constructor: (options) ->
         if options.nargs == 0
-            raise new ValueError('nargs for store actions must be > 0; if you ' +\
+            throw new Error('nargs for store actions must be > 0; if you ' +\
                              'have nothing to store, actions such as store ' +\
                              'true or store constant may be more appropriate')
-        if optons.constant != null and options.nargs != $$.OPTIONAL
-            raise new Error("nargs must be #{$$.OPTIONAL} to supply constant")
+        if options.constant? and options.nargs != $$.OPTIONAL
+            throw new Error("nargs must be #{$$.OPTIONAL} to supply constant")
         super(options)
 
     __call__: (parser, namespace, values, option_string=null) ->
@@ -142,6 +142,8 @@ class _StoreConstAction extends Action
 
     constructor: (options) ->
         options.nargs = 0
+        if not options.constant?
+            throw new Error('StoreConstAction needs a constant parameter')
         # sqawk if options.constant not provided?
         # type, choices ignored (error if given?)
         super(options)
@@ -153,42 +155,46 @@ class _StoreTrueAction extends _StoreConstAction
 
     constructor: (options) ->
         options.constant = true
+        options.defaultValue = false
         super(options)
 
 class _StoreFalseAction extends _StoreConstAction
 
     constructor: (options) ->
         options.constant = false
+        options.defaultValue = true
         super(options)
 
 class _AppendAction extends Action
 
     constructor: (options) ->
         if options.nargs == 0
-            raise new Error('nargs for append actions must be > 0; if arg ' + \
+            throw new Error('nargs for append actions must be > 0; if arg ' + \
                              'strings are not supplying the value to append, ' + \
                              'the append constant action may be more appropriate')
-        if options.constant != null and nargs != $$.OPTIONAL
-            raise new Error("nargs must be #{$$.OPTIONAL} to supply constant")
+        if options.constant? and options.nargs != $$.OPTIONAL
+            throw new Error("nargs must be #{$$.OPTIONAL} to supply constant")
         super(options)
 
     __call__: (parser, namespace, values, option_string=null) ->
+        DEBUG namespace
+        DEBUG _ensure_value(namespace, @dest, [])
         items = _.clone(_ensure_value(namespace, @dest, []))
         items.push(values)
         namespace.set(@dest, items)
-
+        
 
 class _AppendConstAction extends Action
 
     constructor: (options) ->
-        if options.constant ?
+        if options.constant?
             super(options)
         else
-            raise new Error('constant required for AppendConstAction')
+            throw new Error('constant required for AppendConstAction')
 
     __call__: (parser, namespace, values, option_string=null) ->
         items = _.clone(_ensure_value(namespace, @dest, []))
-        items.append(@constant)
+        items.push(@constant)
         namespace.set(@dest, items)
 
 
@@ -212,6 +218,10 @@ class _HelpAction extends Action
         options.defaultValue ?= $$.SUPPRESS
         options.nargs = 0
         super(options)
+        DEBUG @__call__
+        DEBUG @isPositional
+        DEBUG @optionStrings
+        DEBUG @getName()
 
     __call__: (parser, namespace, values, option_string=null) ->
         parser.print_help()
@@ -229,7 +239,7 @@ class _VersionAction extends Action
         options.defaultValue ?= $$.SUPPRESS
         options.help ?="show program's version number and exit"
         super(options)
-        @version = version
+        @version = options.version
 
     __call__: (parser, namespace, values, option_string=null) ->
         version = @version
@@ -293,14 +303,14 @@ class _SubParsersAction extends Action
         if parser == null
             choices = _.keys(@.name_parser.map).join(', ')
             msg = "unknown parser #{parse_name} (choices: #{choices})"
-            raise new Error(msg)
+            throw new Error(msg)
 
         # parse all the remaining options into the namespace
         # store any unrecognized options on the object, so that the top
         # level parser can decide what to do with them
         [namespace, arg_strings] = parser.parse_known_args(arg_strings, namespace)
         if arg_strings
-            raise new Error('subparser call incomplete')
+            throw new Error('subparser call incomplete')
             #vars(namespace).setdefault($$._UNRECOGNIZED_ARGS_ATTR, [])
             # getattr(namespace, $$._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
             #namespace.get($$._UNRECOGNIZED_ARGS_ATTR)
@@ -310,6 +320,18 @@ _ensure_value = (namespace, name, value) ->
         setattr(namespace, name, value)
     return getattr(namespace, name)
     
+exports.ActionHelp = _HelpAction
+exports.ActionAppend = _AppendAction
+exports.ActionAppendConstant = _AppendConstAction
+exports.ActionCount = _CountAction
+exports.ActionStore = _StoreAction
+exports.ActionStoreConstant = _StoreConstAction
+exports.ActionStoreTrue = _StoreTrueAction
+exports.ActionStoreFalse = _StoreFalseAction
+exports.ActionVersion = _VersionAction
+exports.ActionSubparsers = _SubParsersAction
+
+    
 # basic methods in Python, used to access Namespace 
 # with these do we need a special Namespace class?
 getattr = (obj, key, defaultValue) ->
@@ -318,5 +340,52 @@ setattr = (obj, key, value) ->
     obj[key] = value
 hasattr = (obj, key) ->
     obj[key]?
+
+class Namespace
+Namespace::isset = (key) ->
+    this[key]?
+Namespace::get = (key, defaultValue) ->
+    this[key] ? defaultValue
+Namespace::set = (key, value) ->
+  this[key] = value 
+Namespace::repr = () ->
+    'Namespace'+ util.inspect(@)
     
 # should I make None a syn of null?
+
+if not module.parent?
+  console.log action = new Action({help:'testing Action'})
+  console.log action = new _StoreAction({dest:'xxx',help:'testing StoreAction'})
+  action.call(null, namespace = new Namespace(), 1); console.log namespace
+  console.log action = new _StoreConstAction({dest:'xxx',help:'testing StoreConstAction',constant:4})
+  action.call(null, namespace = new Namespace()); console.log namespace
+  console.log action = new _StoreTrueAction({dest:'xxx',help:'testing storeTrue'})
+  action.call(null, namespace = new Namespace()); console.log namespace
+  console.log action = new _StoreFalseAction({dest:'xxx',help:'testing storeFalse'})
+  action.call(null, namespace = new Namespace()); console.log namespace
+  
+  console.log action = new _AppendAction({dest:'xxx',help:'testing AppendAction',constant:'x',nargs:'?'})
+  namespace = new Namespace(); namespace.set('xxx',[2,3])
+  action.call(null, namespace, 1); console.log namespace
+  
+  console.log action = new _AppendConstAction({dest:'xxx',constant:0, help:'testing AppendConstAction',nargs:'?'})
+  action.call(null, namespace, 1); console.log namespace
+  console.log action = new _CountAction({dest:'xxx',help:'testing CountAction',nargs:'?'})
+  action.call(null, namespace=new Namespace()); console.log namespace
+  action.call(null, namespace); console.log namespace
+  
+  parser = {}; parser.debug=false
+  parser.print_help = ()->console.log "HELP"
+  parser.exit = (msg='') -> console.log "EXIT", msg
+  console.log 'parser', parser
+  console.log action = new _HelpAction({})
+  action.call(parser)
+  parser._get_formatter = () -> 
+    formatter  = {}
+    formatter.add_text = (@text) -> 
+    formatter.format_help = () -> "help;version #{@text}"
+    formatter
+  console.log action = new _VersionAction({version:'1.2.3'})
+  action.call(parser)
+
+  

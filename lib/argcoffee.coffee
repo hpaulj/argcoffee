@@ -1121,7 +1121,7 @@ if TEST and 0
         # console.log (action.dest for action in childParser._get_optional_actions())
     console.log '====================================='
     
-if TEST and 0
+if TEST and 1
     int1 = (arg) ->
         result = parseInt(arg,10)
         if (isNaN(result))
@@ -1142,7 +1142,7 @@ if TEST and 0
         argv = ['-xz','123']
     else 
         argv = null
-    console.log parser
+    #console.log parser
     console.log parser.parse_known_args(argv)
     
     args = parser.parseArgs(argv)
@@ -1172,7 +1172,7 @@ if TEST and 0
     console.log args
     
     console.log '====================================='
-if TEST and 1
+if TEST and 0
     parser = new ArgumentParser({debug: true});
     parser.addArgument(['-1'], {dest: 'one'});
     parser.addArgument(['foo'], {nargs: '?'});
