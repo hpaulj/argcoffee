@@ -76,8 +76,8 @@ class Action
     ###
 
     constructor: (options) ->
-        @optionStrings = options.option_strings ? options.optionStrings
-        @dest = options.dest
+        @optionStrings = options.option_strings ? options.optionStrings ? []
+        @dest = options.dest ? ''
         @nargs = options.nargs ? null
         @constant = options.constant ? null
         @defaultValue = options. defaultValue ? null
@@ -142,9 +142,10 @@ class _StoreConstAction extends Action
 
     constructor: (options) ->
         options.nargs = 0
+        options.constant ?= options.const
+        # const is a JS keyword
         if not options.constant?
             throw new Error('StoreConstAction needs a constant parameter')
-        # sqawk if options.constant not provided?
         # type, choices ignored (error if given?)
         super(options)
         
@@ -187,6 +188,8 @@ class _AppendAction extends Action
 class _AppendConstAction extends Action
 
     constructor: (options) ->
+        options.nargs = 0
+        options.constant ?= options.const
         if options.constant?
             super(options)
         else
@@ -218,10 +221,10 @@ class _HelpAction extends Action
         options.defaultValue ?= $$.SUPPRESS
         options.nargs = 0
         super(options)
-        DEBUG @__call__
-        DEBUG @isPositional
-        DEBUG @optionStrings
-        DEBUG @getName()
+        #DEBUG @__call__
+        #DEBUG @isPositional
+        #DEBUG @optionStrings
+        #DEBUG @getName()
 
     __call__: (parser, namespace, values, option_string=null) ->
         parser.print_help()
@@ -251,17 +254,18 @@ class _VersionAction extends Action
 
 class _SubParsersAction extends Action
 
-    ###
     class _ChoicesPseudoAction extends Action
 
-        constructor: (options) -> 
-            name, help):
-            sup = super(_SubParsersAction._ChoicesPseudoAction, self)
-            sup.__init__(option_strings=[], dest=name, help=help)
-    ###
+        constructor: (name, aliases, help) -> 
+            metavar = dest = name
+            if aliases?
+              metavar += " (#{aliases.join(', ')})"
+            options = {option_strings:[], dest:name, help:help, metavar:metavar}
+            super(options)
+    
     constructor: (options) ->
-        @_prog_prefix = prog
-        @_parser_class = parser_class
+        @_prog_prefix = options.prog
+        @_parser_class = options.parser_class ? options.parserClass
         @_name_parser_map = {} # _collections.OrderedDict()
         @_choices_actions = []
 
@@ -272,19 +276,31 @@ class _SubParsersAction extends Action
 
     add_parser: (name, options) ->
         # set prog from the existing prefix
+        options ?= {}
         options.prog ?= "#{@_prog_prefix} #{name}"
-
+        if options.aliases?
+            aliases = options.aliases
+            delete options.aliases
+        else
+            aliases = []
+        
         # create a pseudo-action to hold the choice help
         if options.help?
             help = options.help
             delete options.help
-            choice_action = @_ChoicesPseudoAction(name, help)
+            choice_action = new _ChoicesPseudoAction(name, aliases, help)
             @_choices_actions.push(choice_action)
 
         # create the parser and add it to the map
-        parser = @_parser_class(options)
+        parser = new @_parser_class(options)
         @_name_parser_map[name] = parser
+        
+        # make parser available under aliases also
+        for alias in aliases
+            @._name_parser_map[alias] = parser
+            
         return parser
+    addParser: (name, options) -> @add_parser(name, options)
 
     _get_subactions: () ->
         @_choices_actions
@@ -298,7 +314,6 @@ class _SubParsersAction extends Action
             namespace.set(@dest, parser_name)
 
         # select the parser
-        
         parser = @_name_parser_map[parser_name] ? null
         if parser == null
             choices = _.keys(@.name_parser.map).join(', ')
@@ -309,11 +324,11 @@ class _SubParsersAction extends Action
         # store any unrecognized options on the object, so that the top
         # level parser can decide what to do with them
         [namespace, arg_strings] = parser.parse_known_args(arg_strings, namespace)
-        if arg_strings
-            throw new Error('subparser call incomplete')
-            #vars(namespace).setdefault($$._UNRECOGNIZED_ARGS_ATTR, [])
-            # getattr(namespace, $$._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
-            #namespace.get($$._UNRECOGNIZED_ARGS_ATTR)
+        if arg_strings.length>0
+            if not namespace[$$._UNRECOGNIZED_ARGS_ATTR]?
+              namespace[$$._UNRECOGNIZED_ARGS_ATTR] = []
+            for astring in arg_strings
+              namespace[$$._UNRECOGNIZED_ARGS_ATTR].push(astring)
 
 _ensure_value = (namespace, name, value) ->
     if getattr(namespace, name, null) is null

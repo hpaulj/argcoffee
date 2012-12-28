@@ -28,9 +28,8 @@ if not ArgumentParser.prototype.parse_args?
   ArgumentParser::parse_known_args = (args) ->
           @parseKnownArgs(args)
 
-# edit add_help to addHelp
-# put guard around FileType
 
+header 'intro with sum/max'
 sum = (a,b) ->
     print 'sum stub'
 max = (a,b) ->
@@ -42,7 +41,9 @@ parser.add_argument('integers', {metavar:'N', type:'int', nargs:'+', \
 parser.add_argument('--sum', {dest:'accumulate', action:'storeConst', \
                     const:sum, defaultValue:max,
                     help:'sum the integers (default: find the max)'})
-print parser.parse_args(['--sum', '7', '-1', '42'])
+args = parser.parse_args(['--sum', '7', '-1', '42'])
+print args
+print args.accumulate(args)
 parser.print_help()
 
 header 'description'
@@ -197,7 +198,7 @@ parser.add_argument('--foo',{})
 print parser.parse_args('--foo 1'.split(' '))
 
 parser = new ArgumentParser()
-parser.add_argument('--foo', action:'storeConst', const:42)
+parser.add_argument('--foo', action:'storeConst', constant:42)
 print parser.parse_args('--foo'.split(' '))
 
 parser = new ArgumentParser()
@@ -210,8 +211,8 @@ parser.add_argument('--foo', {action:'append'})
 print parser.parse_args('--foo 1 --foo 2'.split(' '))
 
 parser = new ArgumentParser()
-parser.add_argument('--str', {dest:'types', action:'appendConst', const:'string'})
-parser.add_argument('--int', {dest:'types', action:'appendConst', const:'int'})
+parser.add_argument('--str', {dest:'types', action:'appendConst', constant:'string'})
+parser.add_argument('--int', {dest:'types', action:'appendConst', constant:'int'})
 print parser.parse_args('--str --int'.split(' '))
 
 
@@ -249,7 +250,7 @@ print parser.parse_args('c --foo a b'.split(' '))
 
 
 parser = new ArgumentParser()
-parser.add_argument('--foo', {nargs:'?', const:'c', defaultValue:'d'})
+parser.add_argument('--foo', {nargs:'?', constant:'c', defaultValue:'d'})
 parser.add_argument('bar', {nargs:'?', defaultValue:'d'})
 print parser.parse_args('XX --foo YY'.split(' '))
 
@@ -548,7 +549,7 @@ parser.add_argument(
     'integers', {metavar:'int', type:'int', choices:[0...10],\
     nargs:'+', help:'an integer in the range 0..9'})
 parser.add_argument(\
-    '--sum', {dest:'accumulate', action:'storeConst', const:sum,\
+    '--sum', {dest:'accumulate', action:'storeConst', constant:sum,\
     defaultValue:max, help:'sum the integers (default: find the max)'})
 print parser.parse_args(['1', '2', '3', '4'])
 
@@ -612,12 +613,14 @@ subparsers.addParser('foo',{})
 subparsers.addParser('bar',{})
 parser.print_help()
 
-# sub-command functions
+header 'sub-command functions'
 foo = (args) ->
-    print(args.x * args.y)
+    print "foo cmd: #{args.x}*#{args.y}=#{args.x * args.y}"
+    'foo result'
 
 bar = (args) ->
-    print('((%s))' % args.z)
+    print "var: ({args.z})"
+    'bar return value'
 
 # create the top-level parser
 parser = new ArgumentParser({debug:true, description:'toplevel parser'})
@@ -640,20 +643,23 @@ catch error
     print 'help error,',error
     
 # parse the args and call whatever function was selected
-try
-    print 'args: foo 1 -x 2'
-    args = parser.parse_args('foo 1 -x 2'.split(' '))
-    print args  # error: args is {}
-    #print args.func(args)
-catch error
-    print error.message
+
+  print 'should be foo func with y=1, x=2'
+  print 'args: foo 1 -x 2'
+  args = parser.parse_args('foo 1 -x 2'.split(' '))
+  print args  # error: args is {}
+  args.func(args)
+
 try
     # parse the args and call whatever function was selected
+    print 'should be bar func with arg z'
     args = parser.parse_args('bar XYZYX'.split(' '))
-    #print args.func(args)
+    print args
+    args.func(args)
 catch error
     print error.message
     
+header 'subparser with dest'
 parser = new ArgumentParser({debug:true})
 subparsers = parser.add_subparsers({dest:'subparser_name'})
 subparser1 = subparsers.addParser('1')
@@ -661,6 +667,7 @@ subparser1.add_argument('-x',{})
 subparser2 = subparsers.addParser('2')
 subparser2.add_argument('y',{})
 try
+    print 'should be subparser with dest with arg y'
     print parser.parse_args(['2', 'frobble'])
 catch error
     print error.message
