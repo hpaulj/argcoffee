@@ -20,15 +20,15 @@ _.str = require('underscore.string')
 
 # other argparse
 adir = './'
-adir = '../node_modules/argparse/lib/'
-$$ = require(adir+'const')
+#adir = '../node_modules/argparse/lib/'
+$$ = require('./const')
 
 if false
   ActionContainer = require(adir+'action_container')
 else
   _ActionsContainer = require('./argcontainer')._ActionsContainer
-argumentErrorHelper = require(adir+'argument/error')
-HelpFormatter = require(adir+'help/formatter')
+#argumentErrorHelper = require('./error')
+HelpFormatter = require('./formatter')
 
 if false
   Namespace = require(adir+'namespace')
@@ -818,13 +818,13 @@ class ArgumentParser extends _ActionsContainer
         except ArgumentTypeError:
             name = getattr(action.type, '__name__', repr(action.type))
             msg = str(_sys.exc_info()[1])
-            raise ArgumentError(action, msg)
+            throw argumentError(action, msg)
 
         # TypeErrors or ValueErrors also indicate errors
         except (TypeError, ValueError):
             name = getattr(action.type, '__name__', repr(action.type))
             msg = _('invalid %s value: %r')
-            raise ArgumentError(action, msg % (name, arg_string))
+            throw argumentError(action, msg % (name, arg_string))
         ###
         # return the converted value
         return result
@@ -872,7 +872,7 @@ class ArgumentParser extends _ActionsContainer
           'Invalid choice: %(value)s (choose from [%(choices)s])',
           {value: value, choices: choices}
         );
-        throw argumentErrorHelper(action, message);
+        throw argumentError(action, message);
       }
     };
     ###
@@ -1082,6 +1082,20 @@ FileType = (mode) ->
 # args.outfile should then be a writable filehandle
 exports.FileType = FileType
         
+argumentError = (argument, message) ->
+  ERR_CODE = 'ARGError'
+  if argument.getName?
+    argumentName = argument.getName()
+  else
+    argumentName = '' + argument
+  if argumentName?
+    errMessage = "argument '#{argumentName}': #{message}"
+  else
+    errMessage = "#{message}"  
+  # format = !argumentName ? '%(message)s': 'argument "%(argumentName)s": %(message)s';
+  err = new TypeError(errMessage)
+  err.code = ERR_CODE
+  return err
 
 
 

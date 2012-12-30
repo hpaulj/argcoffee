@@ -1,0 +1,1433 @@
+76 'test cases'
+
+ 1 =====================
+TestDefaultSuppress
+expected: {} got { baz: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: {},
+  expected: { baz: false },
+  operator: 'deepEqual' }
+expected: { foo: 'a' } got { baz: false, foo: 'a' }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: 'a' },
+  expected: { baz: false, foo: 'a' },
+  operator: 'deepEqual' }
+expected: { foo: 'a', bar: [ 'b' ] } got { baz: false, foo: 'a', bar: [ 'b' ] }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: 'a', bar: [ 'b' ] },
+  expected: { baz: false, foo: 'a', bar: [ 'b' ] },
+  operator: 'deepEqual' }
+expected: { baz: true } got { baz: true }
+expected: { foo: 'a', baz: true } got { baz: true, foo: 'a' }
+expected: { bar: [ 'b' ], foo: 'a', baz: true } got { baz: true, foo: 'a', bar: [ 'b' ] }
+success tests: 6 of 6
+OOPS, no error -x
+failure tests: 0 of 1
+
+ 2 =====================
+TestEmptyAndSpaceContainingArguments
+expected: { y: null, x: '' } got { x: '', y: null }
+expected: { y: null, x: 'a badger' } got { x: 'a badger', y: null }
+expected: { y: null, x: '-a badger' } got { x: '-a badger', y: null }
+expected: { y: '', x: null } got { x: null, y: '' }
+expected: { y: 'a badger', x: null } got { x: null, y: 'a badger' }
+expected: { y: '-a badger', x: null } got { x: null, y: '-a badger' }
+expected: { y: 'a badger', x: null } got { x: null, y: 'a badger' }
+expected: { y: '-a badger', x: null } got { x: null, y: '-a badger' }
+success tests: 8 of 8
+[-y] TestEmptyAndSpaceContainingArguments: error: -y/--yyy: expected one argument
+
+failure tests: 1 of 1
+
+ 3 =====================
+TestNargsRemainder
+expected: { y: [], x: 'X', z: null } got { x: 'X', y: [], z: null }
+expected: { y: [], x: 'X', z: 'Z' } got { x: 'X', y: [], z: 'Z' }
+expected: { y: [ 'A', 'B', '-z', 'Z' ], x: 'X', z: null } got { x: 'X', y: [ 'A', 'B', '-z', 'Z' ], z: null }
+expected: { y: [ 'Y', '--foo' ], x: 'X', z: null } got { x: 'X', y: [ 'Y', '--foo' ], z: null }
+success tests: 4 of 4
+[] TestNargsRemainder: error: too few arguments
+
+[-z] TestNargsRemainder: error: -z: expected one argument
+
+[-z Z] TestNargsRemainder: error: too few arguments
+
+failure tests: 3 of 3
+
+ 4 =====================
+TestNargsZeroOrMore
+expected: { y: [], x: null } got { x: null, y: [] }
+expected: { y: [], x: [] } got { x: [], y: [] }
+expected: { y: [], x: [ 'a' ] } got { x: [ 'a' ], y: [] }
+expected: { y: [ 'b' ], x: [ 'a' ] } got { x: [ 'a' ], y: [ 'b' ] }
+expected: { y: [ 'a' ], x: null } got { x: null, y: [ 'a' ] }
+expected: { y: [ 'a' ], x: [] } got { x: [], y: [ 'a' ] }
+expected: { y: [ 'a' ], x: [ 'b' ] } got { x: [ 'b' ], y: [ 'a' ] }
+success tests: 7 of 7
+failure tests: 0 of 0
+
+ 5 =====================
+TestOptionLike
+expected: { y: null, x: null, z: [] } got { x: null, y: null, z: [] }
+expected: { y: null, x: 2.5, z: [] } got { x: 2.5, y: null, z: [] }
+expected: { y: null, x: 2.5, z: [ 'a' ] } got { x: 2.5, y: null, z: [ 'a' ] }
+expected: { y: 0.5, x: null, z: [] } got { x: null, y: 0.5, z: [] }
+expected: { y: -0.5, x: null, z: [] } got { x: null, y: -0.5, z: [] }
+expected: { y: 0.5, x: null, z: [] } got { x: null, y: 0.5, z: [] }
+expected: { y: 0.5, x: null, z: [ 'a' ] } got { x: null, y: 0.5, z: [ 'a' ] }
+expected: { y: null, x: null, z: [ 'a' ] } got { x: null, y: null, z: [ 'a' ] }
+expected: { y: null, x: 1, z: [ 'a' ] } got { x: 1, y: null, z: [ 'a' ] }
+expected: { y: null, x: 1, z: [ 'a' ] } got { x: 1, y: null, z: [ 'a' ] }
+expected: { y: 1, x: null, z: [ 'a' ] } got { x: null, y: 1, z: [ 'a' ] }
+success tests: 11 of 11
+[-x] TestOptionLike: error: -x: expected one argument
+
+[-y2.5] TestOptionLike: error: unrecognized arguments: -y2.5
+
+[-xa] a is not a valid float.
+[-x -a] TestOptionLike: error: -x: expected one argument
+
+[-x -3] TestOptionLike: error: -x: expected one argument
+
+[-x -3.5] TestOptionLike: error: -x: expected one argument
+
+[-3 -3.5] TestOptionLike: error: -3: expected one argument
+
+[-x -2.5] TestOptionLike: error: -x: expected one argument
+
+OOPS, no error -x -2.5 a
+[-3 -.5] TestOptionLike: error: -3: expected one argument
+
+[a x -1] TestOptionLike: error: unrecognized arguments: -1
+
+OOPS, no error -x -1 a
+OOPS, no error -3 -1 a
+failure tests: 10 of 13
+
+ 6 =====================
+TestOptionalsActionAppend
+expected: { baz: null } got { baz: null }
+expected: { baz: [ 'a' ] } got { baz: [ 'a' ] }
+expected: { baz: [ 'a', 'b' ] } got { baz: [ 'a', 'b' ] }
+success tests: 3 of 3
+[a] TestOptionalsActionAppend: error: unrecognized arguments: a
+
+[--baz] TestOptionalsActionAppend: error: --baz: expected one argument
+
+[a --baz] TestOptionalsActionAppend: error: --baz: expected one argument
+
+[--baz a b] TestOptionalsActionAppend: error: unrecognized arguments: b
+
+failure tests: 4 of 4
+
+ 7 =====================
+TestOptionalsActionAppendConst
+expected: { b: null } got { b: null }
+expected: { b: [ 'Exception' ] } got { b: [ 'Exception' ] }
+expected: { b: [ 'Exception', 'x', 'Exception', 'yz' ] } got { b: [ 'Exception', 'x', 'Exception', 'yz' ] }
+success tests: 3 of 3
+[a] TestOptionalsActionAppendConst: error: unrecognized arguments: a
+
+[-c] TestOptionalsActionAppendConst: error: -c: expected one argument
+
+[a -c] TestOptionalsActionAppendConst: error: -c: expected one argument
+
+[-bx] TestOptionalsActionAppendConst: error: -b: ignored explicit argument x
+
+[-b x] TestOptionalsActionAppendConst: error: unrecognized arguments: x
+
+failure tests: 5 of 5
+
+ 8 =====================
+TestOptionalsActionAppendConstWithDefault
+expected: { b: [ 'X' ] } got { b: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { b: [ 'X' ] },
+  expected: { b: null },
+  operator: 'deepEqual' }
+expected: { b: [ 'X', 'Exception' ] } got { b: [ 'Exception' ] }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { b: [ 'X', 'Exception' ] },
+  expected: { b: [ 'Exception' ] },
+  operator: 'deepEqual' }
+expected: { b: [ 'X', 'Exception', 'x', 'Exception', 'yz' ] } got { b: [ 'Exception', 'x', 'Exception', 'yz' ] }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { b: [ 'X', 'Exception', 'x', 'Exception', 'yz' ] },
+  expected: { b: [ 'Exception', 'x', 'Exception', 'yz' ] },
+  operator: 'deepEqual' }
+success tests: 3 of 3
+[a] TestOptionalsActionAppendConstWithDefault: error: unrecognized arguments: a
+
+[-c] TestOptionalsActionAppendConstWithDefault: error: -c: expected one argument
+
+[a -c] TestOptionalsActionAppendConstWithDefault: error: -c: expected one argument
+
+[-bx] TestOptionalsActionAppendConstWithDefault: error: -b: ignored explicit argument x
+
+[-b x] TestOptionalsActionAppendConstWithDefault: error: unrecognized arguments: x
+
+failure tests: 5 of 5
+
+ 9 =====================
+TestOptionalsActionAppendWithDefault
+expected: { baz: [ 'X' ] } got { baz: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { baz: [ 'X' ] },
+  expected: { baz: null },
+  operator: 'deepEqual' }
+expected: { baz: [ 'X', 'a' ] } got { baz: [ 'a' ] }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { baz: [ 'X', 'a' ] },
+  expected: { baz: [ 'a' ] },
+  operator: 'deepEqual' }
+expected: { baz: [ 'X', 'a', 'b' ] } got { baz: [ 'a', 'b' ] }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { baz: [ 'X', 'a', 'b' ] },
+  expected: { baz: [ 'a', 'b' ] },
+  operator: 'deepEqual' }
+success tests: 3 of 3
+[a] TestOptionalsActionAppendWithDefault: error: unrecognized arguments: a
+
+[--baz] TestOptionalsActionAppendWithDefault: error: --baz: expected one argument
+
+[a --baz] TestOptionalsActionAppendWithDefault: error: --baz: expected one argument
+
+[--baz a b] TestOptionalsActionAppendWithDefault: error: unrecognized arguments: b
+
+failure tests: 4 of 4
+
+ 10 =====================
+TestOptionalsActionCount
+expected: { x: null } got { x: null }
+expected: { x: 1 } got { x: 1 }
+success tests: 2 of 2
+[a] TestOptionalsActionCount: error: unrecognized arguments: a
+
+[-x a] TestOptionalsActionCount: error: unrecognized arguments: a
+
+[-x b] TestOptionalsActionCount: error: unrecognized arguments: b
+
+[-x a -x b] TestOptionalsActionCount: error: unrecognized arguments: a b
+
+failure tests: 4 of 4
+
+ 11 =====================
+TestOptionalsActionStore
+expected: { x: null } got { x: null }
+expected: { x: 'foo' } got { x: 'foo' }
+success tests: 2 of 2
+[a] TestOptionalsActionStore: error: unrecognized arguments: a
+
+[a -x] TestOptionalsActionStore: error: -x: expected one argument
+
+failure tests: 2 of 2
+
+ 12 =====================
+TestOptionalsActionStoreConst
+expected: { y: null } got { y: null }
+expected: { y: 'object' } got { y: 'object' }
+success tests: 2 of 2
+[a] TestOptionalsActionStoreConst: error: unrecognized arguments: a
+
+failure tests: 1 of 1
+
+ 13 =====================
+TestOptionalsActionStoreFalse
+expected: { z: true } got { z: true }
+expected: { z: false } got { z: false }
+success tests: 2 of 2
+[a] TestOptionalsActionStoreFalse: error: unrecognized arguments: a
+
+[-za] TestOptionalsActionStoreFalse: error: -z: ignored explicit argument a
+
+[-z a] TestOptionalsActionStoreFalse: error: unrecognized arguments: a
+
+failure tests: 3 of 3
+
+ 14 =====================
+TestOptionalsActionStoreTrue
+expected: { apple: false } got { apple: false }
+expected: { apple: true } got { apple: true }
+success tests: 2 of 2
+[a] TestOptionalsActionStoreTrue: error: unrecognized arguments: a
+
+[--apple=b] TestOptionalsActionStoreTrue: error: --apple: ignored explicit argument b
+
+[--apple b] TestOptionalsActionStoreTrue: error: unrecognized arguments: b
+
+failure tests: 3 of 3
+
+ 15 =====================
+TestOptionalsAlmostNumericAndPositionals
+expected: { y: false, x: null } got { x: null, y: false }
+expected: { y: false, x: '-2' } got { x: '-2', y: false }
+expected: { y: false, x: 'a' } got { x: 'a', y: false }
+expected: { y: true, x: null } got { x: null, y: true }
+expected: { y: true, x: 'a' } got { x: 'a', y: true }
+success tests: 5 of 5
+OOPS, no error -k3
+failure tests: 0 of 1
+
+ 16 =====================
+TestOptionalsAlternatePrefixChars
+camelized: { add_help: false,
+  prefix_chars: '+:/',
+  addHelp: false,
+  prefixChars: '+:/' }
+expected: { bar: null, baz: null, f: false } got { f: false, bar: null, baz: null }
+expected: { bar: null, baz: null, f: true } got { f: true, bar: null, baz: null }
+expected: { bar: 'B', baz: null, f: false } got { f: false, bar: 'B', baz: null }
+expected: { bar: 'B', baz: null, f: true } got { f: true, bar: 'B', baz: null }
+expected: { bar: null, baz: 42, f: true } got { f: true, bar: null, baz: 42 }
+expected: { bar: null, baz: 42, f: true } got { f: true, bar: null, baz: 42 }
+success tests: 6 of 6
+[--bar] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: --bar
+
+[-fbar] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: -fbar
+
+[-b B] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: -b B
+
+[B] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: B
+
+[-f] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: -f
+
+[--bar B] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: --bar B
+
+[-baz] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: -baz
+
+[-h] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: -h
+
+[--help] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: --help
+
+[+h] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: +h
+
+[::help] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: ::help
+
+[/help] TestOptionalsAlternatePrefixChars: error: unrecognized arguments: /help
+
+failure tests: 12 of 12
+
+ 17 =====================
+TestOptionalsAlternatePrefixCharsAddedHelp
+camelized: { add_help: true,
+  prefix_chars: '+:/',
+  addHelp: true,
+  prefixChars: '+:/' }
+expected: { bar: null, baz: null, f: false } got { f: false, bar: null, baz: null }
+expected: { bar: null, baz: null, f: true } got { f: true, bar: null, baz: null }
+expected: { bar: 'B', baz: null, f: false } got { f: false, bar: 'B', baz: null }
+expected: { bar: 'B', baz: null, f: true } got { f: true, bar: 'B', baz: null }
+expected: { bar: null, baz: 42, f: true } got { f: true, bar: null, baz: 42 }
+expected: { bar: null, baz: 42, f: true } got { f: true, bar: null, baz: 42 }
+success tests: 6 of 6
+[--bar] TestOptionalsAlternatePrefixCharsAddedHelp: error: unrecognized arguments: --bar
+
+[-fbar] TestOptionalsAlternatePrefixCharsAddedHelp: error: unrecognized arguments: -fbar
+
+[-b B] TestOptionalsAlternatePrefixCharsAddedHelp: error: unrecognized arguments: -b B
+
+[B] TestOptionalsAlternatePrefixCharsAddedHelp: error: unrecognized arguments: B
+
+[-f] TestOptionalsAlternatePrefixCharsAddedHelp: error: unrecognized arguments: -f
+
+[--bar B] TestOptionalsAlternatePrefixCharsAddedHelp: error: unrecognized arguments: --bar B
+
+[-baz] TestOptionalsAlternatePrefixCharsAddedHelp: error: unrecognized arguments: -baz
+
+failure tests: 7 of 7
+
+ 18 =====================
+TestOptionalsAlternatePrefixCharsMultipleShortArgs
+camelized: { add_help: false,
+  prefix_chars: '+-',
+  addHelp: false,
+  prefixChars: '+-' }
+expected: { y: false, x: false, z: false } got { x: false, y: false, z: false }
+expected: { y: false, x: true, z: false } got { x: true, y: false, z: false }
+expected: { y: true, x: true, z: false } got { x: true, y: true, z: false }
+expected: { y: true, x: true, z: true } got { x: true, y: true, z: true }
+success tests: 4 of 4
+[-w] TestOptionalsAlternatePrefixCharsMultipleShortArgs: error: unrecognized arguments: -w
+
+[-xyz] TestOptionalsAlternatePrefixCharsMultipleShortArgs: error: -x: ignored explicit argument yz
+
+[+x] TestOptionalsAlternatePrefixCharsMultipleShortArgs: error: unrecognized arguments: +x
+
+[-y] TestOptionalsAlternatePrefixCharsMultipleShortArgs: error: unrecognized arguments: -y
+
+[+xyz] TestOptionalsAlternatePrefixCharsMultipleShortArgs: error: unrecognized arguments: +xyz
+
+failure tests: 5 of 5
+
+ 19 =====================
+TestOptionalsChoices
+expected: { g: null, f: null } got { f: null, g: null }
+expected: { g: null, f: 'a' } got { f: 'a', g: null }
+expected: { g: null, f: 'c' } got { f: 'c', g: null }
+expected: { g: 0, f: null } got { f: null, g: 0 }
+expected: { g: 3, f: null } got { f: null, g: 3 }
+expected: { g: 4, f: 'b' } got { f: 'b', g: 4 }
+success tests: 6 of 6
+[a] TestOptionalsChoices: error: unrecognized arguments: a
+
+[-f d] TestOptionalsChoices: error: -f: invalid choice: d (choose from abc)
+
+[-fad] TestOptionalsChoices: error: -f: invalid choice: ad (choose from abc)
+
+[-ga] a is not a valid integer.
+[-g 6] TestOptionalsChoices: error: -g: invalid choice: 6 (choose from 0,1,2,3,4)
+
+failure tests: 5 of 5
+
+ 20 =====================
+TestOptionalsDefault
+expected: { y: 42, x: null } got { x: null, y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 42, x: null },
+  expected: { x: null, y: null },
+  operator: 'deepEqual' }
+expected: { y: 42, x: 'x' } got { x: 'x', y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 42, x: 'x' },
+  expected: { x: 'x', y: null },
+  operator: 'deepEqual' }
+expected: { y: 'y', x: null } got { x: null, y: 'y' }
+success tests: 3 of 3
+[a] TestOptionalsDefault: error: unrecognized arguments: a
+
+failure tests: 1 of 1
+
+ 21 =====================
+TestOptionalsDest
+expected: { zabbaz: null, foo_bar: 'f' } got { foo_bar: 'f', zabbaz: null }
+expected: { zabbaz: 'g', foo_bar: null } got { foo_bar: null, zabbaz: 'g' }
+expected: { zabbaz: 'i', foo_bar: 'h' } got { foo_bar: 'h', zabbaz: 'i' }
+expected: { zabbaz: 'j', foo_bar: 'k' } got { foo_bar: 'k', zabbaz: 'j' }
+success tests: 4 of 4
+[a] TestOptionalsDest: error: unrecognized arguments: a
+
+failure tests: 1 of 1
+
+ 22 =====================
+TestOptionalsDoubleDash
+expected: { foo: null } got { foo: null }
+expected: { foo: 'a' } got { foo: 'a' }
+expected: { foo: 'a' } got { foo: 'a' }
+expected: { foo: '-2.5' } got { foo: '-2.5' }
+expected: { foo: '-2.5' } got { foo: '-2.5' }
+success tests: 5 of 5
+[--foo] TestOptionalsDoubleDash: error: --foo: expected one argument
+
+[-f] TestOptionalsDoubleDash: error: unrecognized arguments: -f
+
+[-f a] TestOptionalsDoubleDash: error: unrecognized arguments: -f a
+
+[a] TestOptionalsDoubleDash: error: unrecognized arguments: a
+
+OOPS, no error --foo -x
+OOPS, no error --foo --bar
+failure tests: 4 of 6
+
+ 23 =====================
+TestOptionalsDoubleDashPartialMatch
+expected: { bat: null, badger: false } got { badger: false, bat: null }
+expected: { bat: 'X', badger: false } got { badger: false, bat: 'X' }
+expected: { bat: null, badger: true } got { badger: true, bat: null }
+expected: { bat: null, badger: true } got { badger: true, bat: null }
+expected: { bat: null, badger: true } got { badger: true, bat: null }
+expected: { bat: null, badger: true } got { badger: true, bat: null }
+success tests: 6 of 6
+[--bar] TestOptionalsDoubleDashPartialMatch: error: unrecognized arguments: --bar
+
+[--b] TestOptionalsDoubleDashPartialMatch: error: ambiguous option: --b could match --badger, --bat
+
+[--ba] TestOptionalsDoubleDashPartialMatch: error: ambiguous option: --ba could match --badger, --bat
+
+[--b=2] TestOptionalsDoubleDashPartialMatch: error: ambiguous option: --b=2 could match --badger, --bat
+
+[--ba=4] TestOptionalsDoubleDashPartialMatch: error: ambiguous option: --ba=4 could match --badger, --bat
+
+[--badge 5] TestOptionalsDoubleDashPartialMatch: error: unrecognized arguments: 5
+
+failure tests: 6 of 6
+
+ 24 =====================
+TestOptionalsDoubleDashPrefixMatch
+expected: { ba: null, badger: false } got { badger: false, ba: null }
+expected: { ba: 'X', badger: false } got { badger: false, ba: 'X' }
+expected: { ba: 'X', badger: false } got { badger: false, ba: 'X' }
+expected: { ba: null, badger: true } got { badger: true, ba: null }
+expected: { ba: null, badger: true } got { badger: true, ba: null }
+expected: { ba: null, badger: true } got { badger: true, ba: null }
+expected: { ba: null, badger: true } got { badger: true, ba: null }
+success tests: 7 of 7
+[--bar] TestOptionalsDoubleDashPrefixMatch: error: unrecognized arguments: --bar
+
+[--b] TestOptionalsDoubleDashPrefixMatch: error: ambiguous option: --b could match --badger, --ba
+
+[--ba] TestOptionalsDoubleDashPrefixMatch: error: --ba: expected one argument
+
+[--b=2] TestOptionalsDoubleDashPrefixMatch: error: ambiguous option: --b=2 could match --badger, --ba
+
+[--badge 5] TestOptionalsDoubleDashPrefixMatch: error: unrecognized arguments: 5
+
+failure tests: 5 of 5
+
+ 25 =====================
+TestOptionalsNargs1
+expected: { x: null } got { x: null }
+expected: { x: [ 'a' ] } got { x: [ 'a' ] }
+success tests: 2 of 2
+[a] TestOptionalsNargs1: error: unrecognized arguments: a
+
+[-x] TestOptionalsNargs1: error: -x: expected 1 argument(s)
+
+failure tests: 2 of 2
+
+ 26 =====================
+TestOptionalsNargs3
+expected: { x: null } got { x: null }
+expected: { x: [ 'a', 'b', 'c' ] } got { x: [ 'a', 'b', 'c' ] }
+success tests: 2 of 2
+[a] TestOptionalsNargs3: error: unrecognized arguments: a
+
+[-x] TestOptionalsNargs3: error: -x: expected 3 argument(s)
+
+[-x a] TestOptionalsNargs3: error: -x: expected 3 argument(s)
+
+[-x a b] TestOptionalsNargs3: error: -x: expected 3 argument(s)
+
+[a -x] TestOptionalsNargs3: error: -x: expected 3 argument(s)
+
+[a -x b] TestOptionalsNargs3: error: -x: expected 3 argument(s)
+
+failure tests: 6 of 6
+
+ 27 =====================
+TestOptionalsNargsDefault
+expected: { x: null } got { x: null }
+expected: { x: 'a' } got { x: 'a' }
+success tests: 2 of 2
+[a] TestOptionalsNargsDefault: error: unrecognized arguments: a
+
+[-x] TestOptionalsNargsDefault: error: -x: expected one argument
+
+failure tests: 2 of 2
+
+ 28 =====================
+TestOptionalsNargsOneOrMore
+expected: { y: 'spam', x: null } got { x: null, y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: null },
+  expected: { x: null, y: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: [ 'a' ] } got { x: [ 'a' ], y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: [ 'a' ] },
+  expected: { x: [ 'a' ], y: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: [ 'a', 'b' ] } got { x: [ 'a', 'b' ], y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: [ 'a', 'b' ] },
+  expected: { x: [ 'a', 'b' ], y: null },
+  operator: 'deepEqual' }
+expected: { y: [ 'a' ], x: null } got { x: null, y: [ 'a' ] }
+expected: { y: [ 'a', 'b' ], x: null } got { x: null, y: [ 'a', 'b' ] }
+success tests: 5 of 5
+[a] TestOptionalsNargsOneOrMore: error: unrecognized arguments: a
+
+[-x] TestOptionalsNargsOneOrMore: error: -x: expected at least one argument
+
+[-y] TestOptionalsNargsOneOrMore: error: -y: expected at least one argument
+
+[a -x] TestOptionalsNargsOneOrMore: error: -x: expected at least one argument
+
+[a -y b] TestOptionalsNargsOneOrMore: error: unrecognized arguments: a
+
+failure tests: 5 of 5
+
+ 29 =====================
+TestOptionalsNargsOptional
+expected: { y: 'spam', x: null, z: 84, w: null } got { w: null, x: null, y: null, z: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: null, z: 84, w: null },
+  expected: { w: null, x: null, y: null, z: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: null, z: 84, w: null } got { w: null, x: null, y: null, z: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: null, z: 84, w: null },
+  expected: { w: null, x: null, y: null, z: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: null, z: 84, w: '2' } got { w: '2', x: null, y: null, z: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: null, z: 84, w: '2' },
+  expected: { w: '2', x: null, y: null, z: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: 42, z: 84, w: null } got { w: null, x: null, y: null, z: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: 42, z: 84, w: null },
+  expected: { w: null, x: null, y: null, z: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: '2', z: 84, w: null } got { w: null, x: '2', y: null, z: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: '2', z: 84, w: null },
+  expected: { w: null, x: '2', y: null, z: null },
+  operator: 'deepEqual' }
+expected: { y: null, x: null, z: 84, w: null } got { w: null, x: null, y: null, z: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: null, x: null, z: 84, w: null },
+  expected: { w: null, x: null, y: null, z: null },
+  operator: 'deepEqual' }
+expected: { y: '2', x: null, z: 84, w: null } got { w: null, x: null, y: '2', z: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: '2', x: null, z: 84, w: null },
+  expected: { w: null, x: null, y: '2', z: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: null, z: 42, w: null } got { w: null, x: null, y: null, z: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: null, z: 42, w: null },
+  expected: { w: null, x: null, y: null, z: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: null, z: 2, w: null } got { w: null, x: null, y: null, z: 2 }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: null, z: 2, w: null },
+  expected: { w: null, x: null, y: null, z: 2 },
+  operator: 'deepEqual' }
+success tests: 9 of 9
+[2] TestOptionalsNargsOptional: error: unrecognized arguments: 2
+
+failure tests: 1 of 1
+
+ 30 =====================
+TestOptionalsNargsZeroOrMore
+expected: { y: 'spam', x: null } got { x: null, y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: null },
+  expected: { x: null, y: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: [] } got { x: [], y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: [] },
+  expected: { x: [], y: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: [ 'a' ] } got { x: [ 'a' ], y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: [ 'a' ] },
+  expected: { x: [ 'a' ], y: null },
+  operator: 'deepEqual' }
+expected: { y: 'spam', x: [ 'a', 'b' ] } got { x: [ 'a', 'b' ], y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 'spam', x: [ 'a', 'b' ] },
+  expected: { x: [ 'a', 'b' ], y: null },
+  operator: 'deepEqual' }
+expected: { y: [], x: null } got { x: null, y: [] }
+expected: { y: [ 'a' ], x: null } got { x: null, y: [ 'a' ] }
+expected: { y: [ 'a', 'b' ], x: null } got { x: null, y: [ 'a', 'b' ] }
+success tests: 7 of 7
+[a] TestOptionalsNargsZeroOrMore: error: unrecognized arguments: a
+
+failure tests: 1 of 1
+
+ 31 =====================
+TestOptionalsNumeric
+expected: { one: null } got { one: null }
+expected: { one: 'a' } got { one: 'a' }
+expected: { one: 'a' } got { one: 'a' }
+expected: { one: '-2' } got { one: '-2' }
+success tests: 4 of 4
+[-1] TestOptionalsNumeric: error: -1: expected one argument
+
+[a] TestOptionalsNumeric: error: unrecognized arguments: a
+
+[-1 --foo] TestOptionalsNumeric: error: -1: expected one argument
+
+[-1 -y] TestOptionalsNumeric: error: -1: expected one argument
+
+[-1 -1] TestOptionalsNumeric: error: -1: expected one argument
+
+[-1 -2] TestOptionalsNumeric: error: -1: expected one argument
+
+failure tests: 6 of 6
+
+ 32 =====================
+TestOptionalsNumericAndPositionals
+expected: { y: false, x: null } got { x: null, y: false }
+expected: { y: false, x: 'a' } got { x: 'a', y: false }
+expected: { y: true, x: null } got { x: null, y: true }
+expected: { y: true, x: 'a' } got { x: 'a', y: true }
+success tests: 4 of 4
+[-2] TestOptionalsNumericAndPositionals: error: unrecognized arguments: -2
+
+[-315] TestOptionalsNumericAndPositionals: error: unrecognized arguments: -315
+
+failure tests: 2 of 2
+
+ 33 =====================
+TestOptionalsRequired
+expected: { x: 1 } got { x: 1 }
+expected: { x: 42 } got { x: 42 }
+success tests: 2 of 2
+[a] TestOptionalsRequired: error: argument -x is required
+
+[] TestOptionalsRequired: error: argument -x is required
+
+failure tests: 2 of 2
+
+ 34 =====================
+TestOptionalsShortLong
+expected: { verbose: false } got { verbose: false }
+expected: { verbose: true } got { verbose: true }
+expected: { verbose: true } got { verbose: true }
+expected: { verbose: true } got { verbose: true }
+expected: { verbose: true } got { verbose: true }
+success tests: 5 of 5
+[--x --verbose] TestOptionalsShortLong: error: unrecognized arguments: --x
+
+[-N] TestOptionalsShortLong: error: unrecognized arguments: -N
+
+[a] TestOptionalsShortLong: error: unrecognized arguments: a
+
+[-v x] TestOptionalsShortLong: error: unrecognized arguments: x
+
+failure tests: 4 of 4
+
+ 35 =====================
+TestOptionalsSingleDash
+expected: { x: null } got { x: null }
+expected: { x: 'a' } got { x: 'a' }
+expected: { x: 'a' } got { x: 'a' }
+expected: { x: '-1' } got { x: '-1' }
+expected: { x: '-1' } got { x: '-1' }
+success tests: 5 of 5
+[-x] TestOptionalsSingleDash: error: -x: expected one argument
+
+[a] TestOptionalsSingleDash: error: unrecognized arguments: a
+
+[--foo] TestOptionalsSingleDash: error: unrecognized arguments: --foo
+
+OOPS, no error -x --foo
+OOPS, no error -x -y
+failure tests: 3 of 5
+
+ 36 =====================
+TestOptionalsSingleDashAmbiguous
+expected: { foorab: null, foobar: null } got { foobar: null, foorab: null }
+expected: { foorab: null, foobar: 'a' } got { foobar: 'a', foorab: null }
+expected: { foorab: 'a', foobar: null } got { foobar: null, foorab: 'a' }
+expected: { foorab: null, foobar: 'a' } got { foobar: 'a', foorab: null }
+expected: { foorab: 'a', foobar: null } got { foobar: null, foorab: 'a' }
+expected: { foorab: null, foobar: 'a' } got { foobar: 'a', foorab: null }
+expected: { foorab: 'a', foobar: null } got { foobar: null, foorab: 'a' }
+success tests: 7 of 7
+[-f] TestOptionalsSingleDashAmbiguous: error: ambiguous option: -f could match -foobar, -foorab
+
+[-f a] TestOptionalsSingleDashAmbiguous: error: ambiguous option: -f could match -foobar, -foorab
+
+[-fa] TestOptionalsSingleDashAmbiguous: error: unrecognized arguments: -fa
+
+[-foa] TestOptionalsSingleDashAmbiguous: error: unrecognized arguments: -foa
+
+[-foo] TestOptionalsSingleDashAmbiguous: error: ambiguous option: -foo could match -foobar, -foorab
+
+[-fo] TestOptionalsSingleDashAmbiguous: error: ambiguous option: -fo could match -foobar, -foorab
+
+[-foo b] TestOptionalsSingleDashAmbiguous: error: ambiguous option: -foo could match -foobar, -foorab
+
+failure tests: 7 of 7
+
+ 37 =====================
+TestOptionalsSingleDashCombined
+expected: { x: false, z: null, yyy: null } got { x: false, yyy: null, z: null }
+expected: { x: true, z: null, yyy: null } got { x: true, yyy: null, z: null }
+expected: { x: false, z: 'a', yyy: null } got { x: false, yyy: null, z: 'a' }
+expected: { x: false, z: 'a', yyy: null } got { x: false, yyy: null, z: 'a' }
+expected: { x: true, z: 'a', yyy: null } got { x: true, yyy: null, z: 'a' }
+expected: { x: true, z: 'a', yyy: null } got { x: true, yyy: null, z: 'a' }
+expected: { x: true, z: 'a', yyy: null } got { x: true, yyy: null, z: 'a' }
+expected: { x: true, z: 'a', yyy: null } got { x: true, yyy: null, z: 'a' }
+expected: { x: false, z: null, yyy: 42 } got { x: false, yyy: 42, z: null }
+expected: { x: false, z: null, yyy: 42 } got { x: false, yyy: 42, z: null }
+expected: { x: true, z: 'a', yyy: 42 } got { x: true, yyy: 42, z: 'a' }
+expected: { x: true, z: 'a', yyy: 42 } got { x: true, yyy: 42, z: 'a' }
+success tests: 12 of 12
+[a] TestOptionalsSingleDashCombined: error: unrecognized arguments: a
+
+[--foo] TestOptionalsSingleDashCombined: error: unrecognized arguments: --foo
+
+[-xa] TestOptionalsSingleDashCombined: error: -x: ignored explicit argument a
+
+[-x --foo] TestOptionalsSingleDashCombined: error: unrecognized arguments: --foo
+
+[-x -z] TestOptionalsSingleDashCombined: error: -z: expected one argument
+
+[-z -x] TestOptionalsSingleDashCombined: error: -z: expected one argument
+
+[-yx] TestOptionalsSingleDashCombined: error: unrecognized arguments: -yx
+
+[-yz a] TestOptionalsSingleDashCombined: error: unrecognized arguments: -yz a
+
+[-yyyx] TestOptionalsSingleDashCombined: error: unrecognized arguments: -yyyx
+
+[-yyyza] TestOptionalsSingleDashCombined: error: unrecognized arguments: -yyyza
+
+[-xyza] TestOptionalsSingleDashCombined: error: -x: ignored explicit argument yza
+
+failure tests: 11 of 11
+
+ 38 =====================
+TestOptionalsSingleDashLong
+expected: { foo: null } got { foo: null }
+expected: { foo: 'a' } got { foo: 'a' }
+expected: { foo: '-1' } got { foo: '-1' }
+expected: { foo: 'a' } got { foo: 'a' }
+expected: { foo: 'a' } got { foo: 'a' }
+success tests: 5 of 5
+[-foo] TestOptionalsSingleDashLong: error: -foo: expected one argument
+
+[a] TestOptionalsSingleDashLong: error: unrecognized arguments: a
+
+[--foo] TestOptionalsSingleDashLong: error: unrecognized arguments: --foo
+
+OOPS, no error -foo --foo
+OOPS, no error -foo -y
+[-fooa] TestOptionalsSingleDashLong: error: unrecognized arguments: -fooa
+
+failure tests: 4 of 6
+
+ 39 =====================
+TestOptionalsSingleDashSubsetAmbiguous
+expected: { foorab: null, f: null, foobar: null } got { f: null, foobar: null, foorab: null }
+expected: { foorab: null, f: 'a', foobar: null } got { f: 'a', foobar: null, foorab: null }
+expected: { foorab: null, f: 'a', foobar: null } got { f: 'a', foobar: null, foorab: null }
+expected: { foorab: null, f: 'oa', foobar: null } got { f: 'oa', foobar: null, foorab: null }
+expected: { foorab: null, f: 'ooa', foobar: null } got { f: 'ooa', foobar: null, foorab: null }
+expected: { foorab: null, f: null, foobar: 'a' } got { f: null, foobar: 'a', foorab: null }
+expected: { foorab: 'a', f: null, foobar: null } got { f: null, foobar: null, foorab: 'a' }
+success tests: 7 of 7
+[-f] TestOptionalsSingleDashSubsetAmbiguous: error: -f: expected one argument
+
+[-foo] TestOptionalsSingleDashSubsetAmbiguous: error: ambiguous option: -foo could match -f, -foobar, -foorab
+
+[-fo] TestOptionalsSingleDashSubsetAmbiguous: error: ambiguous option: -fo could match -f, -foobar, -foorab
+
+[-foo b] TestOptionalsSingleDashSubsetAmbiguous: error: ambiguous option: -foo could match -f, -foobar, -foorab
+
+[-foob] TestOptionalsSingleDashSubsetAmbiguous: error: ambiguous option: -foob could match -f, -foobar
+
+[-fooba] TestOptionalsSingleDashSubsetAmbiguous: error: ambiguous option: -fooba could match -f, -foobar
+
+[-foora] TestOptionalsSingleDashSubsetAmbiguous: error: ambiguous option: -foora could match -f, -foorab
+
+failure tests: 7 of 7
+
+ 40 =====================
+TestOptionalsSingleDoubleDash
+expected: { bar: null, baz: null, f: false } got { f: false, bar: null, baz: null }
+expected: { bar: null, baz: null, f: true } got { f: true, bar: null, baz: null }
+expected: { bar: 'B', baz: null, f: false } got { f: false, bar: 'B', baz: null }
+expected: { bar: 'B', baz: null, f: true } got { f: true, bar: 'B', baz: null }
+expected: { bar: null, baz: 42, f: true } got { f: true, bar: null, baz: 42 }
+expected: { bar: null, baz: 42, f: true } got { f: true, bar: null, baz: 42 }
+success tests: 6 of 6
+[--bar] TestOptionalsSingleDoubleDash: error: --bar: expected one argument
+
+[-fbar] TestOptionalsSingleDoubleDash: error: -f: ignored explicit argument bar
+
+[-fbaz] TestOptionalsSingleDoubleDash: error: -f: ignored explicit argument baz
+
+[-bazf] TestOptionalsSingleDoubleDash: error: unrecognized arguments: -bazf
+
+[-b B] TestOptionalsSingleDoubleDash: error: unrecognized arguments: B
+
+[B] TestOptionalsSingleDoubleDash: error: unrecognized arguments: B
+
+failure tests: 6 of 6
+
+ 41 =====================
+TestParserDefault42
+camelized: { version: '1.0', argument_default: 42, argumentDefault: 42 }
+expected: { bar: 42, foo: 42, baz: 42 } got { foo: null, bar: [], baz: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { bar: 42, foo: 42, baz: 42 },
+  expected: { foo: null, bar: [], baz: false },
+  operator: 'deepEqual' }
+expected: { bar: 42, foo: 'a', baz: 42 } got { foo: 'a', bar: [], baz: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { bar: 42, foo: 'a', baz: 42 },
+  expected: { foo: 'a', bar: [], baz: false },
+  operator: 'deepEqual' }
+expected: { bar: [ 'b' ], foo: 'a', baz: 42 } got { foo: 'a', bar: [ 'b' ], baz: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { bar: [ 'b' ], foo: 'a', baz: 42 },
+  expected: { foo: 'a', bar: [ 'b' ], baz: false },
+  operator: 'deepEqual' }
+expected: { bar: 42, foo: 42, baz: true } got { foo: null, bar: [], baz: true }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { bar: 42, foo: 42, baz: true },
+  expected: { foo: null, bar: [], baz: true },
+  operator: 'deepEqual' }
+expected: { bar: 42, foo: 'a', baz: true } got { foo: 'a', bar: [], baz: true }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { bar: 42, foo: 'a', baz: true },
+  expected: { foo: 'a', bar: [], baz: true },
+  operator: 'deepEqual' }
+expected: { bar: [ 'b' ], foo: 'a', baz: true } got { foo: 'a', bar: [ 'b' ], baz: true }
+success tests: 6 of 6
+OOPS, no error -x
+failure tests: 0 of 1
+
+ 42 =====================
+TestParserDefaultSuppress
+camelized: { argument_default: '==SUPPRESS==',
+  argumentDefault: '==SUPPRESS==' }
+expected: {} got { foo: null, bar: [], baz: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: {},
+  expected: { foo: null, bar: [], baz: false },
+  operator: 'deepEqual' }
+expected: { foo: 'a' } got { foo: 'a', bar: [], baz: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: 'a' },
+  expected: { foo: 'a', bar: [], baz: false },
+  operator: 'deepEqual' }
+expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ], baz: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: 'a', bar: [ 'b' ] },
+  expected: { foo: 'a', bar: [ 'b' ], baz: false },
+  operator: 'deepEqual' }
+expected: { baz: true } got { foo: null, bar: [], baz: true }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { baz: true },
+  expected: { foo: null, bar: [], baz: true },
+  operator: 'deepEqual' }
+expected: { foo: 'a', baz: true } got { foo: 'a', bar: [], baz: true }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: 'a', baz: true },
+  expected: { foo: 'a', bar: [], baz: true },
+  operator: 'deepEqual' }
+expected: { bar: [ 'b' ], foo: 'a', baz: true } got { foo: 'a', bar: [ 'b' ], baz: true }
+success tests: 6 of 6
+OOPS, no error -x
+failure tests: 0 of 1
+
+ 43 =====================
+TestPositionalsActionAppend
+expected: { spam: [ 'a', [ 'b', 'c' ] ] } got { spam: [ 'a', [ 'b', 'c' ] ] }
+success tests: 1 of 1
+[] TestPositionalsActionAppend: error: too few arguments
+
+[--foo] TestPositionalsActionAppend: error: too few arguments
+
+[a] TestPositionalsActionAppend: error: too few arguments
+
+[a b] TestPositionalsActionAppend: error: too few arguments
+
+[a b c d] TestPositionalsActionAppend: error: unrecognized arguments: d
+
+failure tests: 5 of 5
+
+ 44 =====================
+TestPositionalsChoicesInt
+expected: { spam: 4 } got { spam: 4 }
+expected: { spam: 15 } got { spam: 15 }
+success tests: 2 of 2
+[] TestPositionalsChoicesInt: error: too few arguments
+
+[--foo] --foo is not a valid integer.
+[h] h is not a valid integer.
+[42] TestPositionalsChoicesInt: error: null: invalid choice: 42 (choose from 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19)
+
+[ef] ef is not a valid integer.
+failure tests: 5 of 5
+
+ 45 =====================
+TestPositionalsChoicesString
+expected: { spam: 'a' } got { spam: 'a' }
+expected: { spam: 'g' } got { spam: 'g' }
+success tests: 2 of 2
+[] TestPositionalsChoicesString: error: too few arguments
+
+[--foo] TestPositionalsChoicesString: error: null: invalid choice: --foo (choose from a,b,c,d,e,f,g)
+
+[h] TestPositionalsChoicesString: error: null: invalid choice: h (choose from a,b,c,d,e,f,g)
+
+[42] TestPositionalsChoicesString: error: null: invalid choice: 42 (choose from a,b,c,d,e,f,g)
+
+[ef] TestPositionalsChoicesString: error: null: invalid choice: ef (choose from a,b,c,d,e,f,g)
+
+failure tests: 5 of 5
+
+ 46 =====================
+TestPositionalsNargs1
+expected: { foo: [ 'a' ] } got { foo: [ 'a' ] }
+success tests: 1 of 1
+[] TestPositionalsNargs1: error: too few arguments
+
+OOPS, no error -x
+[a b] TestPositionalsNargs1: error: unrecognized arguments: b
+
+failure tests: 2 of 3
+
+ 47 =====================
+TestPositionalsNargs2
+expected: { foo: [ 'a', 'b' ] } got { foo: [ 'a', 'b' ] }
+success tests: 1 of 1
+[] TestPositionalsNargs2: error: too few arguments
+
+[a] TestPositionalsNargs2: error: too few arguments
+
+[-x] TestPositionalsNargs2: error: too few arguments
+
+[a b c] TestPositionalsNargs2: error: unrecognized arguments: c
+
+failure tests: 4 of 4
+
+ 48 =====================
+TestPositionalsNargs2None
+expected: { foo: [ 'a', 'b' ], bar: 'c' } got { foo: [ 'a', 'b' ], bar: 'c' }
+success tests: 1 of 1
+[] TestPositionalsNargs2None: error: too few arguments
+
+[--foo] TestPositionalsNargs2None: error: too few arguments
+
+[a] TestPositionalsNargs2None: error: too few arguments
+
+[a b] TestPositionalsNargs2None: error: too few arguments
+
+[a b c d] TestPositionalsNargs2None: error: unrecognized arguments: d
+
+failure tests: 5 of 5
+
+ 49 =====================
+TestPositionalsNargs2OneOrMore
+expected: { foo: [ 'a', 'b' ], bar: [ 'c' ] } got { foo: [ 'a', 'b' ], bar: [ 'c' ] }
+success tests: 1 of 1
+[] TestPositionalsNargs2OneOrMore: error: too few arguments
+
+[--foo] TestPositionalsNargs2OneOrMore: error: too few arguments
+
+[a] TestPositionalsNargs2OneOrMore: error: too few arguments
+
+[a b] TestPositionalsNargs2OneOrMore: error: too few arguments
+
+failure tests: 4 of 4
+
+ 50 =====================
+TestPositionalsNargs2Optional
+expected: { foo: [ 'a', 'b' ], bar: null } got { foo: [ 'a', 'b' ], bar: null }
+expected: { foo: [ 'a', 'b' ], bar: 'c' } got { foo: [ 'a', 'b' ], bar: 'c' }
+success tests: 2 of 2
+[] TestPositionalsNargs2Optional: error: too few arguments
+
+[--foo] TestPositionalsNargs2Optional: error: too few arguments
+
+[a] TestPositionalsNargs2Optional: error: too few arguments
+
+[a b c d] TestPositionalsNargs2Optional: error: unrecognized arguments: d
+
+failure tests: 4 of 4
+
+ 51 =====================
+TestPositionalsNargs2ZeroOrMore
+expected: { foo: [ 'a', 'b' ], bar: [] } got { foo: [ 'a', 'b' ], bar: [] }
+expected: { foo: [ 'a', 'b' ], bar: [ 'c' ] } got { foo: [ 'a', 'b' ], bar: [ 'c' ] }
+success tests: 2 of 2
+[] TestPositionalsNargs2ZeroOrMore: error: too few arguments
+
+[--foo] TestPositionalsNargs2ZeroOrMore: error: too few arguments
+
+[a] TestPositionalsNargs2ZeroOrMore: error: too few arguments
+
+failure tests: 3 of 3
+
+ 52 =====================
+TestPositionalsNargsNone
+expected: { foo: 'a' } got { foo: 'a' }
+success tests: 1 of 1
+[] TestPositionalsNargsNone: error: too few arguments
+
+OOPS, no error -x
+[a b] TestPositionalsNargsNone: error: unrecognized arguments: b
+
+failure tests: 2 of 3
+
+ 53 =====================
+TestPositionalsNargsNone1
+expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
+success tests: 1 of 1
+[] TestPositionalsNargsNone1: error: too few arguments
+
+[--foo] TestPositionalsNargsNone1: error: too few arguments
+
+[a] TestPositionalsNargsNone1: error: too few arguments
+
+[a b c] TestPositionalsNargsNone1: error: unrecognized arguments: c
+
+failure tests: 4 of 4
+
+ 54 =====================
+TestPositionalsNargsNoneNone
+expected: { foo: 'a', bar: 'b' } got { foo: 'a', bar: 'b' }
+success tests: 1 of 1
+[] TestPositionalsNargsNoneNone: error: too few arguments
+
+[-x] TestPositionalsNargsNoneNone: error: too few arguments
+
+[a] TestPositionalsNargsNoneNone: error: too few arguments
+
+[a b c] TestPositionalsNargsNoneNone: error: unrecognized arguments: c
+
+failure tests: 4 of 4
+
+ 55 =====================
+TestPositionalsNargsNoneOneOrMore
+expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
+expected: { foo: 'a', bar: [ 'b', 'c' ] } got { foo: 'a', bar: [ 'b', 'c' ] }
+success tests: 2 of 2
+[] TestPositionalsNargsNoneOneOrMore: error: too few arguments
+
+[--foo] TestPositionalsNargsNoneOneOrMore: error: too few arguments
+
+[a] TestPositionalsNargsNoneOneOrMore: error: too few arguments
+
+failure tests: 3 of 3
+
+ 56 =====================
+TestPositionalsNargsNoneOneOrMore1
+expected: { bar: [ 'b' ], foo: 'a', baz: [ 'c' ] } got { foo: 'a', bar: [ 'b' ], baz: [ 'c' ] }
+expected: { bar: [ 'b', 'c' ], foo: 'a', baz: [ 'd' ] } got { foo: 'a', bar: [ 'b', 'c' ], baz: [ 'd' ] }
+success tests: 2 of 2
+[] TestPositionalsNargsNoneOneOrMore1: error: too few arguments
+
+[--foo] TestPositionalsNargsNoneOneOrMore1: error: too few arguments
+
+[a] TestPositionalsNargsNoneOneOrMore1: error: too few arguments
+
+[b] TestPositionalsNargsNoneOneOrMore1: error: too few arguments
+
+failure tests: 4 of 4
+
+ 57 =====================
+TestPositionalsNargsNoneOptional
+expected: { foo: 'a', bar: null } got { foo: 'a', bar: null }
+expected: { foo: 'a', bar: 'b' } got { foo: 'a', bar: 'b' }
+success tests: 2 of 2
+[] TestPositionalsNargsNoneOptional: error: too few arguments
+
+OOPS, no error --foo
+[a b c] TestPositionalsNargsNoneOptional: error: unrecognized arguments: c
+
+failure tests: 2 of 3
+
+ 58 =====================
+TestPositionalsNargsNoneOptional1
+expected: { bar: 0.625, foo: 'a', baz: [ 'b' ] } got { foo: 'a', bar: null, baz: [ 'b' ] }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { bar: 0.625, foo: 'a', baz: [ 'b' ] },
+  expected: { foo: 'a', bar: null, baz: [ 'b' ] },
+  operator: 'deepEqual' }
+expected: { bar: 'b', foo: 'a', baz: [ 'c' ] } got { foo: 'a', bar: 'b', baz: [ 'c' ] }
+success tests: 2 of 2
+[] TestPositionalsNargsNoneOptional1: error: too few arguments
+
+[--foo] TestPositionalsNargsNoneOptional1: error: too few arguments
+
+[a] TestPositionalsNargsNoneOptional1: error: too few arguments
+
+failure tests: 3 of 3
+
+ 59 =====================
+TestPositionalsNargsNoneZeroOrMore
+expected: { foo: 'a', bar: [] } got { foo: 'a', bar: [] }
+expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
+expected: { foo: 'a', bar: [ 'b', 'c' ] } got { foo: 'a', bar: [ 'b', 'c' ] }
+success tests: 3 of 3
+[] TestPositionalsNargsNoneZeroOrMore: error: too few arguments
+
+OOPS, no error --foo
+failure tests: 1 of 2
+
+ 60 =====================
+TestPositionalsNargsNoneZeroOrMore1
+expected: { bar: [], foo: 'a', baz: [ 'b' ] } got { foo: 'a', bar: [], baz: [ 'b' ] }
+expected: { bar: [ 'b' ], foo: 'a', baz: [ 'c' ] } got { foo: 'a', bar: [ 'b' ], baz: [ 'c' ] }
+success tests: 2 of 2
+[] TestPositionalsNargsNoneZeroOrMore1: error: too few arguments
+
+[--foo] TestPositionalsNargsNoneZeroOrMore1: error: too few arguments
+
+[a] TestPositionalsNargsNoneZeroOrMore1: error: too few arguments
+
+failure tests: 3 of 3
+
+ 61 =====================
+TestPositionalsNargsOneOrMore
+expected: { foo: [ 'a' ] } got { foo: [ 'a' ] }
+expected: { foo: [ 'a', 'b' ] } got { foo: [ 'a', 'b' ] }
+success tests: 2 of 2
+[] TestPositionalsNargsOneOrMore: error: too few arguments
+
+OOPS, no error -x
+failure tests: 1 of 2
+
+ 62 =====================
+TestPositionalsNargsOneOrMore1
+expected: { foo: [ 'a' ], bar: [ 'b' ] } got { foo: [ 'a' ], bar: [ 'b' ] }
+expected: { foo: [ 'a', 'b' ], bar: [ 'c' ] } got { foo: [ 'a', 'b' ], bar: [ 'c' ] }
+success tests: 2 of 2
+[] TestPositionalsNargsOneOrMore1: error: too few arguments
+
+[--foo] TestPositionalsNargsOneOrMore1: error: too few arguments
+
+[a] TestPositionalsNargsOneOrMore1: error: too few arguments
+
+failure tests: 3 of 3
+
+ 63 =====================
+TestPositionalsNargsOneOrMoreNone
+expected: { foo: [ 'a' ], bar: 'b' } got { foo: [ 'a' ], bar: 'b' }
+expected: { foo: [ 'a', 'b' ], bar: 'c' } got { foo: [ 'a', 'b' ], bar: 'c' }
+success tests: 2 of 2
+[] TestPositionalsNargsOneOrMoreNone: error: too few arguments
+
+[--foo] TestPositionalsNargsOneOrMoreNone: error: too few arguments
+
+[a] TestPositionalsNargsOneOrMoreNone: error: too few arguments
+
+failure tests: 3 of 3
+
+ 64 =====================
+TestPositionalsNargsOptional
+expected: { foo: null } got { foo: null }
+expected: { foo: 'a' } got { foo: 'a' }
+success tests: 2 of 2
+OOPS, no error -x
+[a b] TestPositionalsNargsOptional: error: unrecognized arguments: b
+
+failure tests: 1 of 2
+
+ 65 =====================
+TestPositionalsNargsOptional1
+expected: { foo: null, bar: [ 'a' ] } got { foo: null, bar: [ 'a' ] }
+expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
+success tests: 2 of 2
+[] TestPositionalsNargsOptional1: error: too few arguments
+
+OOPS, no error --foo
+[a b c] TestPositionalsNargsOptional1: error: unrecognized arguments: c
+
+failure tests: 2 of 3
+
+ 66 =====================
+TestPositionalsNargsOptionalConvertedDefault
+expected: { foo: 42 } got { foo: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: 42 },
+  expected: { foo: null },
+  operator: 'deepEqual' }
+expected: { foo: 1 } got { foo: 1 }
+success tests: 2 of 2
+[-x] -x is not a valid integer.
+[a b] a is not a valid integer.
+[1 2] TestPositionalsNargsOptionalConvertedDefault: error: unrecognized arguments: 2
+
+failure tests: 3 of 3
+
+ 67 =====================
+TestPositionalsNargsOptionalDefault
+expected: { foo: 42 } got { foo: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: 42 },
+  expected: { foo: null },
+  operator: 'deepEqual' }
+expected: { foo: 'a' } got { foo: 'a' }
+success tests: 2 of 2
+OOPS, no error -x
+[a b] TestPositionalsNargsOptionalDefault: error: unrecognized arguments: b
+
+failure tests: 1 of 2
+
+ 68 =====================
+TestPositionalsNargsOptionalNone
+expected: { foo: 42, bar: 'a' } got { foo: null, bar: 'a' }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: 42, bar: 'a' },
+  expected: { foo: null, bar: 'a' },
+  operator: 'deepEqual' }
+expected: { foo: 'a', bar: 'b' } got { foo: 'a', bar: 'b' }
+success tests: 2 of 2
+[] TestPositionalsNargsOptionalNone: error: too few arguments
+
+OOPS, no error --foo
+[a b c] TestPositionalsNargsOptionalNone: error: unrecognized arguments: c
+
+failure tests: 2 of 3
+
+ 69 =====================
+TestPositionalsNargsOptionalOneOrMore
+expected: { foo: null, bar: [ 'a' ] } got { foo: null, bar: [ 'a' ] }
+expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
+expected: { foo: 'a', bar: [ 'b', 'c' ] } got { foo: 'a', bar: [ 'b', 'c' ] }
+success tests: 3 of 3
+[] TestPositionalsNargsOptionalOneOrMore: error: too few arguments
+
+OOPS, no error --foo
+failure tests: 1 of 2
+
+ 70 =====================
+TestPositionalsNargsOptionalOptional
+expected: { foo: null, bar: 42 } got { foo: null, bar: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: null, bar: 42 },
+  expected: { foo: null, bar: null },
+  operator: 'deepEqual' }
+expected: { foo: 'a', bar: 42 } got { foo: 'a', bar: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: 'a', bar: 42 },
+  expected: { foo: 'a', bar: null },
+  operator: 'deepEqual' }
+expected: { foo: 'a', bar: 'b' } got { foo: 'a', bar: 'b' }
+success tests: 3 of 3
+OOPS, no error --foo
+[a b c] TestPositionalsNargsOptionalOptional: error: unrecognized arguments: c
+
+failure tests: 1 of 2
+
+ 71 =====================
+TestPositionalsNargsOptionalZeroOrMore
+expected: { foo: null, bar: [] } got { foo: null, bar: [] }
+expected: { foo: 'a', bar: [] } got { foo: 'a', bar: [] }
+expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
+expected: { foo: 'a', bar: [ 'b', 'c' ] } got { foo: 'a', bar: [ 'b', 'c' ] }
+success tests: 4 of 4
+OOPS, no error --foo
+failure tests: 0 of 1
+
+ 72 =====================
+TestPositionalsNargsZeroOrMore
+expected: { foo: [] } got { foo: [] }
+expected: { foo: [ 'a' ] } got { foo: [ 'a' ] }
+expected: { foo: [ 'a', 'b' ] } got { foo: [ 'a', 'b' ] }
+success tests: 3 of 3
+OOPS, no error -x
+failure tests: 0 of 1
+
+ 73 =====================
+TestPositionalsNargsZeroOrMore1
+expected: { foo: [], bar: [ 'a' ] } got { foo: [], bar: [ 'a' ] }
+expected: { foo: [ 'a' ], bar: [ 'b' ] } got { foo: [ 'a' ], bar: [ 'b' ] }
+expected: { foo: [ 'a', 'b' ], bar: [ 'c' ] } got { foo: [ 'a', 'b' ], bar: [ 'c' ] }
+success tests: 3 of 3
+[] TestPositionalsNargsZeroOrMore1: error: too few arguments
+
+OOPS, no error --foo
+failure tests: 1 of 2
+
+ 74 =====================
+TestPositionalsNargsZeroOrMoreDefault
+expected: { foo: 'bar' } got { foo: [] }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { foo: 'bar' },
+  expected: { foo: [] },
+  operator: 'deepEqual' }
+expected: { foo: [ 'a' ] } got { foo: [ 'a' ] }
+expected: { foo: [ 'a', 'b' ] } got { foo: [ 'a', 'b' ] }
+success tests: 3 of 3
+OOPS, no error -x
+failure tests: 0 of 1
+
+ 75 =====================
+TestPositionalsNargsZeroOrMoreNone
+expected: { foo: [], bar: 'a' } got { foo: [], bar: 'a' }
+expected: { foo: [ 'a' ], bar: 'b' } got { foo: [ 'a' ], bar: 'b' }
+expected: { foo: [ 'a', 'b' ], bar: 'c' } got { foo: [ 'a', 'b' ], bar: 'c' }
+success tests: 3 of 3
+[] TestPositionalsNargsZeroOrMoreNone: error: too few arguments
+
+OOPS, no error --foo
+failure tests: 1 of 2
+
+ 76 =====================
+TestPrefixCharacterOnlyArguments
+camelized: { prefix_chars: '-+', prefixChars: '-+' }
+expected: { y: 42, x: null, z: false } got { x: null, y: null, z: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 42, x: null, z: false },
+  expected: { x: null, y: null, z: false },
+  operator: 'deepEqual' }
+expected: { y: 42, x: 'badger', z: false } got { x: null, y: null, z: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 42, x: 'badger', z: false },
+  expected: { x: null, y: null, z: false },
+  operator: 'deepEqual' }
+expected: { y: 42, x: 'X', z: false } got { x: 'X', y: null, z: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 42, x: 'X', z: false },
+  expected: { x: 'X', y: null, z: false },
+  operator: 'deepEqual' }
+expected: { y: -3, x: null, z: false } got { x: null, y: -3, z: false }
+expected: { y: 42, x: null, z: true } got { x: null, y: null, z: true }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 42, x: null, z: true },
+  expected: { x: null, y: null, z: true },
+  operator: 'deepEqual' }
+expected: { y: 42, x: '===', z: false } got { x: '===', y: null, z: false }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: 42, x: '===', z: false },
+  expected: { x: '===', y: null, z: false },
+  operator: 'deepEqual' }
+success tests: 6 of 6
+[-y] TestPrefixCharacterOnlyArguments: error: unrecognized arguments: -y
+
+[+ -] TestPrefixCharacterOnlyArguments: error: +: expected one argument
+
+failure tests: 2 of 2

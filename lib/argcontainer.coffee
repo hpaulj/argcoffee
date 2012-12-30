@@ -18,7 +18,7 @@ _ = require('underscore')
 _.str = require('underscore.string')
 
 adir = './'
-adir = '../node_modules/argparse/lib/'
+# adir = '../node_modules/argparse/lib/'
 
 # Constants
 $$ = require(adir+'const');
@@ -65,10 +65,14 @@ class _ActionsContainer
         this.register('action', null, ActionStore);
         this.register('action', 'store', ActionStore);
         this.register('action', 'storeConst', ActionStoreConstant);
+        this.register('action', 'store_const', ActionStoreConstant);
         this.register('action', 'storeTrue', ActionStoreTrue);
+        this.register('action', 'store_true', ActionStoreTrue);
         this.register('action', 'storeFalse', ActionStoreFalse);
+        this.register('action', 'store_false', ActionStoreFalse);
         this.register('action', 'append', ActionAppend);
         this.register('action', 'appendConst', ActionAppendConstant);
+        this.register('action', 'append_const', ActionAppendConstant);
         this.register('action', 'count', ActionCount);
         this.register('action', 'help', ActionHelp);
         this.register('action', 'version', ActionVersion);
