@@ -1,4 +1,9 @@
-argparse = require('argcoffee')
+if true
+  argparse = require('argcoffee')
+  COFFEE = true
+else
+  argparse = require('argparse')
+  COFFEE = false
 ArgumentParser = argparse.ArgumentParser
 Namespace = argparse.Namespace
 NS = Namespace
@@ -10,8 +15,30 @@ _.str = require('underscore.string')
 camelize = (obj) ->
   # camelize the keys of an object (e.g. parser arguments)
   for key of obj
-    obj[_.str.camelize(key)] = obj[key]
+    key1 = _.str.camelize(key)
+    if key1=='const' then key1 = 'constant'
+    if key1=='default' then key1 = 'defaultValue'
+    value = obj[key]
+    if not COFFEE
+      value = _.str.camelize(value)
+    obj[key1] = value
   obj
+
+if not ArgumentParser.prototype.parse_args?
+  #header 'adding method aliases'
+  ArgumentParser::add_argument =  (args..., options) ->
+          # Python like arguments; 
+          # options still needs to be specified, even if only {}
+          @addArgument(args, options)
+  ArgumentParser::parse_args = (args, namespace) ->
+          @parseArgs(args, namespace)
+  ArgumentParser::print_help = (args) ->
+          @printHelp(args)
+  ArgumentParser::add_subparsers = (args) ->
+          @addSubparsers(args)
+  ArgumentParser::parse_known_args = (args) ->
+          @parseKnownArgs(args)
+
 
 # class Sig
 #    def __init__(self, *args, **kwargs):
@@ -161,9 +188,6 @@ for argv, ns in successes[1:]:
     
 ###
 
-#fromPy = '{"successes": [["", {"x": false, "z": null, "yyy": null}], ["-x", {"x": true, "z": null, "yyy": null}], ["-za", {"x": false, "z": "a", "yyy": null}], ["-z a", {"x": false, "z": "a", "yyy": null}], ["-xza", {"x": true, "z": "a", "yyy": null}], ["-xz a", {"x": true, "z": "a", "yyy": null}], ["-x -za", {"x": true, "z": "a", "yyy": null}], ["-x -z a", {"x": true, "z": "a", "yyy": null}], ["-y", {"x": false, "z": null, "yyy": 42}], ["-yyy", {"x": false, "z": null, "yyy": 42}], ["-x -yyy -za", {"x": true, "z": "a", "yyy": 42}], ["-x -yyy -z a", {"x": true, "z": "a", "yyy": 42}]], "doc": "Test an Optional with a single-dash option string", "argument_signatures": [[["-x"], {"action": "store_true"}], [["-yyy"], {"action": "store_const", "const": 42}], [["-z"], {}]], "name": "TestOptionalsSingleDashCombined", "failures": ["a", "--foo", "-xa", "-x --foo", "-x -z", "-z -x", "-yx", "-yz a", "-yyyx", "-yyyza", "-xyza"]}
-#console.log fromPy
-#obj = JSON.parse(fromPy)
 objlist = require('./testpy') # if written to file
 console.log objlist.length, 'test cases'
 #console.log objlist
@@ -185,6 +209,7 @@ for obj in objlist
   options.description = obj.doc
   parser = new ArgumentParser(options)
   for sig in obj.argument_signatures
+    sig[1] = camelize(sig[1])
     parser.addArgument(sig[0], sig[1])
   
   cnt = 0
@@ -194,11 +219,13 @@ for obj in objlist
     args = parser.parse_args(argv)
     console.log 'expected:',ns,'got',args
     try
-      assert.deepEqual(ns,args)
+      assert.deepEqual(args,ns)
     catch error
       console.log error
+      cnt -= 1
     cnt += 1
-  console.log "success tests: #{cnt} of #{obj.successes.length}"
+  astr = if cnt<obj.successes.length then 'TODO: SUCCESSES TESTS:' else 'successes tests:'
+  console.log "#{astr} #{cnt} of #{obj.successes.length}"
   cnt = 0
   for testcase in obj.failures
     try
@@ -214,7 +241,8 @@ for obj in objlist
     ) # expected error not specified in py orginal
     ###
     cnt += 1
-  console.log "failure tests: #{cnt} of #{obj.failures.length}"
+  astr = if cnt<obj.failures.length then 'TODO: FAILURE TESTS:' else 'failure tests:'
+  console.log "#{astr} #{cnt} of #{obj.failures.length}"
 
 # I added synms to container registry for storeTrue etc.
 

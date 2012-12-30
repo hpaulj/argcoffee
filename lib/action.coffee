@@ -156,14 +156,14 @@ class _StoreTrueAction extends _StoreConstAction
 
     constructor: (options) ->
         options.constant = true
-        options.defaultValue = false
+        options.defaultValue ?= false
         super(options)
 
 class _StoreFalseAction extends _StoreConstAction
 
     constructor: (options) ->
         options.constant = false
-        options.defaultValue = true
+        options.defaultValue ?= true
         super(options)
 
 class _AppendAction extends Action

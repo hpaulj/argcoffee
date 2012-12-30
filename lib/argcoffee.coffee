@@ -90,12 +90,12 @@ class ArgumentParser extends _ActionsContainer
     
         @description=options.description ? null
         @prefix_chars=options.prefixChars ? options.prefix_chars ? '-'
-        @argument_default=options.argument_default ? null
+        @argument_default=options.argument_default ? options.argument_default ? null
         @conflict_handler=options.conflict_handler ? 'error'
         acoptions = {
             description: @description,
             prefixChars: @prefix_chars,
-            argumentDefault: @argument_default, # AC uses cammelcase
+            argument_default: @argument_default,
             conflictHandler: @conflict_handler}
         _ActionsContainer.call(this, acoptions)
         @_positionals = @addArgumentGroup({title: 'Positional arguments'})
@@ -366,7 +366,7 @@ class ArgumentParser extends _ActionsContainer
             # get the optional identified at this index
             option_tuple = option_string_indices[start_index]
             [action, option_string, explicit_arg] = option_tuple
-            #DEBUG 'option tuple:', [action.dest, option_string, explicit_arg]
+            if action? then DEBUG 'option tuple:', [action.dest, option_string, explicit_arg]
             # identify additional optionals in the same arg string
             # (e.g. -xyz is the same as -x -y -z if no args are required)
             match_argument = @_match_argument
@@ -419,8 +419,10 @@ class ArgumentParser extends _ActionsContainer
                 # optional's string arguments with the following strings
                 # if successful, exit the loop
                 else
+                    DEBUG 'consume optional, push action tuple'
                     start = start_index + 1
                     selected_patterns = arg_string_pattern[start...]
+                    DEBUG '    ', start, arg_string_pattern, action.dest
                     arg_count = match_argument(action, selected_patterns)
                     stop = start + arg_count
                     args = arg_strings[start...stop]
@@ -486,7 +488,7 @@ class ArgumentParser extends _ActionsContainer
             # consume any Positionals preceding the next option
             next_option_string_index = Math.min((index for index in index_keys when index >= start_index)...)
             if start_index != next_option_string_index
-                DEBUG 'start index:',start_index
+                DEBUG 'consume positional:',start_index
                 positionals_end_index = consume_positionals(start_index)
 
                 # only try to parse the next optional if we didn't consume
@@ -505,9 +507,11 @@ class ArgumentParser extends _ActionsContainer
                 start_index = next_option_string_index
 
             # consume the next optional and any arguments for it
+            DEBUG 'consume optional',start_index
             start_index = consume_optional(start_index)
 
         # consume any positionals following the last Optional
+        DEBUG 'consume positional',start_index
         stop_index = consume_positionals(start_index)
 
         # if we didn't consume all the argument strings, there were extras
@@ -555,9 +559,11 @@ class ArgumentParser extends _ActionsContainer
     _match_argument: (action, arg_strings_pattern) =>
         # match the pattern for this action to the arg strings
         nargs_pattern = @_get_nargs_pattern(action)
-        # match = _re.match(nargs_pattern, arg_strings_pattern)
+        nargs_pattern = '^'+nargs_pattern
+        # match = _re.match(nargs_pattern, arg_strings_pattern) 
+        # py looks for match from start
         matches = arg_strings_pattern.match(nargs_pattern)
-
+        DEBUG 'match_argument', arg_strings_pattern, nargs_pattern, matches
         # raise an exception if we weren't able to find a match
         if not matches?
             args_errors = {null: 'expected one argument'}
@@ -626,7 +632,7 @@ class ArgumentParser extends _ActionsContainer
         # search through all possible prefixes of the option string
         # and all actions in the parser for possible interpretations
         option_tuples = @_get_option_tuples(arg_string)
-
+        DEBUG 'get opt tuples',arg_string,option_tuples.length
         # if multiple actions match, the option string was ambiguous
         if option_tuples.length > 1
             options = (option_string for [action, option_string, explicit_arg] in option_tuples)
@@ -644,7 +650,7 @@ class ArgumentParser extends _ActionsContainer
         # number, it was meant to be positional
         # unless there are negative-number-like options
         # if @_regexpNegativeNumber.match(arg_string)
-        if arg_string.match(@_regexpNegativeNumber)
+        if arg_string.match(@_negative_number_matcher)
             if not _.any(@_hasNegativeNumberOptionals)
                 return null
 
@@ -1099,7 +1105,7 @@ argumentError = (argument, message) ->
 
 
 
-TEST = if not module.parent? then true else false
+TEST = not module.parent?
 if TEST and 0
     parser = new ArgumentParser()
     #console.log 'obj:',util.inspect(parser,false,0)
@@ -1135,7 +1141,7 @@ if TEST and 0
         # console.log (action.dest for action in childParser._get_optional_actions())
     console.log '====================================='
     
-if TEST and 1
+if TEST and 0
     int1 = (arg) ->
         result = parseInt(arg,10)
         if (isNaN(result))
@@ -1198,7 +1204,15 @@ if TEST and 0
     console.log parser.parseArgs(['-z'])
     console.log parser.parseArgs(['-2']);
 
-    
+    console.log '====================================='
+if TEST and 1
+  parser = new ArgumentParser({debug: true});
+  parser.addArgument(['-x'],{type:'float'});
+  parser.addArgument(['-3'],{type:'float', dest:'y'})
+  parser.addArgument(['z'],{nargs:'*'})
+  args = parser.parse_args(['-2'])    
+  console.log args 
+
 # args from files
 
 # py parse_args takes an optional Namespace arg; it can be a simple object

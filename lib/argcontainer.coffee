@@ -50,11 +50,11 @@ else
   
 class _ActionsContainer
   constructor: (options={}) ->
-    # description, prefixChars, argumentDefault, conflictHandler):
+    # description, prefixChars, argument_default, conflictHandler):
     # super(_ActionsContainer, self).__init__()
 
         @description = options.description
-        @argumentDefault = options.argumentDefault
+        @argument_default = options.argument_default
         @prefix_chars = options.prefixChars ? options.prefix_chars
         @conflictHandler = options.conflictHandler
 
@@ -184,8 +184,8 @@ class _ActionsContainer
             dest = options['dest']
             if dest of @_defaults
                 options['defaultValue'] = @_defaults[dest]
-            else if @argumentDefault is not null
-                options['defaultValue'] = @argumentDefault
+            else if @argument_default != null
+                options['defaultValue'] = @argument_default
             else
                 options['defaultValue'] = null
 
@@ -452,7 +452,7 @@ class _ArgumentGroup extends _ActionsContainer
         # def __init__(self, container, title=None, description=None, **kwargs):
         # add any missing keyword arguments by checking the container
         options.prefix_chars = options.prefixChars ? container.prefix_chars
-        options.argumentDefault = options.argumentDefault ? container.argumentDefault
+        options.argument_default = options.argument_default ? container.argument_default
         options.conflict_handler = options.conflict_handler ? container.conflict_handler
     
         # super_init = super(_ArgumentGroup, self).__init__
@@ -514,7 +514,7 @@ class _MutuallyExclusiveGroup extends _ArgumentGroup
 
 
 if not module.parent?
-  container = new _ActionsContainer({description:'a desciption', prefixChars:'-', argumentDefault:null, conflictHandler:'error'})
+  container = new _ActionsContainer({description:'a desciption', prefixChars:'-', argument_default:null, conflictHandler:'error'})
   console.log container
   container.register('type', null, (x)->x) # types normally added by argparser
   container.add_argument('-x','--xxx', {help:'testing'})
