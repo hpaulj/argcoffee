@@ -90,7 +90,7 @@ class ArgumentParser extends _ActionsContainer
     
         @description=options.description ? null
         @prefix_chars=options.prefixChars ? options.prefix_chars ? '-'
-        @argument_default=options.argument_default ? options.argument_default ? null
+        @argument_default=options.argumentDefault ? options.argument_default ? null
         @conflict_handler=options.conflict_handler ? 'error'
         acoptions = {
             description: @description,
@@ -288,6 +288,7 @@ class ArgumentParser extends _ActionsContainer
         # replace arg strings that are file references
         if @fromfile_prefix_chars?
             arg_strings = @_read_args_from_files(arg_strings) # stub
+            return [namespace, []]
             
         # map all mutually exclusive arguments to the other arguments
         # they can't occur with
@@ -550,8 +551,8 @@ class ArgumentParser extends _ActionsContainer
         DEBUG [namespace.repr(), extras]
         return [namespace, extras]
         
-    # def _read_args_from_files(self, arg_strings):
-    #    stub
+    _read_args_from_files: (arg_strings) ->
+        return arg_strings # stub
     
     convert_arg_line_to_args: (arg_line) ->
         return [arg_line] # no split?
@@ -588,7 +589,7 @@ class ArgumentParser extends _ActionsContainer
         for i in [actions.length..0]
             actions_slice = actions[...i]
             pattern = (foo(action) for action in actions_slice).join('')
-            m = arg_strings_pattern.match(pattern)
+            m = arg_strings_pattern.match('^'+pattern)
             DEBUG 'pattern:',pattern
             DEBUG 'matches:',m
             if m?

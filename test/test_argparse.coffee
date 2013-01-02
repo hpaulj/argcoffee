@@ -1,16 +1,38 @@
-if true
-  argparse = require('argcoffee')
-  COFFEE = true
-else
-  argparse = require('argparse')
-  COFFEE = false
-ArgumentParser = argparse.ArgumentParser
-Namespace = argparse.Namespace
-NS = Namespace
+# usage
+# use test_argparse_convert.py to json serialize as many python tests as it can
+# use this program to test an argparse implementation
+
+# coffee test_argparse.coffee   # to see results
+# coffee test_argparse.coffee|grep TODO   # to see if any tests need attention
+# coffee test_argparse.coffee|grep > test_argparse_results.txt  # to collect in file
+# 
+# change 'COFFEE' to change which parser it uses (could be based on process.argv)
+
 assert = require('assert')
 
 _ = require('underscore')
 _.str = require('underscore.string')
+
+print = console.log
+
+AP = require('argparse').ArgumentParser
+parser = new AP()
+parser.addArgument(['-j','--jsonfile'],{defaultValue: './testpy',help:'json file to load, ./testpy(.json) default'})
+parser.addArgument(['-r','--require'],{defaultValue: 'argparse', help:'module to test, argparse default'})
+parser.addArgument(['-f','--flag'], {defaultValue: 'TODO', help:'error flag, e.g. TODO'})
+parser.addArgument(['-n','--ignorenulls'], {action: 'storeTrue', help: 'ignore null values in namespace'})
+# I use TODO because my editor is set up to flag such a line
+# grep with this flag to filter for such lines
+# the python Namespace includes null default values; pargs.ignorenulls ignores these
+pargs = parser.parseArgs()
+
+argparse = require(pargs.require)
+print "testing #{pargs.require}"
+COFFEE = pargs.require=='argcoffee'
+  
+ArgumentParser = argparse.ArgumentParser
+Namespace = argparse.Namespace
+NS = Namespace
 
 camelize = (obj) ->
   # camelize the keys of an object (e.g. parser arguments)
@@ -20,33 +42,20 @@ camelize = (obj) ->
     if key1=='default' then key1 = 'defaultValue'
     value = obj[key]
     if not COFFEE
-      value = _.str.camelize(value)
+      if key1=='action' 
+        #console.log 'Value', value
+        value = _.str.camelize(value)
     obj[key1] = value
   obj
 
-if not ArgumentParser.prototype.parse_args?
-  #header 'adding method aliases'
-  ArgumentParser::add_argument =  (args..., options) ->
-          # Python like arguments; 
-          # options still needs to be specified, even if only {}
-          @addArgument(args, options)
-  ArgumentParser::parse_args = (args, namespace) ->
-          @parseArgs(args, namespace)
-  ArgumentParser::print_help = (args) ->
-          @printHelp(args)
-  ArgumentParser::add_subparsers = (args) ->
-          @addSubparsers(args)
-  ArgumentParser::parse_known_args = (args) ->
-          @parseKnownArgs(args)
-
-
-# class Sig
-#    def __init__(self, *args, **kwargs):
-#        self.args = args
-#        self.kwargs = kwargs
-# in effect object with a number of 'positional' args and then some keyword args
-# in JS argparse this was implemented as fn with a list arg and obj arg, ([],{})
-
+nnequal = (a,b) ->
+  # deep equal, ignoring null values
+  aKeys = (k for own k,v of a when v!=null)
+  bKeys = (k for own k,v of b when v!=null)
+  console.log aKeys, bKeys
+  return false if aKeys.length isnt bKeys.length
+  return false for key in aKeys when !(key in bKeys) or !_.isEqual(a[key], b[key])
+  return true
 
 psplit = (astring) ->
   # split that is closer the python split()
@@ -56,193 +65,86 @@ psplit = (astring) ->
     result = (r for r in result when r) # remove ''
     return result
   return astring # probably is a list already
-  
-###
-class NS(object):
 
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-    def __repr__(self):
-        sorted_items = sorted(self.__dict__.items())
-        kwarg_str = ', '.join(['%s=%r' % tup for tup in sorted_items])
-        return '%s(%s)' % (type(self).__name__, kwarg_str)
-
-    __hash__ = None
-
-    def __eq__(self, other):
-        return vars(self) == vars(other)
-
-    def __ne__(self, other):
-        return not (self == other)
-###
-
-# NS - namespace, obj that can take keyword initial args
-# has some sort of repr, and can test against others
-
-# argument_signatures is list of 1 or more Sig(); these look like add_argument arguments
-
-###
-pycode = '''
-class TestOptionalsShortLong(ParserTestCase):
-    """Test a combination of single- and double-dash option strings"""
-
-    argument_signatures = [
-        Sig('-v', '--verbose', '-n', '--noisy', action='store_true'),
-    ]
-    failures = ['--x --verbose', '-N', 'a', '-v x']
-    successes = [
-        ('', NS(verbose=False)),
-        ('-v', NS(verbose=True)),
-        ('--verbose', NS(verbose=True)),
-        ('-n', NS(verbose=True)),
-        ('--noisy', NS(verbose=True)),
-    ]
-'''
-console.log pycode
-###
-###
-   argument_signatures = [
-        Sig('-x', action='store_true'),
-        Sig('-yyy', action='store_const', const=42),
-        Sig('-z'),
-    ]
-    failures = ['a', '--foo', '-xa', '-x --foo', '-x -z', '-z -x',
-                '-yx', '-yz a', '-yyyx', '-yyyza', '-xyza']
-    successes = [
-        ('', NS(x=False, yyy=None, z=None)),
-        ('-x', NS(x=True, yyy=None, z=None)),
-        ('-za', NS(x=False, yyy=None, z='a')),
-        ('-z a', NS(x=False, yyy=None, z='a')),
-        ('-xza', NS(x=True, yyy=None, z='a')),
-        ('-xz a', NS(x=True, yyy=None, z='a')),
-        ('-x -za', NS(x=True, yyy=None, z='a')),
-        ('-x -z a', NS(x=True, yyy=None, z='a')),
-        ('-y', NS(x=False, yyy=42, z=None)),
-        ('-yyy', NS(x=False, yyy=42, z=None)),
-        ('-x -yyy -za', NS(x=True, yyy=42, z='a')),
-        ('-x -yyy -z a', NS(x=True, yyy=42, z='a')),
-    ]
-
-# 3 add_argument
-# number of parse_args args that should produce failure
-# number of parse_args args that produce success, and expected namespace
-
-# so expected testing is:
-# construct a parser with the 3 arguments
-# loop over the failure cases, with a try or assert_throws 'guard'
-# loop over the success cases, comparing result with the NS
-
-# tasks: convert Sig() to JS ([],{})
-# looping on failures list should be straight forward
-# successes, list of tuples, each tuple is a parse_args string (to split)
-# and NS; need to convert NS to JS obj
-# current Namespace does not take an obj constructor; e.g.
-# for now is just new Namespace(); not new Namespace({x:1, yyy:3})
-# JS syntax does not allow for Namespace(x:1, yyy:3)
-
-
-parser = new ArgumentParser({debug:true})
-parser.add_argument('-v', '--verbose', '-n', '--noisy', {action:'storeTrue'})
-# or parser.addArgument(['-v', '--verbose', '-n', '--noisy'], {action:'storeTrue'})
-# deduced dest is 'verbose'
-
-failures = ['--x --verbose', '-N', 'a', '-v x']
-console.log 'failures', failures
-for testcase in failures
-  
-  try
-    args = parser.parse_args(testcase.split(' '))
-  catch error
-    console.log "[#{testcase}]", error.message
+runtests = (objlist) ->
+  casecnt = 0
+  for obj in objlist
+    # each of these should be a separate test
+    casecnt += 1
+    console.log '\n', casecnt, "====================="
+    console.log obj.name
+    if obj.parser_signature?
+      # some cases have a specialized parser signature
+      options = obj.parser_signature[1]
+      options = camelize(options)
+      console.log 'camelized:', options
+    else
+      options = {}
+    options.debug = true
+    options.prog = obj.name
+    options.description = obj.doc
+    # collect info for error display; clone in case options is modified when used
+    argsigs = [_.clone(options)]  
+    try
+      parser = new ArgumentParser(options)
+    catch error
+      print "#{pargs.flag}: ArgumentParser",error
+      print argsigs
+      continue
+    err = false
+    for sig in obj.argument_signatures
+      sig[1] = camelize(sig[1])
+      argsigs.push([sig[0], _.clone(sig[1])])  # for error display
+      parser.addArgument(sig[0], sig[1])
     
-  assert.throws(
-    () -> 
-      args = parser.parse_args(psplit(testcase))
-    ,/unrecognized arguments/i)
-
-successes = [
-        ['', {verbose:false}],
-        ['-v', {verbose:true}],
-        ['--verbose', {verbose:true}],
-        ['-n', {verbose:true}],
-        ['--noisy', {verbose:true}],
-    ]
-console.log 'successes', successes
-for testcase in successes
-  [argv, ns] = testcase
-  argv = psplit(argv)
-  args = parser.parse_args(argv)
-  console.log 'expect:',ns,'got',args
-  assert.deepEqual(ns,args)
-
-in python
-
-p=ArgumentParser()
-p.add_argument(*argument_signatures[0].args,**argument_signatures[0].kwargs)
-args=p.parse_args(successes[1][0].split(' '))
-successes[1][1]==args
-py does not like ''.split(' ')=[''] any more than js
-for argv, ns in successes[1:]:
-    print ns==p.parse_args(argv.split(' '))
+    cnt = 0
+    for testcase in obj.successes
+      [argv, ns] = testcase
+      argv = psplit(argv)
+      args = parser.parseArgs(argv)
+      console.log _.isEqual(args,ns)
+      try
+        if pargs.ignorenulls
+          assert.ok(nnequal(args,ns))
+        else
+          assert.deepEqual(args,ns)
+        console.log "for '#{argv.join(' ')}' got:", args
+      catch error   
+        console.log "for '#{argv.join(' ')}' got:", args, 'expected:', ns
+        console.log error
+        cnt -= 1
+        err = true
+      cnt += 1
+    astr = if cnt<obj.successes.length then "#{pargs.flag}: SUCCESSES TESTS:" else 'successes tests:'
+    console.log "#{astr} #{cnt} of #{obj.successes.length}, (#{obj.name})"
     
-###
+    cnt = 0
+    for testcase in obj.failures
+      try
+        args = parser.parseArgs(psplit(testcase))
+        console.log 'OOPS, expected an error', testcase
+        cnt -= 1
+        err = true
+      catch error
+        console.log "[#{testcase}]", error.message
+      try
+        assert.throws(
+          () -> 
+            args = parser.parse_args(psplit(testcase))
+          , Error
+        ) # the expected error is not specified in py orginal
+      catch error
+        console.log 'OOPS', error 
+      cnt += 1
+    astr = if cnt<obj.failures.length then "#{pargs.flag}: FAILURE TESTS:" else 'failure tests:'
+    console.log "#{astr} #{cnt} of #{obj.failures.length}, (#{obj.name})"
+    if err
+      # display the collected argument sigs if there was an error
+      console.log 'ARGUMENTS:'
+      console.log argsigs
 
-objlist = require('./testpy') # if written to file
+
+objlist = require(pargs.jsonfile)  
 console.log objlist.length, 'test cases'
-#console.log objlist
-
-casecnt = 0
-for obj in objlist
-  # each of these should be separate test
-  casecnt += 1
-  console.log '\n', casecnt, "====================="
-  console.log obj.name
-  if obj.parser_signature?
-    options = obj.parser_signature[1]
-    options = camelize(options)
-    console.log 'camelized:', options
-  else
-    options = {}
-  options.debug = true
-  options.prog = obj.name
-  options.description = obj.doc
-  parser = new ArgumentParser(options)
-  for sig in obj.argument_signatures
-    sig[1] = camelize(sig[1])
-    parser.addArgument(sig[0], sig[1])
-  
-  cnt = 0
-  for testcase in obj.successes
-    [argv, ns] = testcase
-    argv = psplit(argv)
-    args = parser.parse_args(argv)
-    console.log 'expected:',ns,'got',args
-    try
-      assert.deepEqual(args,ns)
-    catch error
-      console.log error
-      cnt -= 1
-    cnt += 1
-  astr = if cnt<obj.successes.length then 'TODO: SUCCESSES TESTS:' else 'successes tests:'
-  console.log "#{astr} #{cnt} of #{obj.successes.length}"
-  cnt = 0
-  for testcase in obj.failures
-    try
-      args = parser.parse_args(psplit(testcase))
-      console.log 'OOPS, no error', testcase
-      cnt -= 1
-    catch error
-      console.log "[#{testcase}]", error.message
-    ###
-    assert.throws(
-      () -> 
-        args = parser.parse_args(psplit(testcase))
-    ) # expected error not specified in py orginal
-    ###
-    cnt += 1
-  astr = if cnt<obj.failures.length then 'TODO: FAILURE TESTS:' else 'failure tests:'
-  console.log "#{astr} #{cnt} of #{obj.failures.length}"
-
-# I added synms to container registry for storeTrue etc.
+runtests(objlist)
 

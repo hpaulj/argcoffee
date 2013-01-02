@@ -1,7 +1,83 @@
 76 'test cases'
 
  1 =====================
+TestArgumentsFromFile
+camelized: { fromfile_prefix_chars: '@', fromfilePrefixChars: '@' }
+expected: { y: [ 'Y' ], x: 'X', a: null } got { a: null, x: null, y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { a: null, x: null, y: null },
+  expected: { y: [ 'Y' ], x: 'X', a: null },
+  operator: 'deepEqual' }
+expected: { y: [ 'Y', 'Z' ], x: 'X', a: 'A' } got { a: null, x: null, y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { a: null, x: null, y: null },
+  expected: { y: [ 'Y', 'Z' ], x: 'X', a: 'A' },
+  operator: 'deepEqual' }
+expected: { y: [ 'X' ], x: 'hello world!', a: null } got { a: null, x: null, y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { a: null, x: null, y: null },
+  expected: { y: [ 'X' ], x: 'hello world!', a: null },
+  operator: 'deepEqual' }
+expected: { y: [ 'hello world!' ], x: 'X', a: null } got { a: null, x: null, y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { a: null, x: null, y: null },
+  expected: { y: [ 'hello world!' ], x: 'X', a: null },
+  operator: 'deepEqual' }
+expected: { y: [ 'Y', 'Z' ], x: 'hello world!', a: 'A' } got { a: null, x: null, y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { a: null, x: null, y: null },
+  expected: { y: [ 'Y', 'Z' ], x: 'hello world!', a: 'A' },
+  operator: 'deepEqual' }
+expected: { y: [ 'hello world!', 'Z' ], x: 'X', a: 'B' } got { a: null, x: null, y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { a: null, x: null, y: null },
+  expected: { y: [ 'hello world!', 'Z' ], x: 'X', a: 'B' },
+  operator: 'deepEqual' }
+TODO: SUCCESSES TESTS: 0 of 6
+OOPS, no error 
+OOPS, no error -b
+OOPS, no error X
+OOPS, no error @invalid
+OOPS, no error @missing
+TODO: FAILURE TESTS: 0 of 5
+ARGUMENTS:
+[ { fromfile_prefix_chars: '@',
+    fromfilePrefixChars: '@',
+    debug: true,
+    prog: 'TestArgumentsFromFile',
+    description: 'Test reading arguments from a file' },
+  [ [ '-a' ], {} ],
+  [ [ 'x' ], { required: true } ],
+  [ [ 'y' ], { nargs: '+', required: true } ] ]
+
+ 2 =====================
+TestArgumentsFromFileConverter
+camelized: { fromfile_prefix_chars: '@', fromfilePrefixChars: '@' }
+expected: { y: [ 'hello', 'world!', 'X' ] } got { y: null }
+{ name: 'AssertionError',
+  message: undefined,
+  actual: { y: null },
+  expected: { y: [ 'hello', 'world!', 'X' ] },
+  operator: 'deepEqual' }
+TODO: SUCCESSES TESTS: 0 of 1
+failure tests: 0 of 0
+ARGUMENTS:
+[ { fromfile_prefix_chars: '@',
+    fromfilePrefixChars: '@',
+    debug: true,
+    prog: 'TestArgumentsFromFileConverter',
+    description: 'Test reading arguments from a file' },
+  [ [ 'y' ], { nargs: '+', required: true } ] ]
+
+ 3 =====================
 TestDefaultSuppress
+camelized: {}
 expected: {} got {}
 expected: { foo: 'a' } got { foo: 'a' }
 expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
@@ -13,8 +89,9 @@ successes tests: 6 of 6
 
 failure tests: 1 of 1
 
- 2 =====================
+ 4 =====================
 TestEmptyAndSpaceContainingArguments
+camelized: {}
 expected: { y: null, x: '' } got { x: '', y: null }
 expected: { y: null, x: 'a badger' } got { x: 'a badger', y: null }
 expected: { y: null, x: '-a badger' } got { x: '-a badger', y: null }
@@ -28,8 +105,9 @@ successes tests: 8 of 8
 
 failure tests: 1 of 1
 
- 3 =====================
+ 5 =====================
 TestNargsRemainder
+camelized: {}
 expected: { y: [], x: 'X', z: null } got { x: 'X', y: [], z: null }
 expected: { y: [], x: 'X', z: 'Z' } got { x: 'X', y: [], z: 'Z' }
 expected: { y: [ 'A', 'B', '-z', 'Z' ], x: 'X', z: null } got { x: 'X', y: [ 'A', 'B', '-z', 'Z' ], z: null }
@@ -43,8 +121,9 @@ successes tests: 4 of 4
 
 failure tests: 3 of 3
 
- 4 =====================
+ 6 =====================
 TestNargsZeroOrMore
+camelized: {}
 expected: { y: [], x: null } got { x: null, y: [] }
 expected: { y: [], x: [] } got { x: [], y: [] }
 expected: { y: [], x: [ 'a' ] } got { x: [ 'a' ], y: [] }
@@ -55,8 +134,9 @@ expected: { y: [ 'a' ], x: [ 'b' ] } got { x: [ 'b' ], y: [ 'a' ] }
 successes tests: 7 of 7
 failure tests: 0 of 0
 
- 5 =====================
+ 7 =====================
 TestOptionLike
+camelized: {}
 expected: { y: null, x: null, z: [] } got { x: null, y: null, z: [] }
 expected: { y: null, x: 2.5, z: [] } got { x: 2.5, y: null, z: [] }
 expected: { y: null, x: 2.5, z: [ 'a' ] } got { x: 2.5, y: null, z: [ 'a' ] }
@@ -96,8 +176,9 @@ successes tests: 11 of 11
 
 failure tests: 13 of 13
 
- 6 =====================
+ 8 =====================
 TestOptionalsActionAppend
+camelized: {}
 expected: { baz: null } got { baz: null }
 expected: { baz: [ 'a' ] } got { baz: [ 'a' ] }
 expected: { baz: [ 'a', 'b' ] } got { baz: [ 'a', 'b' ] }
@@ -112,44 +193,9 @@ successes tests: 3 of 3
 
 failure tests: 4 of 4
 
- 7 =====================
-TestOptionalsActionAppendConst
-expected: { b: null } got { b: null }
-expected: { b: [ 'Exception' ] } got { b: [ 'Exception' ] }
-expected: { b: [ 'Exception', 'x', 'Exception', 'yz' ] } got { b: [ 'Exception', 'x', 'Exception', 'yz' ] }
-successes tests: 3 of 3
-[a] TestOptionalsActionAppendConst: error: unrecognized arguments: a
-
-[-c] TestOptionalsActionAppendConst: error: -c: expected one argument
-
-[a -c] TestOptionalsActionAppendConst: error: -c: expected one argument
-
-[-bx] TestOptionalsActionAppendConst: error: -b: ignored explicit argument x
-
-[-b x] TestOptionalsActionAppendConst: error: unrecognized arguments: x
-
-failure tests: 5 of 5
-
- 8 =====================
-TestOptionalsActionAppendConstWithDefault
-expected: { b: [ 'X' ] } got { b: [ 'X' ] }
-expected: { b: [ 'X', 'Exception' ] } got { b: [ 'X', 'Exception' ] }
-expected: { b: [ 'X', 'Exception', 'x', 'Exception', 'yz' ] } got { b: [ 'X', 'Exception', 'x', 'Exception', 'yz' ] }
-successes tests: 3 of 3
-[a] TestOptionalsActionAppendConstWithDefault: error: unrecognized arguments: a
-
-[-c] TestOptionalsActionAppendConstWithDefault: error: -c: expected one argument
-
-[a -c] TestOptionalsActionAppendConstWithDefault: error: -c: expected one argument
-
-[-bx] TestOptionalsActionAppendConstWithDefault: error: -b: ignored explicit argument x
-
-[-b x] TestOptionalsActionAppendConstWithDefault: error: unrecognized arguments: x
-
-failure tests: 5 of 5
-
  9 =====================
 TestOptionalsActionAppendWithDefault
+camelized: {}
 expected: { baz: [ 'X' ] } got { baz: [ 'X' ] }
 expected: { baz: [ 'X', 'a' ] } got { baz: [ 'X', 'a' ] }
 expected: { baz: [ 'X', 'a', 'b' ] } got { baz: [ 'X', 'a', 'b' ] }
@@ -166,6 +212,7 @@ failure tests: 4 of 4
 
  10 =====================
 TestOptionalsActionCount
+camelized: {}
 expected: { x: null } got { x: null }
 expected: { x: 1 } got { x: 1 }
 successes tests: 2 of 2
@@ -181,6 +228,7 @@ failure tests: 4 of 4
 
  11 =====================
 TestOptionalsActionStore
+camelized: {}
 expected: { x: null } got { x: null }
 expected: { x: 'foo' } got { x: 'foo' }
 successes tests: 2 of 2
@@ -192,6 +240,7 @@ failure tests: 2 of 2
 
  12 =====================
 TestOptionalsActionStoreConst
+camelized: {}
 expected: { y: null } got { y: null }
 expected: { y: 'object' } got { y: 'object' }
 successes tests: 2 of 2
@@ -201,6 +250,7 @@ failure tests: 1 of 1
 
  13 =====================
 TestOptionalsActionStoreFalse
+camelized: {}
 expected: { z: true } got { z: true }
 expected: { z: false } got { z: false }
 successes tests: 2 of 2
@@ -214,6 +264,7 @@ failure tests: 3 of 3
 
  14 =====================
 TestOptionalsActionStoreTrue
+camelized: {}
 expected: { apple: false } got { apple: false }
 expected: { apple: true } got { apple: true }
 successes tests: 2 of 2
@@ -227,6 +278,7 @@ failure tests: 3 of 3
 
  15 =====================
 TestOptionalsAlmostNumericAndPositionals
+camelized: {}
 expected: { y: false, x: null } got { x: null, y: false }
 expected: { y: false, x: '-2' } got { x: '-2', y: false }
 expected: { y: false, x: 'a' } got { x: 'a', y: false }
@@ -330,6 +382,7 @@ failure tests: 5 of 5
 
  19 =====================
 TestOptionalsChoices
+camelized: {}
 expected: { g: null, f: null } got { f: null, g: null }
 expected: { g: null, f: 'a' } got { f: 'a', g: null }
 expected: { g: null, f: 'c' } got { f: 'c', g: null }
@@ -350,6 +403,7 @@ failure tests: 5 of 5
 
  20 =====================
 TestOptionalsDefault
+camelized: {}
 expected: { y: 42, x: null } got { x: null, y: 42 }
 expected: { y: 42, x: 'x' } got { x: 'x', y: 42 }
 expected: { y: 'y', x: null } got { x: null, y: 'y' }
@@ -360,6 +414,7 @@ failure tests: 1 of 1
 
  21 =====================
 TestOptionalsDest
+camelized: {}
 expected: { zabbaz: null, foo_bar: 'f' } got { foo_bar: 'f', zabbaz: null }
 expected: { zabbaz: 'g', foo_bar: null } got { foo_bar: null, zabbaz: 'g' }
 expected: { zabbaz: 'i', foo_bar: 'h' } got { foo_bar: 'h', zabbaz: 'i' }
@@ -371,6 +426,7 @@ failure tests: 1 of 1
 
  22 =====================
 TestOptionalsDoubleDash
+camelized: {}
 expected: { foo: null } got { foo: null }
 expected: { foo: 'a' } got { foo: 'a' }
 expected: { foo: 'a' } got { foo: 'a' }
@@ -393,6 +449,7 @@ failure tests: 6 of 6
 
  23 =====================
 TestOptionalsDoubleDashPartialMatch
+camelized: {}
 expected: { bat: null, badger: false } got { badger: false, bat: null }
 expected: { bat: 'X', badger: false } got { badger: false, bat: 'X' }
 expected: { bat: null, badger: true } got { badger: true, bat: null }
@@ -416,6 +473,7 @@ failure tests: 6 of 6
 
  24 =====================
 TestOptionalsDoubleDashPrefixMatch
+camelized: {}
 expected: { ba: null, badger: false } got { badger: false, ba: null }
 expected: { ba: 'X', badger: false } got { badger: false, ba: 'X' }
 expected: { ba: 'X', badger: false } got { badger: false, ba: 'X' }
@@ -438,6 +496,7 @@ failure tests: 5 of 5
 
  25 =====================
 TestOptionalsNargs1
+camelized: {}
 expected: { x: null } got { x: null }
 expected: { x: [ 'a' ] } got { x: [ 'a' ] }
 successes tests: 2 of 2
@@ -449,6 +508,7 @@ failure tests: 2 of 2
 
  26 =====================
 TestOptionalsNargs3
+camelized: {}
 expected: { x: null } got { x: null }
 expected: { x: [ 'a', 'b', 'c' ] } got { x: [ 'a', 'b', 'c' ] }
 successes tests: 2 of 2
@@ -468,6 +528,7 @@ failure tests: 6 of 6
 
  27 =====================
 TestOptionalsNargsDefault
+camelized: {}
 expected: { x: null } got { x: null }
 expected: { x: 'a' } got { x: 'a' }
 successes tests: 2 of 2
@@ -479,6 +540,7 @@ failure tests: 2 of 2
 
  28 =====================
 TestOptionalsNargsOneOrMore
+camelized: {}
 expected: { y: 'spam', x: null } got { x: null, y: 'spam' }
 expected: { y: 'spam', x: [ 'a' ] } got { x: [ 'a' ], y: 'spam' }
 expected: { y: 'spam', x: [ 'a', 'b' ] } got { x: [ 'a', 'b' ], y: 'spam' }
@@ -499,6 +561,7 @@ failure tests: 5 of 5
 
  29 =====================
 TestOptionalsNargsOptional
+camelized: {}
 expected: { y: 'spam', x: null, z: 84, w: null } got { w: null, x: null, y: 'spam', z: 84 }
 expected: { y: 'spam', x: null, z: 84, w: null } got { w: null, x: null, y: 'spam', z: 84 }
 expected: { y: 'spam', x: null, z: 84, w: '2' } got { w: '2', x: null, y: 'spam', z: 84 }
@@ -515,6 +578,7 @@ failure tests: 1 of 1
 
  30 =====================
 TestOptionalsNargsZeroOrMore
+camelized: {}
 expected: { y: 'spam', x: null } got { x: null, y: 'spam' }
 expected: { y: 'spam', x: [] } got { x: [], y: 'spam' }
 expected: { y: 'spam', x: [ 'a' ] } got { x: [ 'a' ], y: 'spam' }
@@ -529,6 +593,7 @@ failure tests: 1 of 1
 
  31 =====================
 TestOptionalsNumeric
+camelized: {}
 expected: { one: null } got { one: null }
 expected: { one: 'a' } got { one: 'a' }
 expected: { one: 'a' } got { one: 'a' }
@@ -550,6 +615,7 @@ failure tests: 6 of 6
 
  32 =====================
 TestOptionalsNumericAndPositionals
+camelized: {}
 expected: { y: false, x: null } got { x: null, y: false }
 expected: { y: false, x: 'a' } got { x: 'a', y: false }
 expected: { y: true, x: null } got { x: null, y: true }
@@ -563,6 +629,7 @@ failure tests: 2 of 2
 
  33 =====================
 TestOptionalsRequired
+camelized: {}
 expected: { x: 1 } got { x: 1 }
 expected: { x: 42 } got { x: 42 }
 successes tests: 2 of 2
@@ -574,6 +641,7 @@ failure tests: 2 of 2
 
  34 =====================
 TestOptionalsShortLong
+camelized: {}
 expected: { verbose: false } got { verbose: false }
 expected: { verbose: true } got { verbose: true }
 expected: { verbose: true } got { verbose: true }
@@ -592,6 +660,7 @@ failure tests: 4 of 4
 
  35 =====================
 TestOptionalsSingleDash
+camelized: {}
 expected: { x: null } got { x: null }
 expected: { x: 'a' } got { x: 'a' }
 expected: { x: 'a' } got { x: 'a' }
@@ -612,6 +681,7 @@ failure tests: 5 of 5
 
  36 =====================
 TestOptionalsSingleDashAmbiguous
+camelized: {}
 expected: { foorab: null, foobar: null } got { foobar: null, foorab: null }
 expected: { foorab: null, foobar: 'a' } got { foobar: 'a', foorab: null }
 expected: { foorab: 'a', foobar: null } got { foobar: null, foorab: 'a' }
@@ -638,6 +708,7 @@ failure tests: 7 of 7
 
  37 =====================
 TestOptionalsSingleDashCombined
+camelized: {}
 expected: { x: false, z: null, yyy: null } got { x: false, yyy: null, z: null }
 expected: { x: true, z: null, yyy: null } got { x: true, yyy: null, z: null }
 expected: { x: false, z: 'a', yyy: null } got { x: false, yyy: null, z: 'a' }
@@ -677,6 +748,7 @@ failure tests: 11 of 11
 
  38 =====================
 TestOptionalsSingleDashLong
+camelized: {}
 expected: { foo: null } got { foo: null }
 expected: { foo: 'a' } got { foo: 'a' }
 expected: { foo: '-1' } got { foo: '-1' }
@@ -699,6 +771,7 @@ failure tests: 6 of 6
 
  39 =====================
 TestOptionalsSingleDashSubsetAmbiguous
+camelized: {}
 expected: { foorab: null, f: null, foobar: null } got { f: null, foobar: null, foorab: null }
 expected: { foorab: null, f: 'a', foobar: null } got { f: 'a', foobar: null, foorab: null }
 expected: { foorab: null, f: 'a', foobar: null } got { f: 'a', foobar: null, foorab: null }
@@ -725,6 +798,7 @@ failure tests: 7 of 7
 
  40 =====================
 TestOptionalsSingleDoubleDash
+camelized: {}
 expected: { bar: null, baz: null, f: false } got { f: false, bar: null, baz: null }
 expected: { bar: null, baz: null, f: true } got { f: true, bar: null, baz: null }
 expected: { bar: 'B', baz: null, f: false } got { f: false, bar: 'B', baz: null }
@@ -777,6 +851,7 @@ failure tests: 1 of 1
 
  43 =====================
 TestPositionalsActionAppend
+camelized: {}
 expected: { spam: [ 'a', [ 'b', 'c' ] ] } got { spam: [ 'a', [ 'b', 'c' ] ] }
 successes tests: 1 of 1
 [] TestPositionalsActionAppend: error: too few arguments
@@ -793,6 +868,7 @@ failure tests: 5 of 5
 
  44 =====================
 TestPositionalsChoicesInt
+camelized: {}
 expected: { spam: 4 } got { spam: 4 }
 expected: { spam: 15 } got { spam: 15 }
 successes tests: 2 of 2
@@ -808,6 +884,7 @@ failure tests: 5 of 5
 
  45 =====================
 TestPositionalsChoicesString
+camelized: {}
 expected: { spam: 'a' } got { spam: 'a' }
 expected: { spam: 'g' } got { spam: 'g' }
 successes tests: 2 of 2
@@ -815,16 +892,17 @@ successes tests: 2 of 2
 
 [--foo] TestPositionalsChoicesString: error: too few arguments
 
-[h] TestPositionalsChoicesString: error: null: invalid choice: h (choose from a,b,c,d,e,f,g)
+[h] TestPositionalsChoicesString: error: null: invalid choice: h (choose from a,c,b,e,d,g,f)
 
-[42] TestPositionalsChoicesString: error: null: invalid choice: 42 (choose from a,b,c,d,e,f,g)
+[42] TestPositionalsChoicesString: error: null: invalid choice: 42 (choose from a,c,b,e,d,g,f)
 
-[ef] TestPositionalsChoicesString: error: null: invalid choice: ef (choose from a,b,c,d,e,f,g)
+[ef] TestPositionalsChoicesString: error: null: invalid choice: ef (choose from a,c,b,e,d,g,f)
 
 failure tests: 5 of 5
 
  46 =====================
 TestPositionalsNargs1
+camelized: {}
 expected: { foo: [ 'a' ] } got { foo: [ 'a' ] }
 successes tests: 1 of 1
 [] TestPositionalsNargs1: error: too few arguments
@@ -837,6 +915,7 @@ failure tests: 3 of 3
 
  47 =====================
 TestPositionalsNargs2
+camelized: {}
 expected: { foo: [ 'a', 'b' ] } got { foo: [ 'a', 'b' ] }
 successes tests: 1 of 1
 [] TestPositionalsNargs2: error: too few arguments
@@ -851,6 +930,7 @@ failure tests: 4 of 4
 
  48 =====================
 TestPositionalsNargs2None
+camelized: {}
 expected: { foo: [ 'a', 'b' ], bar: 'c' } got { foo: [ 'a', 'b' ], bar: 'c' }
 successes tests: 1 of 1
 [] TestPositionalsNargs2None: error: too few arguments
@@ -867,6 +947,7 @@ failure tests: 5 of 5
 
  49 =====================
 TestPositionalsNargs2OneOrMore
+camelized: {}
 expected: { foo: [ 'a', 'b' ], bar: [ 'c' ] } got { foo: [ 'a', 'b' ], bar: [ 'c' ] }
 successes tests: 1 of 1
 [] TestPositionalsNargs2OneOrMore: error: too few arguments
@@ -881,6 +962,7 @@ failure tests: 4 of 4
 
  50 =====================
 TestPositionalsNargs2Optional
+camelized: {}
 expected: { foo: [ 'a', 'b' ], bar: null } got { foo: [ 'a', 'b' ], bar: null }
 expected: { foo: [ 'a', 'b' ], bar: 'c' } got { foo: [ 'a', 'b' ], bar: 'c' }
 successes tests: 2 of 2
@@ -896,6 +978,7 @@ failure tests: 4 of 4
 
  51 =====================
 TestPositionalsNargs2ZeroOrMore
+camelized: {}
 expected: { foo: [ 'a', 'b' ], bar: [] } got { foo: [ 'a', 'b' ], bar: [] }
 expected: { foo: [ 'a', 'b' ], bar: [ 'c' ] } got { foo: [ 'a', 'b' ], bar: [ 'c' ] }
 successes tests: 2 of 2
@@ -909,6 +992,7 @@ failure tests: 3 of 3
 
  52 =====================
 TestPositionalsNargsNone
+camelized: {}
 expected: { foo: 'a' } got { foo: 'a' }
 successes tests: 1 of 1
 [] TestPositionalsNargsNone: error: too few arguments
@@ -921,6 +1005,7 @@ failure tests: 3 of 3
 
  53 =====================
 TestPositionalsNargsNone1
+camelized: {}
 expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
 successes tests: 1 of 1
 [] TestPositionalsNargsNone1: error: too few arguments
@@ -935,6 +1020,7 @@ failure tests: 4 of 4
 
  54 =====================
 TestPositionalsNargsNoneNone
+camelized: {}
 expected: { foo: 'a', bar: 'b' } got { foo: 'a', bar: 'b' }
 successes tests: 1 of 1
 [] TestPositionalsNargsNoneNone: error: too few arguments
@@ -949,6 +1035,7 @@ failure tests: 4 of 4
 
  55 =====================
 TestPositionalsNargsNoneOneOrMore
+camelized: {}
 expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
 expected: { foo: 'a', bar: [ 'b', 'c' ] } got { foo: 'a', bar: [ 'b', 'c' ] }
 successes tests: 2 of 2
@@ -962,6 +1049,7 @@ failure tests: 3 of 3
 
  56 =====================
 TestPositionalsNargsNoneOneOrMore1
+camelized: {}
 expected: { bar: [ 'b' ], foo: 'a', baz: [ 'c' ] } got { foo: 'a', bar: [ 'b' ], baz: [ 'c' ] }
 expected: { bar: [ 'b', 'c' ], foo: 'a', baz: [ 'd' ] } got { foo: 'a', bar: [ 'b', 'c' ], baz: [ 'd' ] }
 successes tests: 2 of 2
@@ -977,6 +1065,7 @@ failure tests: 4 of 4
 
  57 =====================
 TestPositionalsNargsNoneOptional
+camelized: {}
 expected: { foo: 'a', bar: null } got { foo: 'a', bar: null }
 expected: { foo: 'a', bar: 'b' } got { foo: 'a', bar: 'b' }
 successes tests: 2 of 2
@@ -990,6 +1079,7 @@ failure tests: 3 of 3
 
  58 =====================
 TestPositionalsNargsNoneOptional1
+camelized: {}
 expected: { bar: 0.625, foo: 'a', baz: [ 'b' ] } got { foo: 'a', bar: 0.625, baz: [ 'b' ] }
 expected: { bar: 'b', foo: 'a', baz: [ 'c' ] } got { foo: 'a', bar: 'b', baz: [ 'c' ] }
 successes tests: 2 of 2
@@ -1003,6 +1093,7 @@ failure tests: 3 of 3
 
  59 =====================
 TestPositionalsNargsNoneZeroOrMore
+camelized: {}
 expected: { foo: 'a', bar: [] } got { foo: 'a', bar: [] }
 expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
 expected: { foo: 'a', bar: [ 'b', 'c' ] } got { foo: 'a', bar: [ 'b', 'c' ] }
@@ -1015,6 +1106,7 @@ failure tests: 2 of 2
 
  60 =====================
 TestPositionalsNargsNoneZeroOrMore1
+camelized: {}
 expected: { bar: [], foo: 'a', baz: [ 'b' ] } got { foo: 'a', bar: [], baz: [ 'b' ] }
 expected: { bar: [ 'b' ], foo: 'a', baz: [ 'c' ] } got { foo: 'a', bar: [ 'b' ], baz: [ 'c' ] }
 successes tests: 2 of 2
@@ -1028,6 +1120,7 @@ failure tests: 3 of 3
 
  61 =====================
 TestPositionalsNargsOneOrMore
+camelized: {}
 expected: { foo: [ 'a' ] } got { foo: [ 'a' ] }
 expected: { foo: [ 'a', 'b' ] } got { foo: [ 'a', 'b' ] }
 successes tests: 2 of 2
@@ -1039,6 +1132,7 @@ failure tests: 2 of 2
 
  62 =====================
 TestPositionalsNargsOneOrMore1
+camelized: {}
 expected: { foo: [ 'a' ], bar: [ 'b' ] } got { foo: [ 'a' ], bar: [ 'b' ] }
 expected: { foo: [ 'a', 'b' ], bar: [ 'c' ] } got { foo: [ 'a', 'b' ], bar: [ 'c' ] }
 successes tests: 2 of 2
@@ -1052,6 +1146,7 @@ failure tests: 3 of 3
 
  63 =====================
 TestPositionalsNargsOneOrMoreNone
+camelized: {}
 expected: { foo: [ 'a' ], bar: 'b' } got { foo: [ 'a' ], bar: 'b' }
 expected: { foo: [ 'a', 'b' ], bar: 'c' } got { foo: [ 'a', 'b' ], bar: 'c' }
 successes tests: 2 of 2
@@ -1065,6 +1160,7 @@ failure tests: 3 of 3
 
  64 =====================
 TestPositionalsNargsOptional
+camelized: {}
 expected: { foo: null } got { foo: null }
 expected: { foo: 'a' } got { foo: 'a' }
 successes tests: 2 of 2
@@ -1076,6 +1172,7 @@ failure tests: 2 of 2
 
  65 =====================
 TestPositionalsNargsOptional1
+camelized: {}
 expected: { foo: null, bar: [ 'a' ] } got { foo: null, bar: [ 'a' ] }
 expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
 successes tests: 2 of 2
@@ -1089,6 +1186,7 @@ failure tests: 3 of 3
 
  66 =====================
 TestPositionalsNargsOptionalConvertedDefault
+camelized: {}
 expected: { foo: 42 } got { foo: 42 }
 expected: { foo: 1 } got { foo: 1 }
 successes tests: 2 of 2
@@ -1101,6 +1199,7 @@ failure tests: 3 of 3
 
  67 =====================
 TestPositionalsNargsOptionalDefault
+camelized: {}
 expected: { foo: 42 } got { foo: 42 }
 expected: { foo: 'a' } got { foo: 'a' }
 successes tests: 2 of 2
@@ -1112,6 +1211,7 @@ failure tests: 2 of 2
 
  68 =====================
 TestPositionalsNargsOptionalNone
+camelized: {}
 expected: { foo: 42, bar: 'a' } got { foo: 42, bar: 'a' }
 expected: { foo: 'a', bar: 'b' } got { foo: 'a', bar: 'b' }
 successes tests: 2 of 2
@@ -1125,6 +1225,7 @@ failure tests: 3 of 3
 
  69 =====================
 TestPositionalsNargsOptionalOneOrMore
+camelized: {}
 expected: { foo: null, bar: [ 'a' ] } got { foo: null, bar: [ 'a' ] }
 expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
 expected: { foo: 'a', bar: [ 'b', 'c' ] } got { foo: 'a', bar: [ 'b', 'c' ] }
@@ -1137,6 +1238,7 @@ failure tests: 2 of 2
 
  70 =====================
 TestPositionalsNargsOptionalOptional
+camelized: {}
 expected: { foo: null, bar: 42 } got { foo: null, bar: 42 }
 expected: { foo: 'a', bar: 42 } got { foo: 'a', bar: 42 }
 expected: { foo: 'a', bar: 'b' } got { foo: 'a', bar: 'b' }
@@ -1149,6 +1251,7 @@ failure tests: 2 of 2
 
  71 =====================
 TestPositionalsNargsOptionalZeroOrMore
+camelized: {}
 expected: { foo: null, bar: [] } got { foo: null, bar: [] }
 expected: { foo: 'a', bar: [] } got { foo: 'a', bar: [] }
 expected: { foo: 'a', bar: [ 'b' ] } got { foo: 'a', bar: [ 'b' ] }
@@ -1160,6 +1263,7 @@ failure tests: 1 of 1
 
  72 =====================
 TestPositionalsNargsZeroOrMore
+camelized: {}
 expected: { foo: [] } got { foo: [] }
 expected: { foo: [ 'a' ] } got { foo: [ 'a' ] }
 expected: { foo: [ 'a', 'b' ] } got { foo: [ 'a', 'b' ] }
@@ -1170,6 +1274,7 @@ failure tests: 1 of 1
 
  73 =====================
 TestPositionalsNargsZeroOrMore1
+camelized: {}
 expected: { foo: [], bar: [ 'a' ] } got { foo: [], bar: [ 'a' ] }
 expected: { foo: [ 'a' ], bar: [ 'b' ] } got { foo: [ 'a' ], bar: [ 'b' ] }
 expected: { foo: [ 'a', 'b' ], bar: [ 'c' ] } got { foo: [ 'a', 'b' ], bar: [ 'c' ] }
@@ -1182,6 +1287,7 @@ failure tests: 2 of 2
 
  74 =====================
 TestPositionalsNargsZeroOrMoreDefault
+camelized: {}
 expected: { foo: 'bar' } got { foo: 'bar' }
 expected: { foo: [ 'a' ] } got { foo: [ 'a' ] }
 expected: { foo: [ 'a', 'b' ] } got { foo: [ 'a', 'b' ] }
@@ -1192,6 +1298,7 @@ failure tests: 1 of 1
 
  75 =====================
 TestPositionalsNargsZeroOrMoreNone
+camelized: {}
 expected: { foo: [], bar: 'a' } got { foo: [], bar: 'a' }
 expected: { foo: [ 'a' ], bar: 'b' } got { foo: [ 'a' ], bar: 'b' }
 expected: { foo: [ 'a', 'b' ], bar: 'c' } got { foo: [ 'a', 'b' ], bar: 'c' }
