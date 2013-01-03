@@ -9,6 +9,7 @@
 # change 'COFFEE' to change which parser it uses (could be based on process.argv)
 
 assert = require('assert')
+util = require('util')
 
 _ = require('underscore')
 _.str = require('underscore.string')
@@ -24,15 +25,17 @@ parser.addArgument(['-n','--ignorenulls'], {action: 'storeTrue', help: 'ignore n
 # I use TODO because my editor is set up to flag such a line
 # grep with this flag to filter for such lines
 # the python Namespace includes null default values; pargs.ignorenulls ignores these
+# require=='mocha' means generate a mocha test file
+#    maybe change to 'testmode'
 pargs = parser.parseArgs()
 
-argparse = require(pargs.require)
-print "testing #{pargs.require}"
-COFFEE = pargs.require=='argcoffee'
-  
-ArgumentParser = argparse.ArgumentParser
-Namespace = argparse.Namespace
-NS = Namespace
+if pargs.require != 'mocha'
+  argparse = require(pargs.require)
+  #print "testing #{pargs.require}"
+  COFFEE = pargs.require=='argcoffee'
+  ArgumentParser = argparse.ArgumentParser
+  #Namespace = argparse.Namespace
+  #NS = Namespace
 
 camelize = (obj) ->
   # camelize the keys of an object (e.g. parser arguments)
@@ -144,7 +147,76 @@ runtests = (objlist) ->
       console.log argsigs
 
 
-objlist = require(pargs.jsonfile)  
-console.log objlist.length, 'test cases'
-runtests(objlist)
+formatdata = (objlist) ->
+  # convert objlist into data that can be passed to fns
+  casecnt = 0
+  results = []
+  for obj in objlist
+    casecnt += 1
+    result = {cnt: casecnt}
+    results.push(result)
+    if obj.parser_signature?
+      options = obj.parser_signature[1]
+      options = camelize(options)
+    else
+      options = {}
+    options.debug = true
+    options.prog = obj.name
+    options.description = obj.doc
+    result.parser_options = options
+    result.arguments = ([sig[0], camelize(sig[1])] for sig in obj.argument_signatures)
+    result.successes = ([psplit(argv[0]), argv[1]] for argv in obj.successes)
+    result.failures = (psplit(testcase) for testcase in obj.failures)
+  results
 
+fmt = (obj) ->
+  util.inspect(obj, false, null)
+
+formattest = (obj)->
+  result = ["    it('#{obj.parser_options.prog}', function () {"]
+  str = "      parser = new ArgumentParser(#{fmt(obj.parser_options)});"
+  result.push(str)
+  for x in obj.arguments
+    str = "      parser.addArgument(#{fmt(x[0])}, #{fmt(x[1])});"
+    result.push(str)
+  result.push('')
+  for x in obj.successes
+    str = "      args = parser.parseArgs(#{fmt(x[0])});"
+    result.push(str)
+    str = "      assert.deepEqual(args, #{fmt(x[1])});"
+    result.push(str)
+  result.push('')
+  for x in obj.failures
+    str = "      assert.throws(function () {\n        args = parser.parseArgs(#{fmt(x)});\n      });"
+    result.push(str)
+  result.push("    });\n")
+  result.join('\n')
+  
+mochaheader = '''/*global describe, it*/
+
+'use strict';
+
+var assert = require('assert');
+
+var ArgumentParser = require('../lib/argparse').ArgumentParser;
+describe('ArgumentParser', function () {
+  describe('....', function () {
+    var parser;
+    var args;
+'''
+mochatrailer = '''  });
+});
+'''
+  
+objlist = require(pargs.jsonfile)  
+
+if pargs.require != 'mocha'
+  console.log objlist.length, 'test cases'
+  runtests(objlist)
+else
+  objs = formatdata(objlist)
+  # console.log util.inspect(formatdata(objlist), false, null)
+  console.log mochaheader
+  for obj in objs
+    console.log formattest(obj)
+  console.log mochatrailer
