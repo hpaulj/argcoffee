@@ -16,23 +16,25 @@ _.str = require('underscore.string')
 
 print = console.log
 
+epilog = 'Redirect stdout to file, less, grep TODO etc'
 AP = require('argparse').ArgumentParser
-parser = new AP()
-parser.addArgument(['-j','--jsonfile'],{defaultValue: './testpy',help:'json file to load, ./testpy(.json) default'})
-parser.addArgument(['-r','--require'],{defaultValue: 'argparse', help:'module to test, argparse default'})
-parser.addArgument(['-f','--flag'], {defaultValue: 'TODO', help:'error flag, e.g. TODO'})
-parser.addArgument(['-n','--ignorenulls'], {action: 'storeTrue', help: 'ignore null values in namespace'})
+parser = new AP(epilog: epilog )
+parser.addArgument(['-j', '--jsonfile'], {defaultValue: './testpy', help: 'json file to load, ./testpy(.json) default'})
+parser.addArgument(['-m', '--mocha'], {action: 'storeTrue', help: 'write mocha test cases'})
+parser.addArgument(['-r', '--require'], {defaultValue: 'argparse', help: 'module to test, argparse default'})
+parser.addArgument(['-f', '--flag'], {defaultValue: 'TODO', help: 'error flag, e.g. TODO'})
+parser.addArgument(['-n', '--ignorenulls'], {action: 'storeTrue', help: 'ignore null values in namespace'})
+
 # I use TODO because my editor is set up to flag such a line
 # grep with this flag to filter for such lines
-# the python Namespace includes null default values; pargs.ignorenulls ignores these
-# require=='mocha' means generate a mocha test file
-#    maybe change to 'testmode'
+# the python Namespace includes null default values;
+
 pargs = parser.parseArgs()
 
-if pargs.require != 'mocha'
+if not pargs.mocha
   argparse = require(pargs.require)
   #print "testing #{pargs.require}"
-  COFFEE = pargs.require=='argcoffee'
+  COFFEE = pargs.require == 'argcoffee'
   ArgumentParser = argparse.ArgumentParser
   #Namespace = argparse.Namespace
   #NS = Namespace
@@ -41,21 +43,20 @@ camelize = (obj) ->
   # camelize the keys of an object (e.g. parser arguments)
   for key of obj
     key1 = _.str.camelize(key)
-    if key1=='const' then key1 = 'constant'
-    if key1=='default' then key1 = 'defaultValue'
+    if key1 == 'const' then key1 = 'constant'
+    if key1 == 'default' then key1 = 'defaultValue'
     value = obj[key]
     if not COFFEE
-      if key1=='action' 
-        #console.log 'Value', value
+      if key1 == 'action' 
         value = _.str.camelize(value)
     obj[key1] = value
   obj
 
 nnequal = (a,b) ->
   # deep equal, ignoring null values
-  aKeys = (k for own k,v of a when v!=null)
-  bKeys = (k for own k,v of b when v!=null)
-  console.log aKeys, bKeys
+  aKeys = (k for own k,v of a when v!= null)
+  bKeys = (k for own k,v of b when v!= null)
+  print aKeys, bKeys
   return false if aKeys.length isnt bKeys.length
   return false for key in aKeys when !(key in bKeys) or !_.isEqual(a[key], b[key])
   return true
@@ -67,88 +68,94 @@ psplit = (astring) ->
     result = astring.split(' ')
     result = (r for r in result when r) # remove ''
     return result
-  return astring # probably is a list already
+  return astring # it probably is a list already
 
 runtests = (objlist) ->
   casecnt = 0
   for obj in objlist
     # each of these should be a separate test
     casecnt += 1
-    console.log '\n', casecnt, "====================="
-    console.log obj.name
-    if obj.parser_signature?
-      # some cases have a specialized parser signature
-      options = obj.parser_signature[1]
-      options = camelize(options)
-      console.log 'camelized:', options
-    else
-      options = {}
-    options.debug = true
-    options.prog = obj.name
-    options.description = obj.doc
-    # collect info for error display; clone in case options is modified when used
-    argsigs = [_.clone(options)]  
+    print '\n', casecnt, "====================="
+    testobj(obj)
+    
+testobj = (obj) ->
+  # test one 'obj' (python test class)
+  print obj.name
+  if obj.parser_signature?
+    # some cases have a specialized parser signature
+    options = obj.parser_signature[1]
+    options = camelize(options)
+    print 'camelized:', options
+  else
+    options = {}
+  options.debug = true
+  options.prog = obj.name
+  options.description = obj.doc
+  # collect info for error display; clone in case options is modified when used
+  argsigs = [_.clone(options)]  
+  try
+    parser = new ArgumentParser(options)
+  catch error
+    print "#{pargs.flag}: ArgumentParser",error
+    print argsigs
+    return # continue
+    
+  err = false
+  for sig in obj.argument_signatures
+    sig[1] = camelize(sig[1])
+    argsigs.push([sig[0], _.clone(sig[1])])  # for error display
+    parser.addArgument(sig[0], sig[1])
+  
+  cnt = 0
+  for testcase in obj.successes
+    [argv, ns] = testcase
+    argv = psplit(argv)
+    args = parser.parseArgs(argv)
+    print _.isEqual(args,ns)
     try
-      parser = new ArgumentParser(options)
+      if pargs.ignorenulls
+        assert.ok(nnequal(args,ns))
+      else
+        assert.deepEqual(args,ns)
+      print "for '#{argv.join(' ')}' got:", args
+    catch error   
+      print "for '#{argv.join(' ')}' got:", args, 'expected:', ns
+      print error
+      cnt -= 1
+      err = true
+    cnt += 1
+  astr = if cnt<obj.successes.length then "#{pargs.flag}: SUCCESSES TESTS:" else 'successes tests:'
+  print "#{astr} #{cnt} of #{obj.successes.length}, (#{obj.name})"
+  
+  cnt = 0
+  for testcase in obj.failures
+    try
+      args = parser.parseArgs(psplit(testcase))
+      print 'OOPS, expected an error', testcase
+      cnt -= 1
+      err = true
     catch error
-      print "#{pargs.flag}: ArgumentParser",error
-      print argsigs
-      continue
-    err = false
-    for sig in obj.argument_signatures
-      sig[1] = camelize(sig[1])
-      argsigs.push([sig[0], _.clone(sig[1])])  # for error display
-      parser.addArgument(sig[0], sig[1])
-    
-    cnt = 0
-    for testcase in obj.successes
-      [argv, ns] = testcase
-      argv = psplit(argv)
-      args = parser.parseArgs(argv)
-      console.log _.isEqual(args,ns)
-      try
-        if pargs.ignorenulls
-          assert.ok(nnequal(args,ns))
-        else
-          assert.deepEqual(args,ns)
-        console.log "for '#{argv.join(' ')}' got:", args
-      catch error   
-        console.log "for '#{argv.join(' ')}' got:", args, 'expected:', ns
-        console.log error
-        cnt -= 1
-        err = true
-      cnt += 1
-    astr = if cnt<obj.successes.length then "#{pargs.flag}: SUCCESSES TESTS:" else 'successes tests:'
-    console.log "#{astr} #{cnt} of #{obj.successes.length}, (#{obj.name})"
-    
-    cnt = 0
-    for testcase in obj.failures
-      try
-        args = parser.parseArgs(psplit(testcase))
-        console.log 'OOPS, expected an error', testcase
-        cnt -= 1
-        err = true
-      catch error
-        console.log "[#{testcase}]", error.message
-      try
-        assert.throws(
-          () -> 
-            args = parser.parse_args(psplit(testcase))
-          , Error
-        ) # the expected error is not specified in py orginal
-      catch error
-        console.log 'OOPS', error 
-      cnt += 1
-    astr = if cnt<obj.failures.length then "#{pargs.flag}: FAILURE TESTS:" else 'failure tests:'
-    console.log "#{astr} #{cnt} of #{obj.failures.length}, (#{obj.name})"
-    if err
-      # display the collected argument sigs if there was an error
-      console.log 'ARGUMENTS:'
-      console.log argsigs
+      print "[#{testcase}]", error.message
+    try
+      assert.throws(
+        () -> 
+          args = parser.parse_args(psplit(testcase))
+        , Error
+      ) # the expected error is not specified in py orginal
+    catch error
+      print 'OOPS', error 
+    cnt += 1
+  astr = if cnt<obj.failures.length then "#{pargs.flag}: FAILURE TESTS:" else 'failure tests:'
+  print "#{astr} #{cnt} of #{obj.failures.length}, (#{obj.name})"
+  
+  if err
+    # display the collected argument sigs if there was an error
+    print 'ARGUMENTS:'
+    print argsigs
 
-
-formatdata = (objlist) ->
-  # convert objlist into data that can be passed to fns
+preformatobjs = (objlist) ->
+  # convert objlist into data that can be passed to fns like
+  # ArgumentParser, addArgument, parseArgs
   casecnt = 0
   results = []
   for obj in objlist
@@ -172,7 +179,8 @@ formatdata = (objlist) ->
 fmt = (obj) ->
   util.inspect(obj, false, null)
 
-formattest = (obj)->
+mochatest = (obj)->
+  # format a mocha it(){} test
   result = ["    it('#{obj.parser_options.prog}', function () {"]
   str = "      parser = new ArgumentParser(#{fmt(obj.parser_options)});"
   result.push(str)
@@ -208,15 +216,17 @@ mochatrailer = '''  });
 });
 '''
   
-objlist = require(pargs.jsonfile)  
+testlist = require(pargs.jsonfile)  
 
-if pargs.require != 'mocha'
-  console.log objlist.length, 'test cases'
-  runtests(objlist)
-else
-  objs = formatdata(objlist)
-  # console.log util.inspect(formatdata(objlist), false, null)
-  console.log mochaheader
+if pargs.mocha
+  objs = preformatobjs(testlist)
+  # print util.inspect(preformatobjs(testlist), false, null)
+  print mochaheader
   for obj in objs
-    console.log formattest(obj)
-  console.log mochatrailer
+    print mochatest(obj)
+  print mochatrailer
+else
+  # direct test of argparse with these cases
+  # in case of an error, output is more detailed than mocha gives
+  print testlist.length, 'test cases'
+  runtests(testlist)
