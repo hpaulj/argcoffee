@@ -209,22 +209,21 @@ class ArgumentParser extends _ActionsContainer
         action = new ParsersClass(options)
         DEBUG action.nargs
         DEBUG @_subparsers.__super__
-        if @_subparsers._addAction?
-          @_subparsers._addAction(action)
+        if @_subparsers._add_action?
+          @_subparsers._add_action(action)
         else
           @_subparsers._add_action(action)
 
         # return the created parsers action
         return action
 
-    _addAction: (action) ->   # use camel because AC does
+    _add_action: (action) ->   # use camel because AC does
         if action.isOptional() # optionStrings.length>0
             assert(action.optionStrings)
-            # DEBUG 'opt action:',action.dest
-            this._optionals._addAction(action)
+            this._optionals._add_action(action)
         else
             # DEBUG 'pos action:',action.dest
-            this._positionals._addAction(action)
+            this._positionals._add_action(action)
         return action
     
     _get_optional_actions: () ->
@@ -891,13 +890,14 @@ class ArgumentParser extends _ActionsContainer
     
     format_usage: () ->
         formatter = @_getFormatter()
-        formatter.addUsage(@usage, @_actions, [])
+        formatter.addUsage(@usage, @_actions, @_mutually_exclusive_groups)
         return formatter.formatHelp()
+    formatUsage: () -> @format_usage()
     
     format_help: () ->
         formatter = @_getFormatter()
         # usage
-        formatter.addUsage(@usage, @_actions, [])
+        formatter.addUsage(@usage, @_actions, @_mutually_exclusive_groups)
         formatter.addText(@description)
         for actionGroup in (@_actionGroups ? @_action_groups)
             formatter.startSection(actionGroup.title)

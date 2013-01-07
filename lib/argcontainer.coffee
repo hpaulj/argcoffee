@@ -453,7 +453,7 @@ class _ArgumentGroup extends _ActionsContainer
         # add any missing keyword arguments by checking the container
         options.prefix_chars = options.prefixChars ? container.prefix_chars
         options.argument_default = options.argument_default ? container.argument_default
-        options.conflict_handler = options.conflict_handler ? container.conflict_handler
+        options.conflictHandler = options.conflictHandler ? container.conflictHandler
     
         # super_init = super(_ArgumentGroup, self).__init__
         # _ActionsContainer.call(this, options)
@@ -462,7 +462,6 @@ class _ArgumentGroup extends _ActionsContainer
         # group attributes
         @title = options.title
         @_group_actions = []
-
         # share most attributes with the container
         @_registries = container._registries
         @_actions = container._actions
@@ -493,20 +492,23 @@ class _MutuallyExclusiveGroup extends _ArgumentGroup
         super(container, options)
         # super(_MutuallyExclusiveGroup, self).__init__(container)
         @required = options.required
-        @_container = container
+        # @_container = container
 
     _add_action: (action) ->
         if action.required
             msg = 'mutually exclusive arguments must be optional'
             raise new Error(msg)
-        #action = @_container._add_action(action)
-        action = super(action)
-        #@_group_actions.push(action)
+        # action = super(action) 
+        # super doesn't work here because an exclusive group is simply a
+        # variation on group; an action can be in both an xgroup and a group
+        # like optionals; where as an action cannot be in 2 regular groups
+        action = @_container._add_action(action)        
+        @_group_actions.push(action)
         return action
 
     _remove_action: (action) ->
-        super(action)
-        #@_container._remove_action(action)
+        # super(action)
+        @_container._remove_action(action)
         @_group_actions.remove(action) # TODO
 
 
