@@ -18,10 +18,16 @@ $$ = require('./const')
 
 fmtwindent= (fmt, tup) ->
   # @_current_indent, '', action_width, action_header
-  [indent, spc, text, width] = tup
-  text = (spc for i in [0...indent]).join('') + text
+  [indent, text, width, spc] = tup
+  spc = spc ? ' '
+  text = text ? ''
+  indentstr = (spc for i in [0...indent]).join('')
+  text = indentstr + text
   if width?
     text = _.str.pad(text, width+indent, ' ', 'right')
+  if _.str.endsWith(fmt, '\n')
+    # or maybe grab everything after the last %s
+    text = text + '\n'
   return text
 
 _textwrap =
@@ -71,7 +77,7 @@ class HelpFormatter
       @_current_section = @_root_section
 
       @_whitespace_matcher = /\s+/ # _re.compile(r'\s+')
-      @_long_break_matcher = /\n\n\n+/ # _re.compile(r'\n\n\n+')
+      @_long_break_matcher = /\n\n\n+/g # _re.compile(r'\n\n\n+')
 
     # ===============================
     # Section and indentation methods
@@ -115,7 +121,7 @@ class HelpFormatter
             if @heading != $$.SUPPRESS and @heading != null
                 current_indent = @formatter._current_indent
                 # heading = '%*s%s:\n' % (current_indent, '', @heading)
-                heading = fmtwindent('%*s%s',[current_indent, ' ', @heading+':\n'])
+                heading = fmtwindent('%*s%s:\n', [current_indent, @heading+':'])
             else
                 heading = ''
 
@@ -184,15 +190,12 @@ class HelpFormatter
         return (part for part in part_strings when part and part != $$.SUPPRESS).join('')
 
     _format_usage: (usage, actions, groups, prefix) =>
-        DEBUG '_format_usage', usage, actions.length, groups.length
-        #DEBUG usage, actions, groups, prefix
         if prefix is null
             prefix = 'usage: '
 
         # if usage is specified, use that
         if usage?
             #  usage = usage % dict(prog=@_prog)
-            DEBUG usage
             usage = usage.replace(/%(prog)/, @_prog)
 
         # if no optionals or positionals are available, usage is just prog
@@ -269,7 +272,7 @@ class HelpFormatter
 
                 # if prog is long, put it on its own line
                 else
-                    indent = fmtwindent('',[prefix.length,' ',''])
+                    indent = fmtwindent('',[prefix.length])
                     opt_parts.concat(pos_parts)
                     parts = opt_parts
                     lines = get_lines(parts, indent)
@@ -288,7 +291,6 @@ class HelpFormatter
 
     _format_actions_usage: (actions, groups) =>
         # find group indices and identify actions in groups
-        DEBUG '_format_actions_usage', @._current_indent
         group_actions = {} # set()
         inserts = {}
         ###
@@ -403,7 +405,7 @@ class HelpFormatter
             text = text.replace(/\%\(prog\)/, @prog)
             #text = text % {prog:@prog}
         text_width = @_width - @_current_indent
-        indent = fmtwindent('',[@_current_indent,' ',''])
+        indent = fmtwindent('',[@_current_indent])
         return @_fill_text(text, text_width, indent) + '\n\n'
 
     _format_action: (action) =>
@@ -413,15 +415,13 @@ class HelpFormatter
         help_width = @_width - help_position
         action_width = help_position - @_current_indent - 2
         action_header = @_format_action_invocation(action)
-        DEBUG 'action header', action_header, action_width, help_position
         # no help; start on same line and add a final newline
         if not action.help?
-            action_header = fmtwindent('%*s%s\n',[@current_indent, ' ', action_header])+'\n'
-            # action_header = fmtwindent(@_current_indent, action_header)+'\n'
+            action_header = fmtwindent('%*s%s\n',[@_current_indent, action_header])
       
         # short action name; start on the same line and pad two spaces
         else if action_header.length <= action_width
-            tup = [@_current_indent, ' ', action_header, action_width+2]
+            tup = [@_current_indent, action_header, action_width+2]
             action_header = fmtwindent('%*s%-*s  ',tup)
             indent_first = 0
 
@@ -437,16 +437,15 @@ class HelpFormatter
         if action.help?
             help_text = @_expand_help(action)
             help_lines = @_split_lines(help_text, help_width)
-            help_lines = [help_lines]
+            help_lines = if _.isString(help_lines) then [help_lines] else help_lines
             # parts.push('%*s%s\n' % (indent_first, '', help_lines[0]))
-            parts.push(fmtwindent('%*s%s\n',[indent_first, ' ', help_lines[0]])+'\n')
+            parts.push(fmtwindent('%*s%s\n',[indent_first, help_lines[0]]))
             for line in help_lines[1...]
                 #parts.push('%*s%s\n' % (help_position, '', line))
-                parts.push(fmtwindent('%*s%s\n', [help_position, ' ', line])+'\n')
+                parts.push(fmtwindent('%*s%s\n', [help_position, line]))
         # or add a newline if the description doesn't end with one
         else if not _.str.endsWith(action_header, '\n')
             parts.push('\n')
-        # DEBUG parts
         # if there are any sub-actions, add their help as well
         for subaction in @_indented_subactions(action)
             parts.push(@_format_action(subaction))
@@ -608,17 +607,16 @@ if not module.parent?
   console.log parser.format_help()
   formatter = new HelpFormatter({prog:'PROG'})
   formatter.add_usage(parser.usage, parser._actions, [])
-  #formatter.add_text('a description')
+  formatter.add_text('a description')
   console.log 'format_help\n', formatter.format_help()
   
   for ag in parser._action_groups
     formatter.start_section(ag.title)
-    DEBUG 'add_text'
+    #DEBUG 'add_text'
     formatter.add_text(ag.description)
-    DEBUG 'add_arg'
+    #DEBUG 'add_arg'
     formatter.add_arguments(ag._group_actions)
-    DEBUG 'end section'    
+    #DEBUG 'end section'    
     formatter.end_section()
   DEBUG ''
   console.log 'format_help\n', formatter.format_help()
-  
