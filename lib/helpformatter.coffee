@@ -18,6 +18,8 @@ $$ = require('./const')
 
 fmtwindent= (fmt, tup) ->
   # @_current_indent, '', action_width, action_header
+  # '%*s'%(5,'x') => '    x'; len('%*s'%(5,'')) is 5
+  # len('%-*s'%(5,'x')) 'x    '
   [indent, text, width, spc] = tup
   spc = spc ? ' '
   text = text ? ''
@@ -25,16 +27,19 @@ fmtwindent= (fmt, tup) ->
   text = indentstr + text
   if width?
     text = _.str.pad(text, width+indent, ' ', 'right')
-  if _.str.endsWith(fmt, '\n')
-    # or maybe grab everything after the last %s
+  # append everything after the last %..s
+  trailing = _.str.strRightBack(fmt,'s') # e.g '%*s%-*s:\n'-> ':\n'
+  if trailing != fmt
+    text = text + trailing
+  else if _.str.endsWith(fmt, '\n')
     text = text + '\n'
   return text
 
 _textwrap =
-  wrap: (text, width) -> 
-    return text
-  fill: (text, width, initial_indent=0, subsequent_indent=0) -> 
-    return text
+  wrap: (text, width, initial_indent=0, subsequent_indent=0) -> 
+    return [text]
+  fill: (args...) -> 
+    return _textwrap.wrap(args...).join('\n')
   
 pformat = (fmt, params) ->
   # standin for python format
@@ -60,7 +65,7 @@ class HelpFormatter
       width = options.width ? null
 
       # default setting for width
-      if width?
+      if not width?
         # environ['COLUMNS'] or 80 -2
         width = 80 - 2
 
@@ -76,7 +81,7 @@ class HelpFormatter
       @_root_section = new @_Section(@, null)
       @_current_section = @_root_section
 
-      @_whitespace_matcher = /\s+/ # _re.compile(r'\s+')
+      @_whitespace_matcher = /\s+/g # _re.compile(r'\s+')
       @_long_break_matcher = /\n\n\n+/g # _re.compile(r'\n\n\n+')
 
     # ===============================
@@ -121,7 +126,7 @@ class HelpFormatter
             if @heading != $$.SUPPRESS and @heading != null
                 current_indent = @formatter._current_indent
                 # heading = '%*s%s:\n' % (current_indent, '', @heading)
-                heading = fmtwindent('%*s%s:\n', [current_indent, @heading+':'])
+                heading = fmtwindent('%*s%s:\n', [current_indent, @heading])
             else
                 heading = ''
 
@@ -421,7 +426,7 @@ class HelpFormatter
       
         # short action name; start on the same line and pad two spaces
         else if action_header.length <= action_width
-            tup = [@_current_indent, action_header, action_width+2]
+            tup = [@_current_indent, action_header, action_width]
             action_header = fmtwindent('%*s%-*s  ',tup)
             indent_first = 0
 
@@ -437,7 +442,7 @@ class HelpFormatter
         if action.help?
             help_text = @_expand_help(action)
             help_lines = @_split_lines(help_text, help_width)
-            help_lines = if _.isString(help_lines) then [help_lines] else help_lines
+            # help_lines = if _.isString(help_lines) then [help_lines] else help_lines
             # parts.push('%*s%s\n' % (indent_first, '', help_lines[0]))
             parts.push(fmtwindent('%*s%s\n',[indent_first, help_lines[0]]))
             for line in help_lines[1...]
@@ -541,18 +546,35 @@ class HelpFormatter
         else
           return []
 
-    _split_lines: (text, width) ->
-        return text
-        # text = @_whitespace_matcher.sub(' ', text).strip()
+    _split_lines: (text, width=80, indent=0) ->
         text = text.replace(@_whitespace_matcher, ' ')
         text = _.str.strip(text)
-        return _textwrap.wrap(text, width)
-
-    _fill_text: (text, width, indent) ->
-        return text
+        wds = text.split(' ')
+        lines = []
+        line = []
+        cnt = 0
+        for wd in wds
+          if (cnt+wd.length+1) < (width-indent)
+            line.push(wd)
+            cnt += wd.length+1
+          else
+            lines.push(line.join(' '))
+            line = [wd]
+            cnt = wd.length+1
+        lines.push(line.join(' '))
+        return lines
+        # return text.split('\n') 
+        # py: split text in lines roughly width long
         # text = @_whitespace_matcher.sub(' ', text).strip()
-        text = _.str.strip(text.replace(@_whitespace_matcher, ' '))
-        return _textwrap.fill(text, width, indent, indent)
+        # return _textwrap.wrap(text, width)
+
+    _fill_text: (text, width, indent=0) ->
+        text = @_split_lines(text,width, indent)
+        text = text.join('\n')
+        return text
+        # py returns text reformed into indented lines
+        # text = @_whitespace_matcher.sub(' ', text).strip()
+        # return _textwrap.fill(text, width, indent, indent)
 
     _get_help_string: (action) ->
         return action.help
@@ -577,7 +599,7 @@ class RawTextHelpFormatter extends RawDescriptionHelpFormatter
     ###
 
     _split_lines: (text, width) ->
-        return text.splitlines()
+        return text.split('\n')  # text.splitlines()
 
 
 class ArgumentDefaultsHelpFormatter extends HelpFormatter
@@ -620,3 +642,37 @@ if not module.parent?
     formatter.end_section()
   DEBUG ''
   console.log 'format_help\n', formatter.format_help()
+  console.log '============================================='
+  DEBUG = () ->
+  parser = new ap({prog:'PROG', debug: true, \
+      description: '   oddly    formatted\n' + 
+                    'description\n' + 
+                    '\n' + 
+                    'that is so long that it should go onto multiple ' + 
+                    'lines when wrapped'})
+  parser.add_argument('-x',{metavar:'XX',help: 'oddly\n'+
+                                     '    formatted -x help'})
+  parser.add_argument('y',{metavar:'yyy',help: 'normal y help'})
+  group = parser.add_argument_group({title:'title', description: '\n'+
+                                  '    oddly formatted group\n' +
+                                  '\n' +
+                                  'description'})
+  group.add_argument('-a',{action:'storeTrue',\
+              help: ' oddly \n'+
+                   'formatted    -a  help  \n'+
+                   '    again, so long that it should be wrapped over '+
+                   'multiple lines'})                    
+  console.log parser.format_help()
+  console.log '------------------'
+  formatter = new HelpFormatter({prog:'PROG'})
+  formatter.add_usage(parser.usage, parser._actions, [])
+  formatter.add_text(parser.description)
+  # console.log 'format_help\n', formatter.format_help()
+  for ag in parser._action_groups
+    formatter.start_section(ag.title)
+    formatter.add_text(ag.description)
+    formatter.add_arguments(ag._group_actions)
+    formatter.end_section()
+  DEBUG ''
+  console.log 'format_help\n', formatter.format_help()
+  console.log '============================================='
