@@ -43,15 +43,25 @@ _textwrap =
   
 pformat = (fmt, params) ->
   # standin for python format
+  # params is a list
   for p in params
     fmt=fmt.replace(/%s/,p)
   return fmt
+  
+pnformat = (fmt, params) ->
+  # standin for python format with named entries
+  # params is an object,
+  # if {k:v} in params, then fmt='%(k)s' becomes 'v'
+  for k of params
+    fmt = fmt.replace("%\(#{k}\)s",params[k])
+  return fmt
+    
   
 # ===============
 # Formatting Help
 # ===============
 
-class HelpFormatter
+exports.HelpFormatter = class HelpFormatter
     ###Formatter for generating usage messages and argument help strings.
 
     Only the name of this class is considered a public API. All the methods
@@ -83,6 +93,7 @@ class HelpFormatter
 
       @_whitespace_matcher = /\s+/g # _re.compile(r'\s+')
       @_long_break_matcher = /\n\n\n+/g # _re.compile(r'\n\n\n+')
+      @_prog_matcher = /%\(prog\)s/
 
     # ===============================
     # Section and indentation methods
@@ -103,7 +114,6 @@ class HelpFormatter
             @parent = parent
             @heading = heading
             @items = []
-            DEBUG 'new Section',@heading
 
         format_help: () =>
             # format the indented section
@@ -134,7 +144,6 @@ class HelpFormatter
             return join(['\n', heading, item_help, '\n'])
 
     _add_item: (func, args) ->
-        DEBUG 'add_item', @_current_section.heading,args[0]?.dest
         @_current_section.items.push([func, args])
 
     # ========================
@@ -145,51 +154,59 @@ class HelpFormatter
         section = new @_Section(@, @_current_section, heading)
         @_add_item(section.format_help, [])
         @_current_section = section
+    startSection: (heading) -> @start_section(heading)
 
     end_section: () ->
         @_current_section = @_current_section.parent
         @_dedent()
+    endSection: () -> @end_section()
 
     add_text: (text) ->
         if text != $$.SUPPRESS and text?
             @_add_item(@_format_text, [text])
+    addText: (text) -> @add_text(text)
 
     add_usage: (usage, actions, groups, prefix=null) ->
         if usage != $$.SUPPRESS
             args = [usage, actions, groups, prefix]
             @_add_item(@_format_usage, args)
+    addUsage: (args...) -> @add_usage(args...)
 
     add_argument: (action) ->
         if action.help != $$.SUPPRESS
-
+            # appears main action is to adjust @_action_max_length
             # find all invocations
-            get_invocation = @_format_action_invocation
-            invocations = [get_invocation(action)]
-            for subaction in @_indented_subactions(action)
-                invocations.push(get_invocation(subaction))
-
+            invocations = [@_format_action_invocation(action)]
+            # in py this was in an generator with an indent
+            if action._get_subactions?
+              for subaction in action._get_subactions()
+                @_indent()
+                invocations.push(@_format_action_invocation(subaction))
+                @_dedent()
             # update the maximum item length
-            invocation_length = Math.max(s.length for s in invocations)
+            invocation_length = Math.max((s.length for s in invocations)...)
             action_length = invocation_length + @_current_indent
-            @_action_max_length = Math.max(@_action_max_length,action_length)
-
+            @_action_max_length = Math.max(@_action_max_length, action_length)
             # add the item to the list
             @_add_item(@_format_action, [action])
+    addArgument: (action) -> @add_argument(action)
 
     add_arguments: (actions) ->
         for action in actions
             @add_argument(action)
+    addArguments: (actions) -> @add_arguments(actions)
 
     # =======================
     # Help-formatting methods
     # =======================
     format_help: () ->
         help = @_root_section.format_help()
-        if help
+        if help? and help.length>0
             # help = @_long_break_matcher.sub('\n\n', help)
             help = help.replace(@_long_break_matcher, '\n\n')
             help = _.str.strip(help,'\n') + '\n'
         return help
+    formatHelp: () -> @format_help()
 
     _join_parts: (part_strings) ->
         return (part for part in part_strings when part and part != $$.SUPPRESS).join('')
@@ -201,7 +218,7 @@ class HelpFormatter
         # if usage is specified, use that
         if usage?
             #  usage = usage % dict(prog=@_prog)
-            usage = usage.replace(/%(prog)/, @_prog)
+            usage = usage.replace(@_prog_matcher, @_prog)
 
         # if no optionals or positionals are available, usage is just prog
         else if not usage? and actions.length==0
@@ -226,7 +243,6 @@ class HelpFormatter
             action_usage = format([].concat(optionals, positionals), groups)
             usage = (s for s in [prog, action_usage] when s).join(' ')
               
-            ###  
             # wrap the usage parts if it's too long
             text_width = @_width - @_current_indent
             if prefix.length + usage.length > text_width
@@ -238,11 +254,6 @@ class HelpFormatter
                   
                 opt_parts = opt_usage.match(part_regexp) ? []
                 pos_parts = pos_usage.match(part_regexp) ? []
-                #opt_parts = _re.findall(part_regexp, opt_usage)
-                #pos_parts = _re.findall(part_regexp, pos_usage)
-                #assert opt_parts?.join(' ') == opt_usage
-                #assert pos_parts?.join(' ') == pos_usage
-
                 # helper for wrapping lines
                 get_lines = (parts, indent, prefix=null) ->
                     lines = []
@@ -258,20 +269,24 @@ class HelpFormatter
                             line_len = indent.length - 1
                         line.push(part)
                         line_len += part.length + 1
-                    if line
+                    if line.length>0
                         lines.push(indent + line.join(' '))
                     if prefix?
-                        lines[0] = lines[0][indent.length]
+                        lines[0] = lines[0][indent.length...]
                     return lines
 
                 # if prog is short, follow it with optionals or positionals
                 if prefix.length + prog.length <= 0.75 * text_width
-                    indent = ' ' * (prefix.length + prog.length + 1)
-                    if opt_parts
-                        lines = get_lines([prog].concat(opt_parts), indent, prefix)
-                        lines.concat(get_lines(pos_parts, indent))
-                    else if pos_parts
-                        lines = get_lines([prog].concat(pos_parts), indent, prefix)
+                    indent = fmtwindent('',[prefix.length + prog.length + 1])
+                    if opt_parts.length>0
+                        lines = [prog].concat(opt_parts)
+                        lines = get_lines(lines, indent, prefix)
+                        lines = lines.concat(get_lines(pos_parts, indent))
+                        #lines = [lines.join(' ')]
+                        #lines = [lines, indent + pos_parts.join(' ')]
+                    else if pos_parts.length>0
+                        lines = [prog].concat(pos_parts)
+                        lines = get_lines(lines, indent, prefix)
                     else
                         lines = [prog]
 
@@ -290,40 +305,40 @@ class HelpFormatter
 
                 # join lines into usage
                 usage = lines.join('\n')
-          ###
+        
         # prefix with 'usage:'
         return prefix + usage + "\n\n"
 
     _format_actions_usage: (actions, groups) =>
         # find group indices and identify actions in groups
-        group_actions = {} # set()
+        group_actions = [] 
+        # set() in python; could use {}, but using action as key is awkward
         inserts = {}
-        ###
         for group in groups
-            try
-                start = actions.index(group._group_actions[0])
-            catch ValueError
-                continue
+            #try
+            start = actions.indexOf(group._group_actions[0])
+            #catch ValueError
+            #    continue
             #else
+            # looks like it expects group actions to be defined in sequence
             end = start + group._group_actions.length
-            if actions[start...end] == group._group_actions
+            if _.isEqual(actions[start...end], group._group_actions)
                 for action in group._group_actions
-                    group_actions[action] = true
+                    group_actions.push(action)
                 if not group.required
-                    if start in inserts
+                    if start of inserts
                         inserts[start] += ' ['
                     else
                         inserts[start] = '['
                     inserts[end] = ']'
                 else
-                    if start in inserts
+                    if start of inserts
                         inserts[start] += ' ('
                     else
                         inserts[start] = '('
                     inserts[end] = ')'
-                for i in range(start + 1, end)
+                for i in [start + 1...end]
                     inserts[i] = '|'
-        ###
         # collect all actions format strings
         parts = []
         i = -1
@@ -343,9 +358,11 @@ class HelpFormatter
                 part = @_format_args(action, action.dest)
 
                 # if it's in a group, strip the outer []
-                if action of group_actions
+                if action in group_actions
                     if part[0] == '[' and _.last(part) == ']'
-                        part = _last(_.rest(part)) # part[1...-1]
+                        # part = _.initial(_.rest(part)).join('') # part[1...-1]
+                        # part.match(/\[(.*)\]/)[1]
+                        part = part.slice(1, part.length-1)
 
                 # add the action string to the list
                 parts.push(part)
@@ -367,7 +384,7 @@ class HelpFormatter
                     part = "#{option_string} #{args_string}"
 
                 # make it look optional if it's not required or in a group
-                if not action.required and action not of group_actions
+                if not action.required and action not in group_actions
                     part = "[#{part}]"
 
                 # add the action string to the list
@@ -375,40 +392,29 @@ class HelpFormatter
         # insert things at the necessary indices
         #for i in sorted(inserts, reverse=true)
         #    parts[i...i] = [inserts[i]]
-        `for (var i = inserts.length-1; i >= 0; --i) {
-           if (inserts[i] != null) {
-             parts.splice(i, 0, inserts[i]);
-           }
-         };`
-
+        pairs = _.pairs(inserts)
+        if pairs.length>0
+          for i in [pairs.length-1..0]
+            [k,v] = pairs[i]
+            if v?
+              parts.splice(k,0,v)
         # join all the action items with spaces
         text = (item for item in parts when item?)
         text = text.join(' ')
 
         # clean up separators for mutually exclusive groups
-        ###
-        open = r'[\[(]'
-        close = r'[\])]'
-        text = _re.sub(r'(%s) ' % open, r'\1', text)
-        text = _re.sub(r' (%s)' % close, r'\1', text)
-        text = _re.sub(r'%s *%s' % (open, close), r'', text)
-        text = _re.sub(r'\(([^|]*)\)', r'\1', text)
-        text = text.strip()
-        ###
-        # clean up separators for mutually exclusive groups
-        `text = text.replace(/([\[(]) /g,'$1'); // remove spaces
-        text = text.replace(/ ([\])])/g,'$1');
-        text = text.replace(/\[ *\]/g, ''); // remove empty groups
+        # coffeescript is having problems parsing / ([\])])/g
+        text = text.replace(/([\[(]) /g,'$1'); # remove spaces
+        `text = text.replace(/ ([\])])/g,'$1');`
+        text = text.replace(/\[ *\]/g, ''); # remove empty groups
         text = text.replace(/\( *\)/g, '');
-        text = text.replace(/\(([^|]*)\)/g, '$1'); // remove () from single action groups
-        text = _.str.strip(text);`
+        text = text.replace(/\(([^|]*)\)/g, '$1'); # remove () from single action groups
+        text = _.str.strip(text);
         # return the text
         return text
 
     _format_text: (text) =>
-        if '%(prog)' in text
-            text = text.replace(/\%\(prog\)/, @prog)
-            #text = text % {prog:@prog}
+        text = text.replace(@_prog_matcher, @_prog)
         text_width = @_width - @_current_indent
         indent = fmtwindent('',[@_current_indent])
         return @_fill_text(text, text_width, indent) + '\n\n'
@@ -432,7 +438,7 @@ class HelpFormatter
 
         # long action name; start on the next line
         else
-            action_header = ftmwindent('%*s%s\n', [@_current_indent, ' ', action_header])+'\n'
+            action_header = fmtwindent('%*s%s\n', [@_current_indent, action_header])
             indent_first = help_position
 
         # collect the pieces of the action help
@@ -452,8 +458,13 @@ class HelpFormatter
         else if not _.str.endsWith(action_header, '\n')
             parts.push('\n')
         # if there are any sub-actions, add their help as well
-        for subaction in @_indented_subactions(action)
+        if action._get_subactions?
+          for subaction in action._get_subactions()
+            @_indent()
             parts.push(@_format_action(subaction))
+            @_dedent()
+          
+            
 
         # return a single string
         return @_join_parts(parts)
@@ -483,9 +494,19 @@ class HelpFormatter
         if action.metavar?
             result = action.metavar
         else if action.choices?
-            choice_strs = (str(choice) for choice in action.choices)
-            #result = '{%s}' % ','.join(choice_strs)
-            result = "#{choice_strs.join(',')}"
+          # copy from ArgumentParser._check_value
+          if _.isString(action.choices)
+            choices = action.choices
+            choices = choices.split(/\W+/) # 'white space' separators
+            if choices.length==1
+              choices = choices[0].split('') # individual letters
+          else if _.isArray(action.choices)
+            choices = action.choices
+          else if _.isObject(action.choices)
+            choices = _.keys(action.choices)
+          else
+            throw new Error('bad choices variable')
+          result = "{#{choices.join(',')}}"
         else
             result = default_metavar
 
@@ -514,7 +535,7 @@ class HelpFormatter
         return result
 
     _expand_help: (action) ->
-        return @_get_help_string(action)    
+        # return @_get_help_string(action)    
         # params = dict(vars(action), prog=@_prog)
         params = _.clone(action); params.prog = @_prog
         for name in _.keys(params)
@@ -530,21 +551,11 @@ class HelpFormatter
         if params.choices?
             choices_str = (''+c for c in params.choices).join(', ')
             params.choices = choices_str
-        return pformat(@_get_help_string(action), params)
+        return pnformat(@_get_help_string(action), params)
         
     _indented_subactions: (action) ->
         # was iter in py
-        if action._get_subactions?
-          get_subactions = action._get_subactions
-          return get_subactions()
-          # skip indent for now; maybe a callback is the way to implement this
-          # subparser has subactions
-          #@_indent()
-          #for subaction in get_subactions()
-          #  return subaction # really is yield
-          #@_dedent()
-        else
-          return []
+        # replace with inline code to get the indent right
 
     _split_lines: (text, width=80, indent=0) ->
         text = text.replace(@_whitespace_matcher, ' ')
@@ -618,7 +629,20 @@ class ArgumentDefaultsHelpFormatter extends HelpFormatter
                     help += ' (default: %(default)s)'
         return help
 
+setup = (parser) ->
+  formatter = new HelpFormatter({prog:'PROG'})
+  formatter.add_usage(parser.usage, parser._actions, parser._mutually_exclusive_groups)
+  formatter.add_text(parser.description)
+  for ag in parser._action_groups
+    formatter.start_section(ag.title)
+    formatter.add_text(ag.description)
+    formatter.add_arguments(ag._group_actions)
+    formatter.end_section()
+  return formatter
 
+#---------------
+# Testing
+#---------------
 if not module.parent?
   ap = require('./argcoffee').ArgumentParser
   parser = new ap({prog:'PROG', debug:true})
@@ -629,21 +653,19 @@ if not module.parent?
   console.log parser.format_help()
   formatter = new HelpFormatter({prog:'PROG'})
   formatter.add_usage(parser.usage, parser._actions, [])
-  formatter.add_text('a description')
+  formatter.add_text('a description %(prog)s')
   console.log 'format_help\n', formatter.format_help()
   
   for ag in parser._action_groups
     formatter.start_section(ag.title)
-    #DEBUG 'add_text'
     formatter.add_text(ag.description)
-    #DEBUG 'add_arg'
     formatter.add_arguments(ag._group_actions)
-    #DEBUG 'end section'    
     formatter.end_section()
   DEBUG ''
   console.log 'format_help\n', formatter.format_help()
   console.log '============================================='
-  DEBUG = () ->
+  # DEBUG = () -> # turn it off
+  console.log 'help wrapping'
   parser = new ap({prog:'PROG', debug: true, \
       description: '   oddly    formatted\n' + 
                     'description\n' + 
@@ -664,15 +686,73 @@ if not module.parent?
                    'multiple lines'})                    
   console.log parser.format_help()
   console.log '------------------'
-  formatter = new HelpFormatter({prog:'PROG'})
-  formatter.add_usage(parser.usage, parser._actions, [])
-  formatter.add_text(parser.description)
-  # console.log 'format_help\n', formatter.format_help()
-  for ag in parser._action_groups
-    formatter.start_section(ag.title)
-    formatter.add_text(ag.description)
-    formatter.add_arguments(ag._group_actions)
-    formatter.end_section()
-  DEBUG ''
+  formatter = setup(parser)
   console.log 'format_help\n', formatter.format_help()
+
   console.log '============================================='
+  console.log 'test usage wrap'
+  ap = require('./argcoffee').ArgumentParser
+  parser = new ap({prog:'PROG', debug:true})
+  parser.add_argument('-f','--foo',{help: 'foo help',nargs: 3})
+  parser.add_argument('--booboo',{help: 'booboo help', nargs:4})
+  parser.add_argument('baz',{nargs:'+'})
+  formatter = setup(parser)
+  console.log parser.format_help()
+  console.log '-------------------'
+  console.log formatter.format_help()
+
+
+  console.log '============================================='
+  console.log 'parser with exclusive group'
+  parser = new ap({prog: 'PROG', debug: true});
+  group = parser.addMutuallyExclusiveGroup({required: true});
+  // or should the input be {required: true}?
+  group.addArgument(['--foo'], {action: 'storeTrue', help: 'foo help'});
+  group.addArgument(['--spam'], {help: 'spam help'});
+  #parser.addArgument(['badger'], {nargs: '*', defaultValue: 'X', help: 'badger help'});
+  group2 = parser.addMutuallyExclusiveGroup({required: false});
+  group2.addArgument(['--soup'], {action: 'storeTrue'});
+  group2.addArgument(['--nuts'], {action: 'storeFalse'});
+  args = parser.parseArgs(['--spam', 'S']);
+  DEBUG 'xgroup actions:',(x.dest for x in parser._mutually_exclusive_groups[0]._group_actions)
+  formatter = setup(parser)
+  console.log parser.format_help()
+  console.log '-------------------'
+  console.log formatter.format_help()
+
+  console.log '========================='
+  console.log 'subparsers'
+  HelpFormatter_js = require('./formatter')
+  parser = new ap({prog:'PROG',debug:true, formatter_class:HelpFormatter_js,description:'description with %(prog)s subsitution'})
+  parser.add_argument('--foo', {action:'storeTrue', help:'foo help'})
+  subparsers = parser.add_subparsers({help:'sub-command of %(prog)s help'})
+
+  # create the parser for the "a" command
+  parser_a = subparsers.addParser('a', {help:'a help',formatter_class:HelpFormatter_js})
+  parser_a.add_argument('bar', {type:'int', help:'bar help, type: %(type)s'})
+
+  # create the parser for the "b" command
+  parser_b = subparsers.addParser('b', {help:'b help',formatter_class:HelpFormatter_js})
+  parser_b.add_argument('--baz', {choices:'XYZ', help:'baz help, default: %(defaultValue)s', defaultValue: 'X'})
+  
+  console.log parser.format_help()
+  console.log parser_a.format_help()
+  console.log parser_b.format_help()
+  console.log '-------------------'
+  formatter = setup(parser) 
+  console.log formatter.format_help()
+  
+  parser_a.formatter_class = HelpFormatter 
+  console.log parser_a.format_help()
+  console.log parser_b.format_help()
+
+if false
+  console.log '==============================='
+  console.log 'choices'
+  parser = new ap({prog:'PROG',debug:true,formatter_class:HelpFormatter_js})
+  parser.add_argument('foo', {type:'int', choices:[5...10]})
+  formatter = setup(parser)
+  console.log parser.format_help()
+  console.log '-------------------'
+  console.log formatter.format_help()
+  

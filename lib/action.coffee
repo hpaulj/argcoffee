@@ -258,7 +258,7 @@ class _SubParsersAction extends Action
 
         constructor: (name, aliases, help) -> 
             metavar = dest = name
-            if aliases?
+            if aliases.length>0
               metavar += " (#{aliases.join(', ')})"
             options = {option_strings:[], dest:name, help:help, metavar:metavar}
             super(options)
@@ -302,8 +302,9 @@ class _SubParsersAction extends Action
         return parser
     addParser: (name, options) -> @add_parser(name, options)
 
-    _get_subactions: () ->
-        @_choices_actions
+    _get_subactions: () =>
+        @_choices_actions  # a list
+    _getSubactions: () => @_get_subactions() # for formatter.js
 
     __call__: (parser, namespace, values, option_string=null) ->
         parser_name = values[0]

@@ -599,6 +599,20 @@ try
     parser.print_help()
 catch error
     print 'capture help exit'
+
+"""
+usage: PROG [-h] [--foo] {a,b} ...
+
+positional arguments:
+  {a,b}   sub-command help
+    a     a help
+    b     b help
+
+optional arguments:
+  -h, --help  show this help message and exit
+  --foo   foo help
+"""
+
     
 parser_a.print_help()
 # parser.parse_args(['a', '--help']) # equiv w/o the exit

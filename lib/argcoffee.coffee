@@ -28,8 +28,10 @@ if false
 else
   _ActionsContainer = require('./argcontainer')._ActionsContainer
 #argumentErrorHelper = require('./error')
-HelpFormatter = require('./formatter')
 
+HelpFormatter_js = require('./formatter')
+HelpFormatter = require('./helpformatter').HelpFormatter
+  
 if false
   Namespace = require(adir+'namespace')
 else
@@ -841,6 +843,9 @@ class ArgumentParser extends _ActionsContainer
         if action.choices?
           if _.isString(action.choices)
             choices = action.choices
+            choices = choices.split(/\W+/) # 'white space' separators
+            if choices.length==1
+              choices = choices[0].split('') # individual letters
           else if _.isArray(action.choices)
             choices = action.choices
           else if _.isObject(action.choices)
@@ -1111,7 +1116,7 @@ if TEST and 0
     parser = new ArgumentParser()
     #console.log 'obj:',util.inspect(parser,false,0)
     #console.log parser._action_groups[0]
-    parser.format_help()
+    console.log parser.format_help()
     parser.add_subparsers({})
     console.log 'class:', 
     console.log ArgumentParser
@@ -1120,7 +1125,7 @@ if TEST and 0
     console.log ArgumentParser.prototype.constructor.super_
     console.log ArgumentParser.prototype.constructor.__super__
     console.log '====================================='
-    #console.log parser.formatHelp()
+    console.log parser.formatHelp()
 
 if TEST and 0
     parentParser = new ArgumentParser({add_help: false, description: 'parent'})
@@ -1193,11 +1198,12 @@ if TEST and 0
     console.log args
     
     console.log '====================================='
-if TEST and 0
+if TEST and 1
     parser = new ArgumentParser({debug: true});
     parser.addArgument(['-1'], {dest: 'one'});
     parser.addArgument(['foo'], {nargs: '?'});
     # negative number options present, so -1 is an option
+    parser.parseArgs(['-h'])
     args = parser.parseArgs(['-1', 'X']);
     # Namespace(foo=None, one='X')
     assert.equal(args.one, 'X');
@@ -1206,7 +1212,7 @@ if TEST and 0
     console.log parser.parseArgs(['-2']);
 
     console.log '====================================='
-if TEST and 1
+if TEST and 0
   parser = new ArgumentParser({debug: true});
   parser.addArgument(['-x'],{type:'float'});
   parser.addArgument(['-3'],{type:'float', dest:'y'})
