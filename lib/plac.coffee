@@ -59,8 +59,14 @@ class getfullargspec
   constructor: (f) ->
     # inspect.getargspac(f)
     @args = alt_getarglist(f)
-    @varargs = []
-    @varkw = {}
+    
+    if @args[@args.length-2] == 'vargs' and @args[@args.length-1] == 'kwargs'
+      @args = @args[...(@args.length-2)]
+      @varargs = 'vargs'
+      @varkw = 'kwargs'
+    else
+      @varargs = null
+      @varkw = null
     @defaults = []
     @annotations = f.__annotations__ ? {}
 
@@ -94,8 +100,10 @@ annotations = (ann) ->
   annotate = (f) ->
     fas = getargspec(f)
     args = fas.args
-    # append varargs to args
-    # append varkw to args
+    if fas.varargs?
+      args.push(fas.varargs)
+    if  fas.varkw?
+      args.push(fas.varkw)
     for argname of ann
       if not argname in args
         thrown new Error('Annotating non-existing argument'+ argname)
@@ -117,7 +125,7 @@ class Annotation
     if @kind == 'positional'
       assert(@abbrev == null)
   
-# class method  
+# was class method in python  
 annotation_from = (obj) ->
   # helper to convert an object into an annotation, if needed
   if is_annotation(obj)
@@ -187,7 +195,7 @@ _extract_kwargs = (args) ->
   kwargs = {}
   for arg in args
     # arg of form 'name=value', put in kwargs, else in arglist
-    m = arg.match(/([a-zA-Z_]\w*])=/)
+    m = arg.match(/([a-zA-Z_]\w*)=/)
     if m?
       name = m[1]
       kwargs[name] = arg[name.length+1...]
@@ -221,7 +229,7 @@ class ArgumentParser extends argparse.ArgumentParser
     return arg
     
   consume: (args) ->
-    #Call the underlying function with the args. Works also for
+    # Call the underlying function with the args. Works also for
     #   command containers, by dispatching to the right subparser.
     
     arglist = (@alias(a) for a in args)
@@ -233,21 +241,25 @@ class ArgumentParser extends argparse.ArgumentParser
       else if subp?
         '' # @ = subp 
     if @argspec? and !_.isEmpty(@argspec.varkw)
-      [arglist, kwargs] = @_extract_kwargs(arglist)
+      [arglist, kwargs] = _extract_kwargs(arglist)
     else
       kwargs = {}
-    if @argspec? and @argspec.varargs.length>0
+    if @argspec? and @argspec.varargs?
       # ignore unrecognized arguments
       [ns, extraopts] = @parse_known_args(arglist)
     else
       [ns, extraopts] = [@parse_args(arglist), []] # may raise an exit
+    DEBUG 'ns', ns
+    DEBUG 'extrapopts', extraopts
     args = (ns[a] for a in @argspec.args)
-    varargs = ns[@argspec.varargs]? []
+    varargs = ns[@argspec.varargs] ? []
     collision = [] # set(@argspec.args) & set(kwargs)
     if collision.length>0
       @error('colliding keyword arguments:' + collision)
-    alist = [].concat(args, varargs, extraopts)
-    return [cmd, @func(alist, kwargs)]
+    alist = [].concat(args, [varargs], extraopts)
+    DEBUG 'alist', alist
+    DEBUG 'kwargs', kwargs
+    return [cmd, @func(alist..., kwargs)]
     
   _extract_subparse_cmd: (arglist) ->
     # Extract the right subparser from the first recognized argument
@@ -285,16 +297,17 @@ class ArgumentParser extends argparse.ArgumentParser
     _parser_registry[obj] = @
 
   populate_from: (func) ->
-    #Extract the arguments from the attributes of the passed function
+    # Extract the arguments from the attributes of the passed function
     # and return a populated ArgumentParser instance.
-    
     @_set_func_argspec(func)
     f = @argspec
-    defaults =f.defaults ? []
+    defaults = f.defaults ? []
     n_args = f.args.length
     n_defaults = defaults.length
     alldefaults = (null for i in [0...(n_args-n_defaults)]).concat(defaults)
+    DEBUG f.args, alldefaults
     prefix = @prefix = (func.prefix_chars ? '-')[0]
+    # args with possible defaults
     for [name, defaultValue] in _.zip(f.args, alldefaults)
       ann = f.annotations[name] ? []
       a = annotation_from(ann)
@@ -311,21 +324,37 @@ class ArgumentParser extends argparse.ArgumentParser
         else
           shortlong = [prefix + name.replace('_','-')]
       else if !defaultValue?
-        @add_argument(name, {help:a.help, type:a.type, choices: a.choices, metaver:metavar})
+        if _.str.endsWith(name,'s')  # plural
+          @add_argument(name, {nargs:'*',help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
+        else
+          @add_argument(name, {help:a.help, type:a.type, choices: a.choices, metaver:metavar})
       else # default  argument
         @add_argument(name, {nargs:'?',help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
+
       if a.kind == 'option'
         if defaultValue?
           metavar = metavar ? ""+metavar
         @add_argument(shortlong..., {help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
-      else if a.king == 'flag'
+      else if a.kind == 'flag'
         if defaultValue? and defaultValue != false
           throw new TypeError("Flat #{name} wants default false, got #{defaultValue}")
         @add_argument(shortlong..., {action:'storeTrue', help:a.help})
-    if f.varargs.length>0
-      a = annotation_from(f.annotations[f.varags] ? [])
-      @add_argument(f.varkw, {nargs:'*', help:a.help, defaultValue:{},type:a.type, metavar:a.metaver})
-      # where is the shortlong?, here or in py?
+        
+    if f.varargs?
+        a = annotation_from(f.annotations[f.varargs] ? [])
+        @add_argument(f.varargs, {nargs:'*', help:a.help, defaultValue:[],\
+                           type:a.type, metavar:a.metavar})
+    if f.varkw?
+        a = annotation_from(f.annotations[f.varkw] ? [])
+        @add_argument(f.varkw, {nargs:'*', help:a.help, defaultValue:{},\
+                           type:a.type, metavar:a.metavar})
+    # 
+    # py has simple arg, arg with defaultvalue, arg w/ multiple values, dict arg
+    # js only has only has simple arg
+    # so has to use other means to identify defaults, indicate '*' and '**' args
+    # here I try positional 'integer' as '?', 'integers' as '*'
+    # propose 'options' as equiv to **kwarg
+
 
   missing: (name) ->
     # may raise a system exit
@@ -373,12 +402,29 @@ _.toArray = (iterable) ->
 
 if not module.parent?
   # example3.py
-  main = (dsn) ->
+  main = (aflag, anopt, aposit, vargs, kwargs) ->
     # Do something with the database
-    console.log dsn
+    # vargs... is not usable; coffee just uses 'arguments'
+    console.log 'main:', aflag, anopt, aposit, vargs, kwargs
     return 'Done'
-    # ...
-  console.log call(main, ['DSN obj'])
+
+  d = {
+    aflag: ["a flag", 'flag'],
+    anopt: ["an optional", 'option'],
+    aposit: ["a positional", 'positional'],
+    vargs: ["multi element ", 'positional'],
+    kwargs: ["keyword args", 'positional']}
+  main = annotations(d)(main)
+
+  parser = parser_from(main, {prog: 'Main', \
+                description: 'plac version of argparse sum example',
+                debug: true})
+
+  console.log(parser.format_help());
+  
+  console.log parser.consume(['-aflag','-anopt', '42', 'posarg','var1','var2','one=1', 'two=foo'])
+  # main: true 42 posarg [ 'var1', 'var2' ] { one: '1', two: 'foo' }
+  # looks right
 
 ###
 in py
