@@ -37,9 +37,11 @@ function formalParameterList(fn) {
  }`
  
 formal_parameter_list = (fn) ->
+  # coffee equivalent
   FN_ARGS = /^function\s*[^\(]*\(\s*([^\)]*)\)/m;
   FN_ARG_SPLIT = /,/;
-  FN_ARG = /^\s*(_?)(\S+?)\1\s*$/;
+  # FN_ARG = /^\s*(_?)(\S+?)\1\s*$/;
+  FN_ARG = /^\s*(\S+?)\s*$/
   STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
   # why is '_x_' parsed as just 'x'? (rm paired _)
   args = []
@@ -48,17 +50,21 @@ formal_parameter_list = (fn) ->
   r = arg_decl[1].split(FN_ARG_SPLIT)
   for a of r
     arg = r[a]
-    arg.replace(FN_ARG, (all, underscore, name) ->
+    arg.replace(FN_ARG, (all, name) ->
       args.push(name))
+    #arg.replace(FN_ARG, (all, underscore, name) ->
+    #  args.push(name))
   args
 
 alt_getarglist = (fn) ->
+  # more compact
   return fn.toString().match(/function\s+\w*\s*\((.*?)\)/)[1].split(/\s*,\s*/)
 
 class getfullargspec
   constructor: (f) ->
     # inspect.getargspac(f)
-    @args = alt_getarglist(f)
+    # @args = alt_getarglist(f)
+    @args = formal_parameter_list(f)
     
     if @args[@args.length-2] == 'vargs' and @args[@args.length-1] == 'kwargs'
       @args = @args[...(@args.length-2)]
@@ -67,7 +73,7 @@ class getfullargspec
     else
       @varargs = null
       @varkw = null
-    @defaults = []
+    @defaults = f.defaults ? []
     @annotations = f.__annotations__ ? {}
 
 # set class
@@ -84,7 +90,7 @@ getargspec = (callableobj) ->
   # else if callableobj.__call__?
   else
     throw new TypeError('Could not determine the signature of'+callableobj)
-  DEBUG name, argspec
+  DEBUG 'argspec:', name, argspec
   return argspec
 
 #DEBUG 'gerartspec args:',formalParameterList(getargspec)
@@ -159,7 +165,8 @@ PARSER_CFG = 'prog, usage, epilog, parents, formatter_class, fromfile_prefix_cha
     'add_help, debug, description, prefix_chars, argument_default, conflict_handler, '+
     'version'
 PARSER_CFG = PARSER_CFG.split(', ')
-DEBUG PARSER_CFG
+# DEBUG PARSER_CFG
+
 pconf = (obj) ->
   # Extracts the configuration of the underlying ArgumentParser from obj
   cfg = {description: 'obj doc', formatter_class:argparse.HelpFormatter}
@@ -180,7 +187,7 @@ parser_from = (obj, confparams={}) ->
   _parser_registry[obj] = parser = new ArgumentParser(conf)
   parser.obj = obj
   parser.case_sensitive = confparams['case_sensitive'] ? obj['case_sensitive'] ? true
-  if obj['commands']? and !_.isClass(obj)
+  if obj['commands']? and true # !_.isClass(obj)
     # a command container instance
     parser.addsubcommands(obj.commands, obj, 'subcommands')
   else
@@ -222,7 +229,9 @@ _match_cmd = (abbrev, commands, case_sensitive=true) ->
 class ArgumentParser extends argparse.ArgumentParser
    # An ArgumentParser with .func and .argspec attributes, and possibly
    # .commands and .subparsers.
-
+  constructor: () ->
+    super()
+    @test = 'testing'
   case_sensitive = true
   alias: (arg) ->
     # Can be overridden to preprocess command-line arguments
@@ -234,12 +243,13 @@ class ArgumentParser extends argparse.ArgumentParser
     
     arglist = (@alias(a) for a in args)
     cmd = null
-    if @.subparsers?
-      [subp, cmd] = @_extract_subparser_cmd(arglist)
+    if @subparsers?
+      [subp, cmd, arglist] = @_extract_subparser_cmd(arglist)
+      DEBUG cmd, arglist
       if !subp? and cmd?
         return [cmd, @missing(cmd)]
       else if subp?
-        '' # @ = subp 
+        return subp.consume(arglist) 
     if @argspec? and !_.isEmpty(@argspec.varkw)
       [arglist, kwargs] = _extract_kwargs(arglist)
     else
@@ -261,31 +271,33 @@ class ArgumentParser extends argparse.ArgumentParser
     DEBUG 'kwargs', kwargs
     return [cmd, @func(alist..., kwargs)]
     
-  _extract_subparse_cmd: (arglist) ->
+  _extract_subparser_cmd: (arglist) ->
     # Extract the right subparser from the first recognized argument
     optprefix = @prefix_chars[0]
-    name_parser_map = @subparsesrs._name_parser_map
+    name_parser_map = @subparsers._name_parser_map
     for [i,arg] in _.zip([0...arglist.length], arglist)
       if arg[0] != optprefix  # or _.str.startsWith
-        cmd = _match_cmd(arg, name_parser_map, @case_sensitive)
-        delete arglist[i]
-        return [name_parser_map[cmd], cmd || arg]
-    return [null,null]
+        # cmd = _match_cmd(arg, name_parser_map, @case_sensitive)
+        cmd = arg # simple matching for now
+        arglist = arglist[(i+1)...]
+        return [name_parser_map[cmd], cmd || arg, arglist]
+    return [null,null, arglist] # none found
     
   addsubcommands: (commands, obj, title=null, cmdprefix='') ->
     # Extract a list of subcommands from obj and add them to the parser
     # obj.cmdprefix? or obj[cmdprefix]
     # 'hasattr(obj, cmdprefix) and obj.cmdprefix' looks a bit suspect
+    options = {title:title}
+    options['parser_class'] = ArgumentParser
     if !@subparsers?
-      @subparsers = @add_subparsers({title:title})
+      @subparsers = @add_subparsers(options)
     else if title?
-      @add_argument_group({title:title})
+      @add_argument_group(options)
     prefixlen = (obj.cmdprefix ? '').length
     add_help = obj.add_help ? true
     for cmd in commands
       func = obj[cmd[prefixlen...]] # strip the prefix
-      options = {add_help:add_help, help:'func.__doc__'}
-      # options.extend(pconf(func)
+      options = {add_help:add_help, help: 'subparser help'}
       subparser = @subparsers.add_parser(cmd, options)
       subparser.populate_from(func)
     
@@ -358,7 +370,7 @@ class ArgumentParser extends argparse.ArgumentParser
 
   missing: (name) ->
     # may raise a system exit
-    miss = @obj['__missing__'] ? (name) -> @error("No command #{name}")
+    miss = @obj['__missing__'] ? (name) -> new Error("No command #{name}")
     return miss(name)
     
   print_actions: () ->
@@ -390,24 +402,22 @@ exports.call = call
 
 #DEBUG 'call args:',formalParameterList(call)
 
-###
-# Convert anything iterable into a real, live array.
-_.toArray = (iterable) ->
-  return []                   if (!iterable)
-  return iterable.toArray()   if (iterable.toArray)
-  return iterable             if (_.isArray(iterable))
-  return slice.call(iterable) if (_.isArguments(iterable))
-  _.values(iterable)
-###
-
 if not module.parent?
+
+  foo = () ->
+  DEBUG 'gerartspec args:',formalParameterList(foo)
+  DEBUG formal_parameter_list(foo)
+  DEBUG alt_getarglist(foo)
+
+
+  console.log require.module == module
   # example3.py
   main = (aflag, anopt, aposit, vargs, kwargs) ->
     # Do something with the database
     # vargs... is not usable; coffee just uses 'arguments'
-    console.log 'main:', aflag, anopt, aposit, vargs, kwargs
+    console.log 'main args:', aflag, anopt, aposit, vargs, kwargs
     return 'Done'
-
+    
   d = {
     aflag: ["a flag", 'flag'],
     anopt: ["an optional", 'option'],
@@ -415,6 +425,38 @@ if not module.parent?
     vargs: ["multi element ", 'positional'],
     kwargs: ["keyword args", 'positional']}
   main = annotations(d)(main)
+  main.defaults = ['posdefault']
+  main.name = 'MAIN'
+  main.document = 'documentation for main'
+
+  parser = parser_from(main, {prog: 'Main', \
+                description: 'plac version of argparse sum example',
+                debug: true})
+
+  console.log(parser.format_help());
+  # usage: Main [-h] [-aflag] [-anopt ANOPT]
+  #          [aposit] [vargs [vargs ...]] [kwargs [kwargs ...]]
+
+  console.log parser.consume([])
+  # main args: false null posdefault [] {}
+
+  console.log parser.consume(['-aflag','-anopt', '42', 'posarg','var1','var2','one=1', 'two=foo'])
+  # main args: true 42 posarg [ 'var1', 'var2' ] { one: '1', two: 'foo' }
+  # looks right
+
+  console.log "========================\ntest subparsers"
+  afunc = (bar) -> 
+    return ['a bar:',bar]
+  main = () ->
+    return "DONE"
+  main.a = afunc
+  main.b = (baz) -> 
+    return ['b baz:',baz]
+    
+  d = {}
+  main = annotations(d)(main)
+  main.commands = ['a','b']
+  main.document = 'documentation for main'
 
   parser = parser_from(main, {prog: 'Main', \
                 description: 'plac version of argparse sum example',
@@ -422,10 +464,16 @@ if not module.parent?
 
   console.log(parser.format_help());
   
-  console.log parser.consume(['-aflag','-anopt', '42', 'posarg','var1','var2','one=1', 'two=foo'])
-  # main: true 42 posarg [ 'var1', 'var2' ] { one: '1', two: 'foo' }
-  # looks right
+  # console.log parser.parse_args(['a','-h'])
+  # exits; I thought debug was supposed to trap that
 
+  console.log 'a bar', parser.consume(['a',42])
+  console.log ''
+  try
+    console.log 'b',parser.consume(['b','BAZ'])
+  catch error
+    console.log error
+    
 ###
 in py
 def foo3(x,y=3,a=None,*z,**w):
