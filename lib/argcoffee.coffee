@@ -5,7 +5,7 @@
  *
  * Inherited from [[ActionContainer]]
 ###
-if not module.parent?
+if not module.parent? and (!process.argv[2]? or process.argv[2]!='nodebug')
     DEBUG = (arg...) ->
       arg.unshift('==> ')
       console.log arg...
@@ -81,7 +81,7 @@ if not _ActionsContainer?
 
 class ArgumentParser extends _ActionsContainer
     constructor: (options={}) ->
-        @prog=options.prog ? process.argv[0] # basename    
+        @prog=options.prog ? path.basename(process.argv[1])    
         @usage=options.usage ? null    
         @epilog=options.epilog ? null
         @parents=options.parents ? []
@@ -1112,6 +1112,16 @@ argumentError = (argument, message) ->
 
 
 TEST = not module.parent?
+
+testparse = (args) ->
+  console.log args
+  console.log (
+    try
+      parser.parseArgs(args)
+    catch error
+      error
+  )
+  
 if TEST and 0
     parser = new ArgumentParser()
     #console.log 'obj:',util.inspect(parser,false,0)
@@ -1179,8 +1189,10 @@ if TEST and 0
     setattr(args,'foo','found')
     console.log getattr(args,'foo'), args
     console.log '====================================='
-if TEST and 0
+if TEST and 1
     parser = new ArgumentParser({debug: true});
+    #parser.add_argument('-x', {action:'storeTrue'})
+    #parser.add_argument('foobar')
     subparsers = parser.addSubparsers({
         title: 'subcommands',
         dest: 'subcommand_name'
@@ -1190,15 +1202,28 @@ if TEST and 0
     c1.addArgument([ '-b', '--bar' ], {});
     c2 = subparsers.addParser('c2', {});
     c2.addArgument([ '--baz' ], {});
-    Nsp = new Namespace()
-    Nsp.set('dummy','foobar')
-    args = parser.parse_args('c1 --foo 5'.split(' '), Nsp)
-    args = parser.parseArgs('c1 --foo 5'.split(' '), Nsp);
-    #args = parser.parseArgs([])
-    console.log args
+    try
+      Nsp = new Namespace()
+      Nsp.set('dummy','foobar')
+      args = parser.parse_args('c1 --foo 5'.split(' '), Nsp)
+      args = parser.parseArgs('c1 --foo 5'.split(' '), Nsp);
+      # args = parser.parseArgs('-x c2'.split(' '))
+      console.log args
+    catch error
     
+    parser.printHelp()
+    try
+      parser.parseArgs(['-h'])
+    catch error
+    try
+      parser.parseArgs(['c1','-h'])
+    catch error
+      DEBUG error
+    try
+      parser.parseArgs(['c2','-h'])
+    catch error
     console.log '====================================='
-if TEST and 1
+if TEST and 0
     parser = new ArgumentParser({debug: true});
     parser.addArgument(['-1'], {dest: 'one'});
     parser.addArgument(['foo'], {nargs: '?'});
@@ -1208,8 +1233,9 @@ if TEST and 1
     # Namespace(foo=None, one='X')
     assert.equal(args.one, 'X');
     # negative number options present, so -2 is an option
-    console.log parser.parseArgs(['-z'])
-    console.log parser.parseArgs(['-2']);
+    testparse(['FOO'])
+    testparse(['-z'])
+    testparse(['-2'])
 
     console.log '====================================='
 if TEST and 0

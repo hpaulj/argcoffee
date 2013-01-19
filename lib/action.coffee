@@ -221,15 +221,12 @@ class _HelpAction extends Action
         options.defaultValue ?= $$.SUPPRESS
         options.nargs = 0
         super(options)
-        #DEBUG @__call__
-        #DEBUG @isPositional
-        #DEBUG @optionStrings
-        #DEBUG @getName()
 
     __call__: (parser, namespace, values, option_string=null) ->
         parser.print_help()
         if parser.debug
             console.log 'Help pseudo exit'
+            parser.exit()
         else
             parser.exit()
 
@@ -273,6 +270,7 @@ class _SubParsersAction extends Action
         options.nargs = $$.PARSER
         options.choices = @_name_parser_map
         super(options)
+        @debug = options.debug
 
     add_parser: (name, options) ->
         # set prog from the existing prefix
@@ -283,6 +281,7 @@ class _SubParsersAction extends Action
             delete options.aliases
         else
             aliases = []
+        options.debug ?= @debug # passed via group
         
         # create a pseudo-action to hold the choice help
         if options.help?

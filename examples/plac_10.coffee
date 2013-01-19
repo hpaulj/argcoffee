@@ -2,7 +2,7 @@
 plac = require('../lib/plac')
 
 main = (operator, numbers) ->
-    # A script to add and multiply numbers
+    ### A script to add and multiply numbers ###
     if operator == 'mul'
         return numbers.reduce(((a, b) -> a*b), 1.0)
     else if operator == 'add'

@@ -1,5 +1,5 @@
 # adapted from plac_core.py, the core part of plac module
-if true # not module.parent?
+if not module.parent?
     DEBUG = (arg...) ->
       arg.unshift('==> ')
       console.log arg...
@@ -13,48 +13,35 @@ _ = require('underscore')
 _.str = require('underscore.string')
 
 argparse = require('argcoffee')
-
-`// http://stackoverflow.com/questions/6921588/is-it-possible-to-reflect-the-arguments-of-a-javascript-function
-var FN_ARGS = /^function\s*[^\(]*\(\s*([^\)]*)\)/m;
-var FN_ARG_SPLIT = /,/;
-var FN_ARG = /^\s*(_?)(\S+?)\1\s*$/;
-var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
-
-function formalParameterList(fn) {
-   var fnText,argDecl;
-   var args=[];
-   fnText = fn.toString().replace(STRIP_COMMENTS, '');
-   argDecl = fnText.match(FN_ARGS); 
-
-   var r = argDecl[1].split(FN_ARG_SPLIT);
-   for(var a in r){
-      var arg = r[a];
-      arg.replace(FN_ARG, function(all, underscore, name){
-         args.push(name);
-      });
-   }
-   return args;
- }`
  
 formal_parameter_list = (fn) ->
-  # coffee equivalent
-  FN_ARGS = /^function\s*[^\(]*\(\s*([^\)]*)\)/m;
+  FN_ARGS = /^function\s*([^\(]*)\(\s*([^\)]*)\)/m;
   FN_ARG_SPLIT = /,/;
-  # FN_ARG = /^\s*(_?)(\S+?)\1\s*$/;
+  # FN_ARG = /^\s*(_?)(\S+?)\1\s*$/; # removes bracketing _
   FN_ARG = /^\s*(\S+?)\s*$/
   STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
-  # why is '_x_' parsed as just 'x'? (rm paired _)
   args = []
+  name = null
+  doc = null
   fn_text = fn.toString().replace(STRIP_COMMENTS, '')
-  arg_decl = fn_text.match(FN_ARGS)
-  r = arg_decl[1].split(FN_ARG_SPLIT)
+  cmts = fn.toString().match(STRIP_COMMENTS)
+  # could refine this to take just the comment at the start
+  # also remove the comment marks
+  if cmts? and cmts.length>0
+    doc = cmts[0]
+  arg_decl = fn_text.match(FN_ARGS)  # function name(args)
+  name = arg_decl[1]
+  arg_decl = arg_decl[2]
+  r = arg_decl.split(FN_ARG_SPLIT)
   for a of r
     arg = r[a]
     arg.replace(FN_ARG, (all, name) ->
       args.push(name))
-    #arg.replace(FN_ARG, (all, underscore, name) ->
-    #  args.push(name))
-  args
+  if name? and name==''
+    name = null
+  if doc? and doc.length==0
+    doc = null
+  return [args, name, doc]
 
 alt_getarglist = (fn) ->
   # more compact
@@ -64,7 +51,7 @@ class getfullargspec
   constructor: (f) ->
     # inspect.getargspac(f)
     # @args = alt_getarglist(f)
-    @args = formal_parameter_list(f)
+    [@args, @name, @doc] = formal_parameter_list(f)
     
     if @args[@args.length-2] == 'vargs' and @args[@args.length-1] == 'kwargs'
       @args = @args[...(@args.length-2)]
@@ -84,16 +71,19 @@ getargspec = (callableobj) ->
   #  methods, classes and generic callables.
   if _.isFunction(callableobj)
     argspec = new getfullargspec(callableobj)
-    name = callableobj.name ? ''
-  # else if method, remove 1st arg, py self
-  # else if class, 
-  # else if callableobj.__call__?
+    if callableobj.name?
+      # explicit name of obj takes presidence over one deduced from string
+      argspec.name = callableobj.name 
+    
+  # py has special treatment for method, class, and callable
+  # js all is either obj, or function
   else
     throw new TypeError('Could not determine the signature of'+callableobj)
-  DEBUG 'argspec:', name, argspec
+  DEBUG 'argspec:', argspec
   return argspec
 
-#DEBUG 'gerartspec args:',formalParameterList(getargspec)
+# this distinction between getargspec and getfullargspec is a python artifact
+
 #DEBUG formal_parameter_list(getargspec)
 #DEBUG alt_getarglist(getargspec)
 
@@ -105,6 +95,7 @@ annotations = (ann) ->
   
   annotate = (f) ->
     fas = getargspec(f)
+    # check that the names in 'ann' match those found by getargspec
     args = fas.args
     if fas.varargs?
       args.push(fas.varargs)
@@ -169,10 +160,19 @@ PARSER_CFG = PARSER_CFG.split(', ')
 
 pconf = (obj) ->
   # Extracts the configuration of the underlying ArgumentParser from obj
-  cfg = {description: 'obj doc', formatter_class:argparse.HelpFormatter}
-  for name of obj # dir(obj)  # what is dir() equivalent? ownProperties?
-    if name in PARSER_CFG # argument of ArgumentParse
-      cfg[name] = obj[name]
+  doc = name = null
+  try
+    argspec = getargspec(obj)
+    doc = argspec.doc ? null
+    name = argspec.name ? null
+  catch TypeError
+    ""    
+  if !name? or name==''
+    name = null
+  cfg = {prog: name, description: doc} # , formatter_class:argparse.HelpFormatter}
+  for key of obj 
+    if key in PARSER_CFG # argument of ArgumentParse
+      cfg[key] = obj[key]
   return cfg
   
 _parser_registry = {}
@@ -184,10 +184,11 @@ parser_from = (obj, confparams={}) ->
     # the underlying parser has been generated already
     return _parser_registry[obj]
   conf = _.extend({}, pconf(obj), confparams)
+  DEBUG 'conf',conf
   _parser_registry[obj] = parser = new ArgumentParser(conf)
   parser.obj = obj
   parser.case_sensitive = confparams['case_sensitive'] ? obj['case_sensitive'] ? true
-  if obj['commands']? and true # !_.isClass(obj)
+  if obj['commands']?
     # a command container instance
     parser.addsubcommands(obj.commands, obj, 'subcommands')
   else
@@ -229,9 +230,9 @@ _match_cmd = (abbrev, commands, case_sensitive=true) ->
 class ArgumentParser extends argparse.ArgumentParser
    # An ArgumentParser with .func and .argspec attributes, and possibly
    # .commands and .subparsers.
-  constructor: () ->
-    super()
-    @test = 'testing'
+  constructor: (options) ->
+    super(options)
+    
   case_sensitive = true
   alias: (arg) ->
     # Can be overridden to preprocess command-line arguments
@@ -313,6 +314,10 @@ class ArgumentParser extends argparse.ArgumentParser
     # and return a populated ArgumentParser instance.
     @_set_func_argspec(func)
     f = @argspec
+    # in python style, defaults, if any, are attributed to the last 'n'
+    # of the args; i.e. args with defaults come after ones without
+    # but if defaults are given as part of the annotations it might be
+    # better to use key value pairs
     defaults = f.defaults ? []
     n_args = f.args.length
     n_defaults = defaults.length
@@ -351,6 +356,9 @@ class ArgumentParser extends argparse.ArgumentParser
         if defaultValue? and defaultValue != false
           throw new TypeError("Flat #{name} wants default false, got #{defaultValue}")
         @add_argument(shortlong..., {action:'storeTrue', help:a.help})
+      # 'flag' action is storeTrue
+      # for all others it is the default store with possbiel defaultValue and choices
+      # nargs is either null (=1), '?' or '*'
         
     if f.varargs?
         a = annotation_from(f.annotations[f.varargs] ? [])
@@ -401,20 +409,14 @@ call = (obj, arglist=process.argv[2...], eager=true) ->
 exports.call = call
 
 #DEBUG 'call args:',formalParameterList(call)
-
+#=======================================================
 if not module.parent?
-
-  foo = () ->
-  DEBUG 'gerartspec args:',formalParameterList(foo)
-  DEBUG formal_parameter_list(foo)
-  DEBUG alt_getarglist(foo)
-
 
   console.log require.module == module
   # example3.py
   main = (aflag, anopt, aposit, vargs, kwargs) ->
-    # Do something with the database
-    # vargs... is not usable; coffee just uses 'arguments'
+    ### Do something with the database
+     vargs... is not usable; coffee just uses 'arguments' ###
     console.log 'main args:', aflag, anopt, aposit, vargs, kwargs
     return 'Done'
     
@@ -427,7 +429,7 @@ if not module.parent?
   main = annotations(d)(main)
   main.defaults = ['posdefault']
   main.name = 'MAIN'
-  main.document = 'documentation for main'
+  main.description = 'documentation for main'
 
   parser = parser_from(main, {prog: 'Main', \
                 description: 'plac version of argparse sum example',
@@ -445,23 +447,24 @@ if not module.parent?
   # looks right
 
   console.log "========================\ntest subparsers"
+  _parser_registry = {}
   afunc = (bar) -> 
+    ### a command ###
     return ['a bar:',bar]
   main = () ->
     return "DONE"
   main.a = afunc
   main.b = (baz) -> 
+    ### b command takes one arg ###
     return ['b baz:',baz]
     
   d = {}
   main = annotations(d)(main)
   main.commands = ['a','b']
-  main.document = 'documentation for main'
+  main.description = 'documentation for main'
 
-  parser = parser_from(main, {prog: 'Main', \
-                description: 'plac version of argparse sum example',
+  parser = parser_from(main, { # prog: 'Main', \
                 debug: true})
-
   console.log(parser.format_help());
   
   # console.log parser.parse_args(['a','-h'])
@@ -473,7 +476,15 @@ if not module.parent?
     console.log 'b',parser.consume(['b','BAZ'])
   catch error
     console.log error
-    
+  
+  try
+    parser.consume(['-h'])
+  catch error
+  try
+    parser.consume(['a','-h'])
+  catch error
+  
+  console.log 'done'
 ###
 in py
 def foo3(x,y=3,a=None,*z,**w):

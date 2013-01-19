@@ -11,8 +11,10 @@ cmds = {
     add_help: false
     commands: ['help', 'commit']
     help: (name) ->
+        ### help command ###
         return ['help:', name]
     commit: () ->
+        ### commit command ###
         return 'commit'
     }
 
@@ -26,6 +28,9 @@ console.log 'help foo:', parser.consume(['help','foo'])
 console.log plac.call(cmds, ['help','foo'])
 
 console.log 'commit:', parser.consume(['commit'])
+
+if process.argv.length>2
+  console.log parser.consume(process.argv[2...])
 ###
 def test_cmds():
     assert 'commit' == plac.call(cmds, ['commit'])

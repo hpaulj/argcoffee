@@ -36,7 +36,7 @@ console.log(main);
 //plac.call(main)
 //parser = plac.call(main)
 var parser = plac.parser_from(main, {prog: 'Main', 
-                description: 'plac version of argparse sum example',
+                // description: 'plac version of argparse sum example',
                 debug: true});
 
 console.log(parser.format_help());
@@ -51,7 +51,7 @@ console.log(parser.format_help());
         console.log(error);
         }        
     })
-
+    
 /*
 parser.addArgument(['integers'], {
   metavar:      'N',
