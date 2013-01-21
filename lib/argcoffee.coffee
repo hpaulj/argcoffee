@@ -12,42 +12,36 @@ if not module.parent? and (!process.argv[2]? or process.argv[2]!='nodebug')
 else
     DEBUG = () ->
 
-util = require('util') # node
+util = require('util')
 assert = require('assert')
 path = require('path')
 _ = require('underscore')
 _.str = require('underscore.string')
+
+# Zip together multiple lists into a single array -- elements that share
+# an index go together.
+_.zipShortest = ->
+  length =  _.min _.pluck arguments, 'length'
+  results = new Array length
+  for i in [0...length]
+    results[i] = _.pluck arguments, String i
+  results
+
 
 # other argparse
 adir = './'
 #adir = '../node_modules/argparse/lib/'
 $$ = require('./const')
 
-if false
-  ActionContainer = require(adir+'action_container')
-else
-  _ActionsContainer = require('./argcontainer')._ActionsContainer
-#argumentErrorHelper = require('./error')
+_ActionsContainer = require('./argcontainer')._ActionsContainer
 
-HelpFormatter_js = require('./formatter')
 HelpFormatter = require('./helpformatter').HelpFormatter
   
-if false
-  Namespace = require(adir+'namespace')
-else
-  class Namespace # or just a simple object
-  
-# (re)define a few namespace methods
-Namespace::isset = (key) ->
-    this[key]?
-Namespace::get = (key, defaultValue) ->
-    this[key] ? defaultValue
-Namespace::set = (key, value) ->
-  this[key] = value 
-Namespace::repr = () ->
-    'Namespace'+ util.inspect(@)
-# a Namespace is only created here (or by user)
-# so we can rework it here, without attention to what's on the argparse file
+class Namespace 
+  isset: (key) -> @[key]?
+  get: (key, defaultValue) -> @[key] ? defaultValue
+  set: (key, value) -> @[key] = value
+  repr: () -> 'Namespace'+ util.inspect(@)
     
 if DEBUG and 0
   np = new Namespace()
@@ -60,24 +54,12 @@ if DEBUG and 0
   console.log np.isset('test')
   console.log np.get('test','default')
   console.log np.repr()
-
-  
-# the Namespace set does not set a 'null' value
-# it also tries to set an object 'key'; where is this needed?
-# lets try something closer to  py setattr(obj,key,value)
-# does change here affect a Namespace object called by a diff file?
-
     
 # argparse separates these exports from definion of ArgumentParser
 exports.Namespace = Namespace
 exports.HelpFormatter = HelpFormatter
 exports.Const = $$
 exports.Action = require(adir+'action')
-
-if not _ActionsContainer?
-  # cast ActionContainer into the Coffeescript 'class' form
-  class _ActionsContainer extends ActionContainer
-  util.inherits(_ActionsContainer, ActionContainer)
 
 class ArgumentParser extends _ActionsContainer
     constructor: (options={}) ->
@@ -100,8 +82,8 @@ class ArgumentParser extends _ActionsContainer
             argument_default: @argument_default,
             conflictHandler: @conflict_handler}
         _ActionsContainer.call(this, acoptions)
-        @_positionals = @addArgumentGroup({title: 'Positional arguments'})
-        @_optionals = @addArgumentGroup({title: 'Optional arguments'})
+        @_positionals = @add_argument_group({title: 'Positional arguments'})
+        @_optionals = @add_argument_group({title: 'Optional arguments'})
         @_subparsers = null
 
         # type can be any fn that takes string and returns a value, or throws an error
@@ -177,7 +159,7 @@ class ArgumentParser extends _ActionsContainer
             @error('cannot have multiple subparser arguments')
         options.defaultValue = null
         options.debug = @debug
-        options.optionStrings = []
+        options.option_strings = []
         options.parserClass = (options.parserClass || ArgumentParser)
         
         # add the parser class to the arguments if it's not present
@@ -188,7 +170,7 @@ class ArgumentParser extends _ActionsContainer
             description = options.description ? null
             delete options.title
             delete options.description
-            @_subparsers = @addArgumentGroup({title: title, description: description})
+            @_subparsers = @add_argument_group({title: title, description: description})
         else
             @_subparsers = @_positionals
 
@@ -219,9 +201,9 @@ class ArgumentParser extends _ActionsContainer
         # return the created parsers action
         return action
 
-    _add_action: (action) ->   # use camel because AC does
-        if action.isOptional() # optionStrings.length>0
-            assert(action.optionStrings)
+    _add_action: (action) ->  
+        if action.isOptional()
+            assert(action.option_strings)
             this._optionals._add_action(action)
         else
             # DEBUG 'pos action:',action.dest
@@ -288,8 +270,8 @@ class ArgumentParser extends _ActionsContainer
     _parse_known_args: (arg_strings, namespace) ->
         # replace arg strings that are file references
         if @fromfile_prefix_chars?
-            arg_strings = @_read_args_from_files(arg_strings) # stub
-            return [namespace, []]
+            arg_strings = @_read_args_from_files(arg_strings)
+            DEBUG 'from files', arg_strings
             
         # map all mutually exclusive arguments to the other arguments
         # they can't occur with
@@ -395,7 +377,7 @@ class ArgumentParser extends _ActionsContainer
                         char = option_string[0]
                         option_string = char + explicit_arg[0]
                         new_explicit_arg = explicit_arg[1...] || null 
-                        optionals_map = @_optionStringActions ? @_option_string_actions
+                        optionals_map = @_option_string_actions
                         if optionals_map[option_string]?
                             action = optionals_map[option_string]
                             explicit_arg = new_explicit_arg
@@ -434,8 +416,9 @@ class ArgumentParser extends _ActionsContainer
             # add the Optional to the list and return the index at which
             # the Optional's string args stopped
             # assert action_tuples
-            for [action, args, option_string] in action_tuples
-                take_action(action, args, option_string)
+            #for [action, args, option_string] in action_tuples
+            #    take_action(action, args, option_string)
+            take_action(tuple...) for tuple in action_tuples
             return stop
 
         # the list of Positionals left to be parsed; this is modified
@@ -445,34 +428,28 @@ class ArgumentParser extends _ActionsContainer
         # function to convert arg_strings into positional actions
         consume_positionals = (start_index) =>
             # match as many Positionals as possible
-            #DEBUG '#positionals start:',positionals.length
             match_partial = @_match_arguments_partial 
             selected_pattern = arg_string_pattern[start_index...]
-            DEBUG 'cp',selected_pattern
+            DEBUG 'cp', selected_pattern
             arg_counts = match_partial(positionals, selected_pattern)
 
             # slice off the appropriate arg strings for each Positional
             # and add the Positional and its args to the list
-            #DEBUG 'positionals:',(a.dest for a in positionals)
             DEBUG 'arg count:',arg_counts
-            #DEBUG _.zip(positionals, arg_counts)
             # py zip stops w/ shortest. _ zip goes with the longest
             # in subparser case there is a subcommand name
             # js version tests for arg_count.length
-            if arg_counts.length
-              for [action, arg_count] in _.zip(positionals, arg_counts)
-                  DEBUG 'zip action:',action.dest
-                  DEBUG 'zip argcount:',arg_count
-                  args = arg_strings[start_index...start_index + arg_count]
-                  start_index += arg_count
-                  DEBUG 'take action:',action.dest, args
-                  DEBUG namespace.repr()
-                  take_action(action, args)
+            #if arg_counts.length
+            for [action, arg_count] in _.zipShortest(positionals, arg_counts) #when arg_count?
+                args = arg_strings[start_index...start_index + arg_count]
+                start_index += arg_count
+                DEBUG 'take action:',action.dest, args
+                DEBUG namespace.repr()
+                take_action(action, args)
 
             # slice off the Positionals that we just parsed and return the
             # index at which the Positionals' string args stopped
             positionals[..] = positionals[arg_counts.length...]
-            #DEBUG '#positionals left:',positionals.length
             return start_index
 
         # consume Positionals and Optionals alternately, until we have
@@ -490,7 +467,7 @@ class ArgumentParser extends _ActionsContainer
             # consume any Positionals preceding the next option
             next_option_string_index = Math.min((index for index in index_keys when index >= start_index)...)
             if start_index != next_option_string_index
-                DEBUG 'consume positional:',start_index
+                DEBUG 'lp consume positional:',start_index
                 positionals_end_index = consume_positionals(start_index)
 
                 # only try to parse the next optional if we didn't consume
@@ -549,20 +526,43 @@ class ArgumentParser extends _ActionsContainer
                         msg = "one of the arguments #{names.join(' ')} is required"
                         @error(msg)
 
-        DEBUG [namespace.repr(), extras]
+        DEBUG 'known:',[namespace.repr(), extras]
         return [namespace, extras]
         
     _read_args_from_files: (arg_strings) ->
-        return arg_strings # stub
+        # expand arguments referencing files
+        fs = require('fs')
+        new_arg_strings = []
+        for arg_string in arg_strings
+            # for regular arguments, just add them back into the list
+            if arg_string[0] not in @fromfile_prefix_chars
+                new_arg_strings.push(arg_string)
+            # replace arguments referencing files with the file content
+            else
+                try
+                  argstrs = []
+                  # filename = '/tmp/' + arg_string[1...]
+                  filename = arg_string[1...] # w/o the prefix
+                  content = fs.readFileSync(filename, 'utf8')
+                  content = content.trim().split('\n') 
+                  DEBUG filename, content
+                  for arg_line in content
+                    for arg in @convert_arg_line_to_args(arg_line)
+                      argstrs.push(arg)
+                    argstrs = @_read_args_from_files(argstrs)
+                  new_arg_strings.push(argstrs...) 
+                catch error 
+                  console.log error.message
+                  @error(error.message)
+        return new_arg_strings
     
     convert_arg_line_to_args: (arg_line) ->
-        return [arg_line] # no split?
+        return [arg_line]
     
     _match_argument: (action, arg_strings_pattern) =>
         # match the pattern for this action to the arg strings
         nargs_pattern = @_get_nargs_pattern(action)
-        nargs_pattern = '^'+nargs_pattern
-        # match = _re.match(nargs_pattern, arg_strings_pattern) 
+        nargs_pattern = '^' + nargs_pattern
         # py looks for match from start
         matches = arg_strings_pattern.match(nargs_pattern)
         DEBUG 'match_argument', arg_strings_pattern, nargs_pattern, matches
@@ -583,7 +583,6 @@ class ArgumentParser extends _ActionsContainer
         # final actions until we find a match
         result = []
         #foo = get_nargs_pattern # @_get... not found
-        # DEBUG 'foo',foo
         DEBUG 'actions:',(a.dest for a in actions)
         DEBUG 'arg strings pattern:',arg_strings_pattern
         foo = @_get_nargs_pattern 
@@ -597,7 +596,6 @@ class ArgumentParser extends _ActionsContainer
                 m = m[1...]
                 result.push((string.length for string in m)...)
                 break
-                # 
         # return the list of arg string counts
         DEBUG 'match arguments partial:',result
         return result        
@@ -614,7 +612,7 @@ class ArgumentParser extends _ActionsContainer
             return null
 
         # if the option string is present in the parser, return the action
-        actions = @_optionStringActions ? @_option_string_actions
+        actions = @_option_string_actions
         if actions[arg_string]?
             action = actions[arg_string]
             return [action, arg_string, null]
@@ -651,7 +649,6 @@ class ArgumentParser extends _ActionsContainer
         # if it was not found as an option, but it looks like a negative
         # number, it was meant to be positional
         # unless there are negative-number-like options
-        # if @_regexpNegativeNumber.match(arg_string)
         if arg_string.match(@_negative_number_matcher)
             if not _.any(@_hasNegativeNumberOptionals)
                 return null
@@ -676,7 +673,7 @@ class ArgumentParser extends _ActionsContainer
             else
                 option_prefix = option_string
                 explicit_arg = null
-            actions = @_optionStringActions ? @_option_string_actions
+            actions = @_option_string_actions
             for option_string of actions
                 if _.str.startsWith(option_string, option_prefix)
                     action = actions[option_string]
@@ -692,7 +689,7 @@ class ArgumentParser extends _ActionsContainer
             short_option_prefix = option_string[...2]
             short_explicit_arg = option_string[2..]
 
-            actions = @_optionStringActions ? @_option_string_actions
+            actions = @_option_string_actions
             for option_string of actions
                 if option_string == short_option_prefix
                     action = actions[option_string]
@@ -745,7 +742,7 @@ class ArgumentParser extends _ActionsContainer
             # nargs_pattern = '(-*%s-*)' % '-*'.join('A' * nargs)
             nargs_pattern = "(-*#{('A' for i in [0...nargs]).join('')}-*)"
         # if this is an optional action, -- is not allowed
-        if action.optionStrings.length>0 # an optional
+        if action.isOptional()
             nargs_pattern = nargs_pattern.replace(/-\*/g, '')
             nargs_pattern = nargs_pattern.replace(/-/g, '')
 
@@ -762,11 +759,11 @@ class ArgumentParser extends _ActionsContainer
         if action.nargs not in [$$.PARSER, $$.REMAINDER]
             arg_strings = (s for s in arg_strings when s != '--')
 
-        DEBUG arg_strings.length, action.nargs, action.optionStrings, action.defaultValue
+        DEBUG arg_strings.length, action.nargs, action.option_strings, action.defaultValue
         # optional argument produces a default when not present
         if arg_strings.length==0 and action.nargs == $$.OPTIONAL
             DEBUG 'doing ?'
-            if action.optionStrings.length>0
+            if action.isOptional()
                 value = action.constant
             else
                 value = action.defaultValue
@@ -776,7 +773,7 @@ class ArgumentParser extends _ActionsContainer
 
         # when nargs='*' on a positional, if there were no command-line
         # args, use the default if it is anything other than null
-        else if (arg_strings.length==0 and action.nargs == $$.ZERO_OR_MORE and action.optionStrings.length==0)
+        else if (arg_strings.length==0 and action.nargs == $$.ZERO_OR_MORE and action.isPositional())
             DEBUG 'doing *'
             if action.defaultValue?
                 value = action.defaultValue
@@ -986,8 +983,8 @@ class ArgumentParser extends _ActionsContainer
 _get_action_name = (argument) ->
     if argument is null
         return null
-    else if argument.optionStrings.length>0
-        return  argument.optionStrings.join('/')
+    else if argument.isOptional()
+        return  argument.option_strings.join('/')
     else if argument.metavar not in [null, $$.SUPPRESS]
         return argument.metavar
     else if argument.dest not in [null, $$.SUPPRESS]
@@ -1246,34 +1243,6 @@ if TEST and 0
   args = parser.parse_args(['-2'])    
   console.log args 
 
-# args from files
+# TODO args from files
 
-# py parse_args takes an optional Namespace arg; it can be a simple object
-# so why can't it be a JS object?  Do we need the 'set' and 'isset' methods?
-# Class Namespace; constructor takes an obj; fn: set, get, isset, unset
-# the action subclasses use: namespace.set(this.dest, values)
-# c = new Namespace({foo:null,pos:[]})
-# parser.parse_args([], c) 
-# will set values in c; 
-# namespace.set(this.dest, values)
-# could change to namespace[this.dest]=values
-# (with added ability to set from object, and use 'null' to delete
-# get() - getattr with default
-# why not equivalents to py setattr,getattr,hasattr,delattr
-# also _ensure_value(namespace, self.dest, [])
-# var(namespace).setdefault()
-
-# I keep calling parser=ap.ArgumentParser(); omitting the new
-
-# bugs from the doc_examples
-# cannot deduce dest from '-x'
-# try/catch does not capture parse_args('-h')
-# how to print_help for subparser?
-# problems with defaults
-
-# display action as python
-# [_StoreAction(option_strings=[], dest='foo', nargs='?', const=None, default=42, type=None, choices=None, help=None, metavar=None)]
-# pos default works for '?'; not sure about '*'
-# '*' works the same on argparse js ([])
-# so why does py give 42?
 

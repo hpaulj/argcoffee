@@ -172,12 +172,11 @@ class _ActionsContainer
         DEBUG options
         # here options has an option_strings attribute
         # rest of this class expects that
-        # but Action expects and returns (empty) optionStrings
+        # but Action expects and returns (empty) option_strings
         # temp fix: duplicate the attribute in options
-        # and always use action.optionStrings
+        # and always use action.option_strings
         # leave options_strings else where
         # positional has [], optional [...]
-        options.optionStrings = options.option_strings
         
         # if no default was supplied, use the parser-level default
         if 'defaultValue' not of options
@@ -233,11 +232,11 @@ class _ActionsContainer
         action.container = this
 
         # index the action by any option strings it has
-        for option_string in action.optionStrings
+        for option_string in action.option_strings
             @_option_string_actions[option_string] = action
 
         # set the flag if any option strings look like negative numbers
-        for option_string in action.optionStrings
+        for option_string in action.option_strings
             if option_string.match(@_negative_number_matcher)
                 if not _.any(@_hasNegativeNumberOptionals)
                     @_hasNegativeNumberOptionals.push(true)
@@ -405,7 +404,7 @@ class _ActionsContainer
         DEBUG 'check', action
         # find all options that conflict with this option
         confl_optionals = []
-        for option_string in action.optionStrings
+        for option_string in action.option_strings
             if option_string of @_option_string_actions
                 confl_optional = @_option_string_actions[option_string]
                 confl_optionals.push([option_string, confl_optional])
@@ -430,17 +429,17 @@ class _ActionsContainer
         for [option_string, action] in conflicting_actions
 
             # remove the conflicting option
-            #action.optionStrings.remove(option_string)
-            i = action.optionStrings.indexOf(option_string)
+            #action.option_strings.remove(option_string)
+            i = action.option_strings.indexOf(option_string)
             if i>=0
-              delete action.optionStrings[i]
+              delete action.option_strings[i]
             # @_option_string_actions.pop(option_string, null)
             delete @_option_string_actions[option_string]
             
 
             # if the option now has no option string, remove it from the
             # container holding it
-            if action.optionStrings.length==0
+            if action.option_strings.length==0
                 action.container._remove_action(action)
   ###
   

@@ -170,9 +170,11 @@ pconf = (obj) ->
   if !name? or name==''
     name = null
   cfg = {prog: name, description: doc} # , formatter_class:argparse.HelpFormatter}
-  for key of obj 
-    if key in PARSER_CFG # argument of ArgumentParse
-      cfg[key] = obj[key]
+  #for key of obj 
+  #  if key in PARSER_CFG # argument of ArgumentParse
+  #    cfg[key] = obj[key]
+  for key of obj when key in PARSER_CFG
+    cfg[key] = obj[key]
   return cfg
   
 _parser_registry = {}
@@ -276,13 +278,14 @@ class ArgumentParser extends argparse.ArgumentParser
     # Extract the right subparser from the first recognized argument
     optprefix = @prefix_chars[0]
     name_parser_map = @subparsers._name_parser_map
-    for [i,arg] in _.zip([0...arglist.length], arglist)
+    # for [i,arg] in _.zip([0...arglist.length], arglist)
+    for arg, i in arglist    
       if arg[0] != optprefix  # or _.str.startsWith
         # cmd = _match_cmd(arg, name_parser_map, @case_sensitive)
         cmd = arg # simple matching for now
-        arglist = arglist[(i+1)...]
+        arglist = arglist.splice(i+1) # [(i+1)...]
         return [name_parser_map[cmd], cmd || arg, arglist]
-    return [null,null, arglist] # none found
+    return [null, null, arglist] # none found
     
   addsubcommands: (commands, obj, title=null, cmdprefix='') ->
     # Extract a list of subcommands from obj and add them to the parser
@@ -298,7 +301,7 @@ class ArgumentParser extends argparse.ArgumentParser
     add_help = obj.add_help ? true
     for cmd in commands
       func = obj[cmd[prefixlen...]] # strip the prefix
-      options = {add_help:add_help, help: 'subparser help'}
+      options = {add_help: add_help, help: 'subparser help'}
       subparser = @subparsers.add_parser(cmd, options)
       subparser.populate_from(func)
     

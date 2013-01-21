@@ -233,7 +233,7 @@ exports.HelpFormatter = class HelpFormatter
             optionals = []
             positionals = []
             for action in actions
-                if action.optionStrings.length>0
+                if action.isOptional()
                     optionals.push(action)
                 else
                     positionals.push(action)
@@ -341,9 +341,9 @@ exports.HelpFormatter = class HelpFormatter
                     inserts[i] = '|'
         # collect all actions format strings
         parts = []
-        i = -1
-        for action in actions
-            i++
+        # i = -1
+        for action, i in actions
+            # i++
             # suppressed arguments are marked with null
             # remove | separators for suppressed arguments
             if action.help is $$.SUPPRESS
@@ -354,7 +354,7 @@ exports.HelpFormatter = class HelpFormatter
                     delete inserts[i + 1]
 
             # produce all arg strings
-            else if action.optionStrings.length==0
+            else if action.isPositional()
                 part = @_format_args(action, action.dest)
 
                 # if it's in a group, strip the outer []
@@ -369,7 +369,7 @@ exports.HelpFormatter = class HelpFormatter
 
             # produce the first way to invoke the option in brackets
             else
-                option_string = action.optionStrings[0]
+                option_string = action.option_strings[0]
 
                 # if the Optional doesn't take a value, format is
                 #    -s or --long
@@ -399,8 +399,7 @@ exports.HelpFormatter = class HelpFormatter
             if v?
               parts.splice(k,0,v)
         # join all the action items with spaces
-        text = (item for item in parts when item?)
-        text = text.join(' ')
+        text = (item for item in parts when item?).join(' ')
 
         # clean up separators for mutually exclusive groups
         # coffeescript is having problems parsing / ([\])])/g
@@ -470,7 +469,7 @@ exports.HelpFormatter = class HelpFormatter
         return @_join_parts(parts)
 
     _format_action_invocation: (action) =>
-        if action.optionStrings.length==0
+        if action.isPositional()
             metavar = @_metavar_formatter(action, action.dest)(1)[0]
             return metavar
         else
@@ -479,13 +478,13 @@ exports.HelpFormatter = class HelpFormatter
             # if the Optional doesn't take a value, format is
             #    -s, --long
             if action.nargs == 0
-                parts = parts.concat(action.optionStrings)
+                parts = parts.concat(action.option_strings)
             # if the Optional takes a value, format is
             #    -s ARGS, --long ARGS
             else
                 defaultValue = action.dest.toUpperCase()
                 args_string = @_format_args(action, defaultValue)
-                for option_string in action.optionStrings
+                for option_string in action.option_strings
                     parts.push("#{option_string} #{args_string}")
 
             return parts.join(', ')
@@ -538,16 +537,12 @@ exports.HelpFormatter = class HelpFormatter
         # return @_get_help_string(action)    
         # params = dict(vars(action), prog=@_prog)
         params = _.clone(action); params.prog = @_prog
-        for name in _.keys(params)
-            if params[name] == $$.SUPPRESS
-                delete params[name]
-        for name in _.keys(params)
-            # process.title?
-            # process.argv
-            # process.mainModule.id
-            # if hasattr(params[name], '__name__')
-            if params[name]?.__name__?
-                params[name] = params[name].__name__
+        # for name in _.keys(params)
+        for name of params when params[name] == $$.SUPPRESS
+            delete params[name]
+        for name of params when params[name]?.__name__?
+            # python specific; e.g. fns have a __name__
+            params[name] = params[name].__name__
         if params.choices?
             choices_str = (''+c for c in params.choices).join(', ')
             params.choices = choices_str
@@ -625,7 +620,7 @@ class ArgumentDefaultsHelpFormatter extends HelpFormatter
         if not '%(default)' in action.help
             if action.defaultValue != $$.SUPPRESS
                 defaulting_nargs = [$$.OPTIONAL, $$.ZERO_OR_MORE]
-                if action.optionStrings or action.nargs in defaulting_nargs
+                if action.isOptional() or action.nargs in defaulting_nargs
                     help += ' (default: %(default)s)'
         return help
 

@@ -76,7 +76,7 @@ class Action
     ###
 
     constructor: (options) ->
-        @optionStrings = options.option_strings ? options.optionStrings ? []
+        @option_strings = options.option_strings ? []
         @dest = options.dest ? ''
         @nargs = options.nargs ? null
         @constant = options.constant ? null
@@ -110,8 +110,8 @@ class Action
     getName: () ->
         # not in py, but used by the JS version that this was built on
         # is this unique enough to use as hash key?
-        if @optionStrings.length>0
-            @.optionStrings.join('/')
+        if @option_strings.length>0
+            @.option_strings.join('/')
         else if @metavar ? @.metavar != $$.SUPPRESS
             @.metavar
         else if @dest ? @dest != $$.SUPPRESS
@@ -122,7 +122,7 @@ class Action
         not @isPositional()
         
     isPositional: () ->
-        @optionStrings.length == 0
+        @option_strings.length == 0
 
 class _StoreAction extends Action
 
