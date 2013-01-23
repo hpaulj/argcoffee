@@ -404,7 +404,7 @@ exports.HelpFormatter = class HelpFormatter
         # clean up separators for mutually exclusive groups
         # coffeescript is having problems parsing / ([\])])/g
         text = text.replace(/([\[(]) /g,'$1'); # remove spaces
-        `text = text.replace(/ ([\])])/g,'$1');`
+        text = text.replace(/\ ([\])])/g,'$1');
         text = text.replace(/\[ *\]/g, ''); # remove empty groups
         text = text.replace(/\( *\)/g, '');
         text = text.replace(/\(([^|]*)\)/g, '$1'); # remove () from single action groups

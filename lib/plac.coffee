@@ -121,6 +121,7 @@ class Annotation
     assert(@kind in ['positional', 'option', 'flag'])
     if @kind == 'positional'
       assert(@abbrev == null)
+  @from_ = (obj) -> annotation_from(obj)
   
 # was class method in python  
 annotation_from = (obj) ->
@@ -134,10 +135,6 @@ annotation_from = (obj) ->
   # but there should be a way of passing an obj (dictionary)
   #
   # annotation is just an obj with a few tests on values
-  
-# DEBUG Annotation.toString()
-#DEBUG 'annotation args:',formalParameterList(Annotation)
-#DEBUG alt_getarglist(Annotation)
   
 # None = {} # sentinel use to signal the absence of a default
 
@@ -330,7 +327,7 @@ class ArgumentParser extends argparse.ArgumentParser
     # args with possible defaults
     for [name, defaultValue] in _.zip(f.args, alldefaults)
       ann = f.annotations[name] ? []
-      a = annotation_from(ann)
+      a = Annotation.from_(ann) # annotation_from(ann)
       metavar = a.metavar
       if !defaultValue?
         dflt = null
@@ -357,18 +354,18 @@ class ArgumentParser extends argparse.ArgumentParser
         @add_argument(shortlong..., {help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
       else if a.kind == 'flag'
         if defaultValue? and defaultValue != false
-          throw new TypeError("Flat #{name} wants default false, got #{defaultValue}")
+          throw new TypeError("Flag #{name} wants default false, got #{defaultValue}")
         @add_argument(shortlong..., {action:'storeTrue', help:a.help})
       # 'flag' action is storeTrue
       # for all others it is the default store with possbiel defaultValue and choices
       # nargs is either null (=1), '?' or '*'
         
     if f.varargs?
-        a = annotation_from(f.annotations[f.varargs] ? [])
+        a = Annotation.from_(f.annotations[f.varargs] ? [])
         @add_argument(f.varargs, {nargs:'*', help:a.help, defaultValue:[],\
                            type:a.type, metavar:a.metavar})
     if f.varkw?
-        a = annotation_from(f.annotations[f.varkw] ? [])
+        a = Annotation.from_(f.annotations[f.varkw] ? [])
         @add_argument(f.varkw, {nargs:'*', help:a.help, defaultValue:{},\
                            type:a.type, metavar:a.metavar})
     # 
@@ -487,6 +484,17 @@ if not module.parent?
     parser.consume(['a','-h'])
   catch error
   
+  console.log '===================================='
+  parser_from1 = (f, kw) ->
+    f.__annotations__ = kw
+    return parser_from(f, {debug:true})
+  p4 = parser_from1(((delete_, delete_all, color)-> None),
+                 {delete_:['delete a file', 'option', 'd'],
+                 delete_all:['delete all files', 'flag', 'a'],
+                 color:['color', 'option', 'c']})
+                 # color default "black"
+  console.log p4.format_help()
+                 
   console.log 'done'
 ###
 in py

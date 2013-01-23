@@ -541,7 +541,6 @@ class ArgumentParser extends _ActionsContainer
             else
                 try
                   argstrs = []
-                  # filename = '/tmp/' + arg_string[1...]
                   filename = arg_string[1...] # w/o the prefix
                   content = fs.readFileSync(filename, 'utf8')
                   content = content.trim().split('\n') 
