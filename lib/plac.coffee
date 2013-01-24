@@ -228,9 +228,10 @@ _extract_kwargs = (args) ->
 
 _match_cmd = (abbrev, commands, case_sensitive=true) ->
   #"Extract the command name from an abbreviation or raise a NameError"
+  commands = _.keys(commands)
   if not case_sensitive
-    abbrev = abbrev.toUpper()
-    commands = (c.toUpper() for c in commands)
+    abbrev = abbrev.toUpperCase()
+    commands = (c.toUpperCase() for c in commands)
   perfect_matches = (name for name in commands when name == abbrev)
   if perfect_matches.length == 1
     return perfect_matches[0]
@@ -291,13 +292,10 @@ class ArgumentParser extends argparse.ArgumentParser
     # Extract the right subparser from the first recognized argument
     optprefix = @prefix_chars[0]
     name_parser_map = @subparsers._name_parser_map
-    # for [i,arg] in _.zip([0...arglist.length], arglist)
-    for arg, i in arglist    
-      if arg[0] != optprefix  # or _.str.startsWith
-        # cmd = _match_cmd(arg, name_parser_map, @case_sensitive)
-        cmd = arg # simple matching for now
-        arglist = arglist.splice(i+1) # [(i+1)...]
-        return [name_parser_map[cmd], cmd || arg, arglist]
+    for arg, i in arglist when arg[0] != optprefix
+      cmd = _match_cmd(arg, name_parser_map, @case_sensitive)
+      arglist = arglist.splice(i+1) # [(i+1)...]
+      return [name_parser_map[cmd], cmd || arg, arglist]
     return [null, null, arglist] # none found
     
   addsubcommands: (commands, obj, title=null, cmdprefix='') ->
@@ -393,7 +391,7 @@ class ArgumentParser extends argparse.ArgumentParser
 
   missing: (name) ->
     # may raise a system exit
-    miss = @obj['__missing__'] ? (name) -> new Error("No command #{name}")
+    miss = @obj['__missing__'] ? (name) => @error("No command #{name}")
     return miss(name)
     
   print_actions: () ->
@@ -404,14 +402,14 @@ class ArgumentParser extends argparse.ArgumentParser
 iterable = (obj) ->
   return obj.__iter__? and not _.isString(obj)
 
-call = (obj, arglist=process.argv[2...], eager=true) ->
+call = (obj, arglist=process.argv[2...], options={}) ->
   # If obj is a function or a bound method, parse the given arglist 
   #  by using the parser inferred from the annotations of obj
   #  and call obj with the parsed arguments. 
   #  If obj is an object with attribute .commands, dispatch to the 
   #  associated subparser.
   
-  [cmd, result] = parser_from(obj).consume(arglist)
+  [cmd, result] = parser_from(obj, options).consume(arglist)
   #if iterable(result) and eager # listify the result
   #  return list(result)
   return result

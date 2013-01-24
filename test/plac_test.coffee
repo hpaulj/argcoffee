@@ -14,6 +14,19 @@ expect = (errpat, func, vargs...) ->
         else
           console.log error
 
+expectc = (errpat, func, obj, args) ->
+    try
+        # func(vargs...)
+        arg = func(obj, args, {debug:true})
+        # having problems with binding the parser
+        console.log arg
+    catch error
+        if (m = error.message.match(errpat))
+          console.log "got expected error: '#{errpat}' with #{args}"
+        else
+          console.log 'unexpected error'
+          console.log error
+
 None = null
 
 parser_from = (f, kw, dflt) ->
@@ -185,9 +198,51 @@ test_kwargs=()->
     assert.deepEqual(argskw, [['arg2'], {'a': '1'}], argskw)
     print argskw
 
-    p = parser_from(main)
-    expect(/colliding keyword arguments/, p.consume, p, ['arg1', 'arg2', 'a=1', 'opt=2'] )
+    expectc(/colliding keyword arguments/, plac.call, main, ['arg1', 'arg2', 'a=1', 'opt=2'] )
     
+cmds = {
+    add_help: false
+    commands: ['help', 'commit']
+    help: (name) ->
+        ### help command ###
+        return ['help:', name]
+    commit: () ->
+        ### commit command ###
+        return 'commit'
+    }
+
+test_cmds = () ->
+    print 'test cmds'
+    assert 'commit' == plac.call(cmds, ['commit'],{debug:true})
+    assert.deepEqual(['help:', 'foo'], plac.call(cmds, ['help', 'foo']))
+    expectc(/too few arguments/, plac.call, cmds, [])
+
+test_cmd_abbrevs=() ->
+    print 'test cmd abbrevs'
+    assert 'commit' == plac.call(cmds, ['comm'])
+    assert.deepEqual(['help:', 'foo'], plac.call(cmds, ['h', 'foo']))
+    expectc(/No command foo/, plac.call, cmds, ['foo'])
+
+test_sub_help=()->
+    print 'test sub help'
+    c = cmds
+    c.add_help = true    
+    expectc(/Exit captured/, plac.call, c, ['commit', '-h'])
+
+log_cmds=()->
+  parser = parser_from(cmds, {'name': ['commit name help','positional']})
+  console.log(parser.format_help());
+  console.log parser.subparsers._name_parser_map['help'].format_help()
+  console.log 'help foo:', parser.consume(['help','foo'])
+  console.log plac.call(cmds, ['help','foo'])
+  console.log 'commit:', parser.consume(['commit'])
+    
+# other tests in test_plac.py are not applicable
+# yield, script, batch etc
+
+# is there a way of this module to get this list of test_ fns?
+
 for test in [test_p1, test_p2, test_p3, test_p4, test_p5, test_p6, \
-      test_metavar_no_defaults,test_metavar_with_defaults, test_kwargs]
+      test_metavar_no_defaults,test_metavar_with_defaults, test_kwargs, \
+      test_cmds,test_sub_help,test_cmd_abbrevs]
   test()
