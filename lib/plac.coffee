@@ -20,7 +20,6 @@ argparse = require('argcoffee')
 formal_parameter_list = (fn) ->
   FN_ARGS = /^function\s*([^\(]*)\(\s*([^\)]*)\)/m;
   FN_ARG_SPLIT = /,/;
-  # FN_ARG = /^\s*(_?)(\S+?)\1\s*$/; # removes bracketing _
   FN_ARG = /^\s*(\S+?)\s*$/
   STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
   args = []
@@ -46,10 +45,6 @@ formal_parameter_list = (fn) ->
     doc = null
   return [args, name, doc]
 
-alt_getarglist = (fn) ->
-  # more compact
-  return fn.toString().match(/function\s+\w*\s*\((.*?)\)/)[1].split(/\s*,\s*/)
-
 class getfullargspec
   constructor: (f) ->
     # inspect.getargspac(f)
@@ -63,16 +58,8 @@ class getfullargspec
     [first...,last] = @args
     if last in ['vargs','_arg']
       [@args, @varargs] = [first, last]
-    #if @args[@args.length-1] in ['kwargs']
-    #  @varkw = @args[@args.length-1]
-    #  @args = @args[...(@args.length-1)]
-    #if @args[@args.length-1] in ['vargs']
-    #  @varargs = @args[@args.length-1]
-    #  @args = @args[...(@args.length-1)]
     @defaults = f.defaults ? []
     @annotations = f.__annotations__ ? {}
-
-# set class
 
 getargspec = (callableobj) ->
   # Given a callable return an object with attributes .args, .varargs, 
@@ -82,21 +69,14 @@ getargspec = (callableobj) ->
     argspec = new getfullargspec(callableobj)
     if callableobj.name?
       # explicit name of obj takes presidence over one deduced from string
-      argspec.name = callableobj.name 
-    
-  # py has special treatment for method, class, and callable
-  # js all is either obj, or function
+      argspec.name = callableobj.name     
+    # py has special treatment for method, class, and callable
+    # js all is either obj, or function
   else
     throw new TypeError('Could not determine the signature of'+callableobj)
-  DEBUG 'argspec:', argspec
   return argspec
 
 # this distinction between getargspec and getfullargspec is a python artifact
-
-#DEBUG formal_parameter_list(getargspec)
-#DEBUG alt_getarglist(getargspec)
-
-#DEBUG alt_getarglist(`function foo(x,y){return x;}`)
 
 annotations = (ann) ->
   #Returns a decorator annotating a function with the given annotations.
@@ -121,7 +101,6 @@ exports.annotations = annotations
 is_annotation = (obj) ->
   #An object is an annotation object if it has the attributes
   #help, kind, abbrev, type, choices, metavar.
-
   return obj.help? and obj.kind? and obj.abbrev? and obj.type? and obj.choices? and obj.metaver?
 
 class Annotation
@@ -130,39 +109,21 @@ class Annotation
     assert(@kind in ['positional', 'option', 'flag'],'kind should be positional, option, or flag')
     if @kind == 'positional'
       assert(@abbrev == null, 'abbrev for positional should be null')
-  @from_ = (obj) -> annotation_from(obj)
-  
-# was class method in python  
-annotation_from = (obj) ->
-  # helper to convert an object into an annotation, if needed
-  if is_annotation(obj)
-    return obj
-  else if _.isArray(obj)
-    return new Annotation(obj...)
-  return new Annotation(obj)
-  # not quite right; this constructor takes (array...)
-  # but there should be a way of passing an obj (dictionary)
-  #
-  # annotation is just an obj with a few tests on values
-  
-# None = {} # sentinel use to signal the absence of a default
+  @from_ = (obj) -> 
+    # helper to convert an object into an annotation, if needed
+    if is_annotation(obj)
+      return obj
+    else if _.isArray(obj)
+      return new Annotation(obj...)
+    return new Annotation(obj)
 
-# PARSER_CFG = getfullargspec(argparse.ArgumentParser.constructor).args[1...]
-# args[1:], skip initial self
+# PARSER_CFG 
 # the default arguments accepted by an ArgumentParser object
-###
-in js version, ArgumentParser takes one argument 'options'
-possible attributes of options are:
-prog, usage, epilog, parents, formatter_class, fromfile_prefix_chars, 
-add_help, debug, description, prefix_chars, argument_default, conflict_handler,
-version
-###
 
 PARSER_CFG = 'prog, usage, epilog, parents, formatter_class, fromfile_prefix_chars, '+ 
     'add_help, debug, description, prefix_chars, argument_default, conflict_handler, '+
     'version'
 PARSER_CFG = PARSER_CFG.split(', ')
-# DEBUG PARSER_CFG
 
 pconf = (obj) ->
   # Extracts the configuration of the underlying ArgumentParser from obj
@@ -176,9 +137,6 @@ pconf = (obj) ->
   if !name? or name==''
     name = null
   cfg = {prog: name, description: doc} # , formatter_class:argparse.HelpFormatter}
-  #for key of obj 
-  #  if key in PARSER_CFG # argument of ArgumentParse
-  #    cfg[key] = obj[key]
   for key of obj when key in PARSER_CFG
     cfg[key] = obj[key]
   return cfg
@@ -198,7 +156,6 @@ parser_from = (obj, confparams={}) ->
     # the underlying parser has been generated already
     return _parser_registry.get(obj)
   conf = _.extend({}, pconf(obj), confparams)
-  DEBUG 'conf',conf
   parser = new ArgumentParser(conf)
   _parser_registry.set(obj,parser)
   parser.obj = obj
@@ -300,8 +257,6 @@ class ArgumentParser extends argparse.ArgumentParser
     
   addsubcommands: (commands, obj, title=null, cmdprefix='') ->
     # Extract a list of subcommands from obj and add them to the parser
-    # obj.cmdprefix? or obj[cmdprefix]
-    # 'hasattr(obj, cmdprefix) and obj.cmdprefix' looks a bit suspect
     options = {title:title}
     options['parser_class'] = ArgumentParser
     if !@subparsers?
@@ -388,7 +343,6 @@ class ArgumentParser extends argparse.ArgumentParser
     # here I try positional 'integer' as '?', 'integers' as '*'
     # propose 'options' as equiv to **kwarg
 
-
   missing: (name) ->
     # may raise a system exit
     miss = @obj['__missing__'] ? (name) => @error("No command #{name}")
@@ -419,7 +373,6 @@ call = (obj, arglist=process.argv[2...], options={}) ->
   # to true array (mainly the psuedo array arguments)
 exports.call = call
 
-#DEBUG 'call args:',formalParameterList(call)
 #=======================================================
 if not module.parent?
 
