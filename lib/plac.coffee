@@ -13,6 +13,9 @@ _ = require('underscore')
 _.str = require('underscore.string')
 
 argparse = require('argcoffee')
+
+# argparse = require('argparse')
+# conditionally add this, need to add add_argument parser_args
  
 formal_parameter_list = (fn) ->
   FN_ARGS = /^function\s*([^\(]*)\(\s*([^\)]*)\)/m;
@@ -52,14 +55,20 @@ class getfullargspec
     # inspect.getargspac(f)
     # @args = alt_getarglist(f)
     [@args, @name, @doc] = formal_parameter_list(f)
-    
-    if @args[@args.length-2] == 'vargs' and @args[@args.length-1] == 'kwargs'
-      @args = @args[...(@args.length-2)]
-      @varargs = 'vargs'
-      @varkw = 'kwargs'
-    else
-      @varargs = null
-      @varkw = null
+    @varargs = null
+    @varkw = null
+    [first...,last] = @args 
+    if last in ['kwarg','kwargs','__kw','varkw']
+      [@args, @varkw] = [first, last]
+    [first...,last] = @args
+    if last in ['vargs','_arg']
+      [@args, @varargs] = [first, last]
+    #if @args[@args.length-1] in ['kwargs']
+    #  @varkw = @args[@args.length-1]
+    #  @args = @args[...(@args.length-1)]
+    #if @args[@args.length-1] in ['vargs']
+    #  @varargs = @args[@args.length-1]
+    #  @args = @args[...(@args.length-1)]
     @defaults = f.defaults ? []
     @annotations = f.__annotations__ ? {}
 
@@ -118,9 +127,9 @@ is_annotation = (obj) ->
 class Annotation
   constructor: (@help=null, @kind='positional', @abbrev=null, @type=null, @choices=null, @metavar=null) ->
     # alt: options:{}
-    assert(@kind in ['positional', 'option', 'flag'])
+    assert(@kind in ['positional', 'option', 'flag'],'kind should be positional, option, or flag')
     if @kind == 'positional'
-      assert(@abbrev == null)
+      assert(@abbrev == null, 'abbrev for positional should be null')
   @from_ = (obj) -> annotation_from(obj)
   
 # was class method in python  
@@ -174,17 +183,24 @@ pconf = (obj) ->
     cfg[key] = obj[key]
   return cfg
   
+# PY stores the parser in this dictionary, using the function (obj) as key
+# looks like JS uses obj.toString() as the key in _parser_registry[obj]
+# thus 2 anonymous fn with same string reference the same parser
+
 _parser_registry = {}
+_parser_registry.get = (obj) -> return null
+_parser_registry.set = (obj, p) -> _parser_registry[obj] = p
 
 parser_from = (obj, confparams={}) ->
   #obj can be a callable or an object with a .commands attribute.
   #Returns an ArgumentParser.
-  if _parser_registry[obj]?
+  if _parser_registry.get(obj)?
     # the underlying parser has been generated already
-    return _parser_registry[obj]
+    return _parser_registry.get(obj)
   conf = _.extend({}, pconf(obj), confparams)
   DEBUG 'conf',conf
-  _parser_registry[obj] = parser = new ArgumentParser(conf)
+  parser = new ArgumentParser(conf)
+  _parser_registry.set(obj,parser)
   parser.obj = obj
   parser.case_sensitive = confparams['case_sensitive'] ? obj['case_sensitive'] ? true
   if obj['commands']?
@@ -263,9 +279,9 @@ class ArgumentParser extends argparse.ArgumentParser
     DEBUG 'extrapopts', extraopts
     args = (ns[a] for a in @argspec.args)
     varargs = ns[@argspec.varargs] ? []
-    collision = [] # set(@argspec.args) & set(kwargs)
+    collision = (arg for arg in @argspec.args when arg of kwargs)
     if collision.length>0
-      @error('colliding keyword arguments:' + collision)
+      @error('colliding keyword arguments: ' + collision)
     alist = [].concat(args, [varargs], extraopts)
     DEBUG 'alist', alist
     DEBUG 'kwargs', kwargs
@@ -307,7 +323,7 @@ class ArgumentParser extends argparse.ArgumentParser
     # attribute to the parser. Also adds a .func reference to the object.
     @func = obj
     @argspec = getargspec(obj)
-    _parser_registry[obj] = @
+    _parser_registry.set(obj, @)
 
   populate_from: (func) ->
     # Extract the arguments from the attributes of the passed function
@@ -340,17 +356,16 @@ class ArgumentParser extends argparse.ArgumentParser
           shortlong = [prefix + a.abbrev, prefix+prefix+name.replace('_','-')]
         else
           shortlong = [prefix + name.replace('_','-')]
-      else if !defaultValue?
-        if _.str.endsWith(name,'s')  # plural
-          @add_argument(name, {nargs:'*',help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
-        else
-          @add_argument(name, {help:a.help, type:a.type, choices: a.choices, metaver:metavar})
+      else if !dflt?   # positional without default
+        # @add_argument(name, {nargs:'*',help:a.help, type:a.type, choices:a.choices, metavar:metavar})
+        @add_argument(name, {help:a.help, type:a.type, choices: a.choices, metavar:metavar})
       else # default  argument
-        @add_argument(name, {nargs:'?',help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
+        nargs = if _.str.endsWith(name,'s') then '*' else '?'  # plural
+        @add_argument(name, {nargs:nargs,help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
 
       if a.kind == 'option'
         if defaultValue?
-          metavar = metavar ? ""+metavar
+          metavar = metavar ? "#{defaultValue}"
         @add_argument(shortlong..., {help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
       else if a.kind == 'flag'
         if defaultValue? and defaultValue != false
@@ -383,9 +398,7 @@ class ArgumentParser extends argparse.ArgumentParser
     
   print_actions: () ->
     #useful for debugging
-    console.log @  # py has a defined __str__ for a parser
-    for a in @._actions
-      console.log a
+    return (a.repr() for a in @_actions).join('\n')
 
     
 iterable = (obj) ->
@@ -447,7 +460,7 @@ if not module.parent?
   # looks right
 
   console.log "========================\ntest subparsers"
-  _parser_registry = {}
+  # _parser_registry = {}
   afunc = (bar) -> 
     ### a command ###
     return ['a bar:',bar]

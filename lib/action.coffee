@@ -87,6 +87,19 @@ class Action
         @help = options.help ? null
         @metavar = options.metavar ? null
 
+    repr: () ->
+        # string repr of own values; like py's str()
+        foo = (value) ->
+          if _.isString(value)
+            return "'#{value}'"
+          if _.isArray(value)
+            xxx = (foo(v) for v in value).join(', ')
+            return "[#{xxx}]"
+          return value
+        x = ("#{key}: #{foo(value)}" for own key,value of @ when key != 'container' and value?)
+        x = x.join(', ')
+        "Action {#{x}}"
+        
     ###
     def _get_kwargs(self):
         names = [
