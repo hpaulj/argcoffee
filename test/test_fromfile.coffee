@@ -89,6 +89,28 @@ for arg in successes
     console.log 'TODO',error
   console.log ''
 
+#----------------
+
+parser = new ArgumentParser({debug: true, fromfile_prefix_chars: '@'})
+parser.addArgument(['y'], {nargs:'+'})
+
+parser.convert_arg_line_to_args = (arg_line) ->
+  # split line into 'words'
+  return (arg for arg in arg_line.split(' ') when arg.trim().length)
+# use the same hello as before
+
+successes = [['@hello X', NS({y:['hello', 'world!', 'X']})]]
+for arg in successes
+  [argv, ns] = arg
+  console.log argv,'=>', ns
+  try
+    args = parser.parseArgs(psplit(argv))
+    assert.deepEqual(args, ns)
+  catch error
+    console.log 'TODO',error
+  console.log ''
+
+
 teardown_tempdir(oldcwd)
     
 ###

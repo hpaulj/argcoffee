@@ -554,7 +554,82 @@ class ArgumentParser extends _ActionsContainer
                   console.log error.message
                   @error(error.message)
         return new_arg_strings
-    
+
+    _read_args_from_files1: (arg_strings) =>
+        ### expand arguments referencing files 
+        trying to use .forEach for loops; problems with binding
+        ###
+        prefix_chars = @fromfile_prefix_chars
+        convert_line = @convert_arg_line_to_args
+        read_args = @_read_args_from_files
+        #console.log prefix_chars, convert_line, read_args
+        fs = require('fs')
+        new_arg_strings = []
+        arg_strings.forEach( (arg_string) =>
+            ### for regular arguments, just add them back into the list ###
+            if @fromfile_prefix_chars.indexOf(arg_string[0])<0
+                new_arg_strings.push(arg_string)
+                ### replace arguments referencing files with the file content ###
+            else
+                try
+                  argstrs = []
+                  filename = arg_string[1...] # w/o the prefix
+                  content = fs.readFileSync(filename, 'utf8')
+                  content = content.trim().split('\n') 
+                  DEBUG filename, content
+                  content.forEach((arg_line) ->
+                    @convert_arg_line_to_args(arg_line).forEach( (arg) ->
+                      argstrs.push(arg)
+                    )
+                    argstrs = @_read_args_from_files(argstrs) # recursive call
+                  )
+                  new_arg_strings.push(argstrs...) 
+                catch error 
+                  console.log error.message
+                  @error(error.message)
+        )
+        return new_arg_strings
+  
+    _read_args_from_files2: (arg_strings) =>
+        ### expand arguments referencing files 
+        try to use the async form of readfile; 
+        it doesn't wait for the read to finish
+        ###
+        prefix_chars = @fromfile_prefix_chars
+        convert_line = @convert_arg_line_to_args
+        read_args = @_read_args_from_files
+        #console.log prefix_chars, convert_line, read_args
+        fs = require('fs')
+        new_arg_strings = []
+        arg_strings.forEach( (arg_string) =>
+            ### for regular arguments, just add them back into the list ###
+            if @fromfile_prefix_chars.indexOf(arg_string[0])<0
+                new_arg_strings.push(arg_string)
+                ### replace arguments referencing files with the file content ###
+            else
+                try
+                  argstrs = []
+                  filename = arg_string[1...] # w/o the prefix
+                  fs.readFile(filename, 'utf8', (err, data) ->
+                    if err
+                      throw err
+                    data = data.trim().split('\n')
+                    DEBUG filename, data
+                    content.forEach((arg_line) ->
+                      @convert_arg_line_to_args(arg_line).forEach( (arg) ->
+                        argstrs.push(arg)
+                      )
+                      argstrs = @_read_args_from_files(argstrs) # recursive call
+                    )
+                    new_arg_strings.push(argstrs...)
+                  )
+                  # shouldn't proceed until this read is done
+                catch error 
+                  console.log error.message
+                  @error(error.message)
+        )
+        return new_arg_strings
+      
     convert_arg_line_to_args: (arg_line) ->
         return [arg_line]
     
