@@ -12,8 +12,17 @@ path = require('path')
 _ = require('underscore')
 _.str = require('underscore.string')
 
-argparse = require('argcoffee')
-#argparse = require('argparse')
+sources = ['./argparse', 'argcoffee', 'argparse']
+for source in sources
+  try
+    argparse = require(source)
+    break 
+  catch e
+    'pass'
+if argparse?
+  exports.source = source
+else
+  throw new Error('Failed to find an argparse module')
  
 formal_parameter_list = (fn) ->
   FN_ARGS = /^function\s*([^\(]*)\(\s*([^\)]*)\)/m;
@@ -230,7 +239,7 @@ class ArgumentParser extends argparse.ArgumentParser
       # ignore unrecognized arguments
       [ns, extraopts] = @parseKnownArgs(arglist)
     else
-      [ns, extraopts] = [@parse_args(arglist), []] # may raise an exit
+      [ns, extraopts] = [@parseArgs(arglist), []] # may raise an exit
     DEBUG 'ns', ns
     DEBUG 'extrapopts', extraopts
     args = (ns[a] for a in @argspec.args)
@@ -245,8 +254,8 @@ class ArgumentParser extends argparse.ArgumentParser
     
   _extract_subparser_cmd: (arglist) ->
     # Extract the right subparser from the first recognized argument
-    optprefix = @prefix_chars[0]
-    name_parser_map = @subparsers._name_parser_map
+    optprefix = (@prefix_chars ? @prefixChars)[0]
+    name_parser_map = @subparsers._name_parser_map ? @subparsers._nameParserMap
     for arg, i in arglist when arg[0] != optprefix
       cmd = _match_cmd(arg, name_parser_map, @case_sensitive)
       arglist = arglist.splice(i+1) # [(i+1)...]
@@ -257,6 +266,7 @@ class ArgumentParser extends argparse.ArgumentParser
     # Extract a list of subcommands from obj and add them to the parser
     options = {title:title}
     options['parser_class'] = ArgumentParser
+    options['parserClass'] = ArgumentParser
     if !@subparsers?
       @subparsers = @addSubparsers(options)
     else if title?
@@ -441,7 +451,7 @@ if not module.parent?
                 debug: true})
   console.log(parser.formatHelp());
   
-  # console.log parser.parse_args(['a','-h'])
+  # console.log parser.parseArgs(['a','-h'])
   # exits; I thought debug was supposed to trap that
 
   console.log 'a bar', parser.consume(['a',42])
