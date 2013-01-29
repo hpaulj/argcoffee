@@ -891,19 +891,27 @@ class ArgumentParser extends _ActionsContainer
         try
             result = type_func(arg_string)
         catch error
-            @error(error)
+            if error instanceof TypeError
+                if _.isString(action.type)
+                    name = action.type 
+                else
+                    name = action.type.name || action.type.displayName || '<function>'
+                msg = "Invalid #{name} value: #{arg_string}"
+                if name == '<function>'
+                  msg = msg + '\n' + error.message
+                  
+                # Invalid dateType value: (.*)
+                console.log msg
+                @error(msg)
+            else
+              @error(error)
+            
         ###    
         # ArgumentTypeErrors indicate errors
         except ArgumentTypeError:
             name = getattr(action.type, '__name__', repr(action.type))
             msg = str(_sys.exc_info()[1])
             throw argumentError(action, msg)
-
-        # TypeErrors or ValueErrors also indicate errors
-        except (TypeError, ValueError):
-            name = getattr(action.type, '__name__', repr(action.type))
-            msg = _('invalid %s value: %r')
-            throw argumentError(action, msg % (name, arg_string))
         ###
         # return the converted value
         return result

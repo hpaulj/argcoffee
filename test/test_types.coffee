@@ -1,36 +1,40 @@
+DEBUG = if process.argv[2]? then process.argv[2]=='true' else false
 
 print = console.log
+_ = require('underscore')
+_.str = require('underscore.string')
 
-argparse = require('argcoffee')
-argparse = require('argparse')
+if true
+  argparse = require('argcoffee')
+  dateType = (arg) ->
+      x = new Date(arg)
+      if x.toString().match('Invalid')
+          throw new TypeError("#{arg} is not a valid date.")
+      return x  
+  dateType.displayName = 'date type'
+else 
+  argparse = require('argparse')
+  # js function with name
+  `function dateType(arg) {
+    var x = new Date(arg);
+    if (x.toString().match('Invalid')) {
+      throw new TypeError("" + arg + " is not a valid date.");
+      }
+    return x;
+    }`
 
-dateType = (arg) ->
-    x = new Date(arg)
-    if x.toString().match('Invalid')
-        throw new TypeError("#{arg} is not a valid date.")
-    return x
-###
-# js function with name
-`function dateType(arg) {
-  var x = new Date(arg);
-  if (x.toString().match('Invalid')) {
-    throw new TypeError("" + arg + " is not a valid date.");
-    }
-  return x;
-  }`
-###
 print dateType('12/1/2012')
 try
   print dateType('abc')
 catch err
   print err
-p = new argparse.ArgumentParser({debug:true})
-
+p = new argparse.ArgumentParser({debug:DEBUG})
 p.addArgument(['-d'],{type:dateType})
 p.addArgument(['-i'],{type:'int'})
 p.addArgument(['-f'],{type:'float'})
 
 print p.parseArgs(['-f','1.23'])
+#print p.parseArgs(['-f','abc'])
 try
   print p.parseArgs(['-d','13/1/12'])
 catch err
