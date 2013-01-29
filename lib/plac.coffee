@@ -13,9 +13,7 @@ _ = require('underscore')
 _.str = require('underscore.string')
 
 argparse = require('argcoffee')
-
-# argparse = require('argparse')
-# conditionally add this, need to add add_argument parser_args
+#argparse = require('argparse')
  
 formal_parameter_list = (fn) ->
   FN_ARGS = /^function\s*([^\(]*)\(\s*([^\)]*)\)/m;
@@ -230,7 +228,7 @@ class ArgumentParser extends argparse.ArgumentParser
       kwargs = {}
     if @argspec? and @argspec.varargs?
       # ignore unrecognized arguments
-      [ns, extraopts] = @parse_known_args(arglist)
+      [ns, extraopts] = @parseKnownArgs(arglist)
     else
       [ns, extraopts] = [@parse_args(arglist), []] # may raise an exit
     DEBUG 'ns', ns
@@ -260,7 +258,7 @@ class ArgumentParser extends argparse.ArgumentParser
     options = {title:title}
     options['parser_class'] = ArgumentParser
     if !@subparsers?
-      @subparsers = @add_subparsers(options)
+      @subparsers = @addSubparsers(options)
     else if title?
       @add_argument_group(options)
     prefixlen = (obj.cmdprefix ? '').length
@@ -268,7 +266,7 @@ class ArgumentParser extends argparse.ArgumentParser
     for cmd in commands
       func = obj[cmd[prefixlen...]] # strip the prefix
       options = {add_help: add_help, help: 'subparser help'}
-      subparser = @subparsers.add_parser(cmd, options)
+      subparser = @subparsers.addParser(cmd, options)
       subparser.populate_from(func)
     
   _set_func_argspec: (obj) ->
@@ -310,31 +308,31 @@ class ArgumentParser extends argparse.ArgumentParser
         else
           shortlong = [prefix + name.replace('_','-')]
       else if !dflt?   # positional without default
-        # @add_argument(name, {nargs:'*',help:a.help, type:a.type, choices:a.choices, metavar:metavar})
-        @add_argument(name, {help:a.help, type:a.type, choices: a.choices, metavar:metavar})
+        # @addArgument([name], {nargs:'*',help:a.help, type:a.type, choices:a.choices, metavar:metavar})
+        @addArgument([name], {help:a.help, type:a.type, choices: a.choices, metavar:metavar})
       else # default  argument
         nargs = if _.str.endsWith(name,'s') then '*' else '?'  # plural
-        @add_argument(name, {nargs:nargs,help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
+        @addArgument([name], {nargs:nargs,help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
 
       if a.kind == 'option'
         if defaultValue?
           metavar = metavar ? "#{defaultValue}"
-        @add_argument(shortlong..., {help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
+        @addArgument(shortlong, {help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
       else if a.kind == 'flag'
         if defaultValue? and defaultValue != false
           throw new TypeError("Flag #{name} wants default false, got #{defaultValue}")
-        @add_argument(shortlong..., {action:'storeTrue', help:a.help})
+        @addArgument(shortlong, {action:'storeTrue', help:a.help})
       # 'flag' action is storeTrue
       # for all others it is the default store with possbiel defaultValue and choices
       # nargs is either null (=1), '?' or '*'
         
     if f.varargs?
         a = Annotation.from_(f.annotations[f.varargs] ? [])
-        @add_argument(f.varargs, {nargs:'*', help:a.help, defaultValue:[],\
+        @addArgument([f.varargs], {nargs:'*', help:a.help, defaultValue:[],\
                            type:a.type, metavar:a.metavar})
     if f.varkw?
         a = Annotation.from_(f.annotations[f.varkw] ? [])
-        @add_argument(f.varkw, {nargs:'*', help:a.help, defaultValue:{},\
+        @addArgument([f.varkw], {nargs:'*', help:a.help, defaultValue:{},\
                            type:a.type, metavar:a.metavar})
     # 
     # py has simple arg, arg with defaultvalue, arg w/ multiple values, dict arg
@@ -399,7 +397,7 @@ if not module.parent?
                 description: 'plac version of argparse sum example',
                 debug: true})
 
-  console.log(parser.format_help());
+  console.log(parser.formatHelp());
   # usage: Main [-h] [-aflag] [-anopt ANOPT]
   #          [aposit] [vargs [vargs ...]] [kwargs [kwargs ...]]
 
@@ -409,6 +407,18 @@ if not module.parent?
   console.log parser.consume(['-aflag','-anopt', '42', 'posarg','var1','var2','one=1', 'two=foo'])
   # main args: true 42 posarg [ 'var1', 'var2' ] { one: '1', two: 'foo' }
   # looks right
+
+  console.log '===================================='
+  parser_from1 = (f, kw) ->
+    f.__annotations__ = kw
+    return parser_from(f, {debug:true})
+  p4 = parser_from1(((delete_, delete_all, color)-> None),
+                 {delete_:['delete a file', 'option', 'd'],
+                 delete_all:['delete all files', 'flag', 'a'],
+                 color:['color', 'option', 'c']})
+                 # color default "black"
+  console.log p4.formatHelp()
+                 
 
   console.log "========================\ntest subparsers"
   # _parser_registry = {}
@@ -429,7 +439,7 @@ if not module.parent?
 
   parser = parser_from(main, { # prog: 'Main', \
                 debug: true})
-  console.log(parser.format_help());
+  console.log(parser.formatHelp());
   
   # console.log parser.parse_args(['a','-h'])
   # exits; I thought debug was supposed to trap that
@@ -448,17 +458,7 @@ if not module.parent?
     parser.consume(['a','-h'])
   catch error
   
-  console.log '===================================='
-  parser_from1 = (f, kw) ->
-    f.__annotations__ = kw
-    return parser_from(f, {debug:true})
-  p4 = parser_from1(((delete_, delete_all, color)-> None),
-                 {delete_:['delete a file', 'option', 'd'],
-                 delete_all:['delete all files', 'flag', 'a'],
-                 color:['color', 'option', 'c']})
-                 # color default "black"
-  console.log p4.format_help()
-                 
+
   console.log 'done'
 ###
 in py

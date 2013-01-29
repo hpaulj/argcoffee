@@ -1,6 +1,7 @@
 assert = require('assert')
 plac = require('../lib/plac')
 print = console.log
+header = (args...) -> print '\n===>', args
 
 expect = (errpat, func, vargs...) ->
     try
@@ -36,90 +37,92 @@ parser_from = (f, kw, dflt) ->
       f.defaults = dflt
     return plac.parser_from(f, {debug:true})
     
-p1 = parser_from(((delete_, vargs) -> None),
-                 {delete_:['delete a file', 'option']})
-                 
-console.log p1.format_help()
+p1 = parser_from(((delete1, vargs) -> null),
+                 {delete1:['delete a file', 'option']})
+
+print 'p1'                 
+print p1.formatHelp()
 
 test_p1 = () ->
-    console.log 'test p1'
-    arg = p1.parse_args(['-d', 'foo', 'arg1', 'arg2'])
+    header 'test p1'
+    arg = p1.parseArgs(['-d', 'foo', 'arg1', 'arg2'])
     console.log arg
-    assert.equal(arg.delete_, 'foo')
+    assert.equal(arg.delete1, 'foo')
     assert.deepEqual(arg.vargs, ['arg1', 'arg2'])
 
-    arg = p1.parse_args([])
+    arg = p1.parseArgs([])
     console.log arg
-    assert.equal(arg.delete, null)
+    assert.equal(arg.delete1, null)
     assert.deepEqual(arg.vargs, [])
 
-p2 = parser_from(((arg1, delete_, vargs) -> null),
-                 {delete_:['delete a file', 'option', 'd']})
+p2 = parser_from(((arg1, delete1, vargs) -> null),
+                 {delete1:['delete a file', 'option', 'd']})
 
 test_p2 = () ->
-    console.log 'test p2'
-    arg = p2.parse_args(['-d', 'foo', 'arg1', 'arg2'])
-    assert arg.delete_ == 'foo', arg.delete_
+    header 'test p2'
+    arg = p2.parseArgs(['-d', 'foo', 'arg1', 'arg2'])
+    assert arg.delete1 == 'foo', arg.delete1
     assert arg.arg1 == 'arg1', arg.arg1
     console.log arg
     assert.deepEqual arg.vargs, ['arg2'], arg.vargs
 
-    arg = p2.parse_args(['arg1'])
+    arg = p2.parseArgs(['arg1'])
     console.log arg
-    assert arg.delete_ is null, arg.delete_
+    assert arg.delete1 is null, arg.delete1
     assert.deepEqual arg.vargs, [], arg.vargs
     assert arg, arg
     
-    #console.log p2.parse_args([])
-    expect(/too few arguments/, p2.parse_args, p2, [])
+    #console.log p2.parseArgs([])
+    expect(/too few arguments/, p2.parseArgs, p2, [])
 
-p3 = parser_from(((arg1, delete_) -> null),
-                 {delete_:['delete a file', 'option', 'd']})
+p3 = parser_from(((arg1, delete1) -> null),
+                 {delete1:['delete a file', 'option', 'd']})
 
 test_p3 = () ->
-    console.log 'test p3'
-    arg = p3.parse_args(['arg1'])
-    assert arg.delete_ is null, arg.delete_
+    header 'test p3'
+    arg = p3.parseArgs(['arg1'])
+    assert arg.delete1 is null, arg.delete1
     assert arg.arg1 == 'arg1', arg.arg
 
-    expect(/unrecognized arguments: arg2/, p3.parse_args, p3,['arg1', 'arg2'])
-    expect(/too few arguments/, p3.parse_args, p3,[])
+    expect(/unrecognized arguments: arg2/, p3.parseArgs, p3,['arg1', 'arg2'])
+    expect(/too few arguments/, p3.parseArgs, p3,[])
 
-fnc4 = (delete_, delete_all, color)-> None
+fnc4 = (delete1, delete_all, color)-> None
 # fnc4.defaults = ["black"] # equiv to Python setting default on last args
 
 p4 = parser_from(fnc4,
-                 {delete_:['delete a file', 'option', 'd'],
+                 {delete1:['delete a file', 'option', 'd'],
                  delete_all:['delete all files', 'flag', 'a'],
                  color:['color', 'option', 'c']},
                  ["black"])
                  # color default "black"
 # p4.set_defaults({color: "black"}) # alt way of setting default
-console.log p4.format_help()
+console.log p4.formatHelp()
 
 test_p4=()->
-    console.log 'test p4'
-    arg = p4.parse_args(['-a'])
+    header 'test p4'
+    arg = p4.parseArgs(['-a'])
     assert arg.delete_all is true, arg.delete_all
 
-    arg = p4.parse_args([])
+    arg = p4.parseArgs([])
     console.log arg
-    arg = p4.parse_args(['--color=black'])
+    arg = p4.parseArgs(['--color=black'])
     assert arg.color == 'black'
 
-    arg = p4.parse_args(['--color=red'])
+    arg = p4.parseArgs(['--color=red'])
     assert arg.color == 'red'
 
 p5 = parser_from(((dry_run)-> None), 
     {dry_run:['Dry run', 'flag', 'x']})
     # default is false
-console.log p5.format_help()
+console.log p5.formatHelp()
 test_p5 = ()->
-    console.log 'test p5'
-    arg = p5.parse_args(['--dry-run'])
+    header 'test p5'
+    arg = p5.parseArgs(['--dry-run'])
     assert arg.dry_run is true,  arg.dry_run
 
 test_p6 = () ->
+  header 'test p6'
   errpat = /Flag yes_or_no wants default false, got no/
   fnc6 = (yes_or_no) -> None
   # fnc6.defaults = ['no']
@@ -133,11 +136,11 @@ test_p6 = () ->
       console.log error
 
 assert_usage = (parser, expected) ->
-    usage = parser.format_usage()
+    usage = parser.formatUsage()
     assert usage.match(expected)?, usage
 
 test_metavar_no_defaults=()->
-    console.log 'test metavar no defaults'
+    header 'test metavar no defaults'
     # positional
     p = parser_from(((x)->None), 
                    {x:['first argument', 'positional', null, 'int', [], 'METAVAR']})
@@ -155,7 +158,7 @@ test_metavar_no_defaults=()->
     # 
 
 test_metavar_with_defaults = () ->
-    console.log 'test metavar with defaults'
+    header 'test metavar with defaults'
     # positional
     p = parser_from(((x)->None),
                    {x:['first argument', 'positional', null, 'string', [], 'METAVAR']},
@@ -179,17 +182,19 @@ test_metavar_with_defaults = () ->
     #assert_usage(p, 'usage: test_plac.py [-h] [-x a]\n')
 
 test_kwargs=()->
-    print 'test kwargs'
+    header 'test kwargs'
     main=(opt, arg1, vargs, varkw)->
         console.log 'main: ',[opt, arg1]
         return [vargs, varkw]
     main.__annotations__ = {opt:['Option', 'option']}
     p = parser_from(main)
-    print p.format_help()
-    print p.print_actions()
+    print p.formatHelp()
+    try
+      print p.print_actions()
+      # depends on an add actions method
     #print (a.repr() for a in p._actions).join('\n')
     #print p.argspec
-    print p.parse_known_args(['arg1', 'arg2', 'a=1', 'b=2'])
+    print p.parseKnownArgs(['arg1', 'arg2', 'a=1', 'b=2'])
     argskw = plac.call(main, ['arg1', 'arg2', 'a=1', 'b=2'])
     assert.deepEqual(argskw, [['arg2'], {'a': '1', 'b': '2'}], argskw)
     print argskw
@@ -212,27 +217,27 @@ cmds = {
     }
 
 test_cmds = () ->
-    print 'test cmds'
+    header 'test cmds'
     assert 'commit' == plac.call(cmds, ['commit'],{debug:true})
     assert.deepEqual(['help:', 'foo'], plac.call(cmds, ['help', 'foo']))
     expectc(/too few arguments/, plac.call, cmds, [])
 
 test_cmd_abbrevs=() ->
-    print 'test cmd abbrevs'
+    header 'test cmd abbrevs'
     assert 'commit' == plac.call(cmds, ['comm'])
     assert.deepEqual(['help:', 'foo'], plac.call(cmds, ['h', 'foo']))
     expectc(/No command foo/, plac.call, cmds, ['foo'])
 
 test_sub_help=()->
-    print 'test sub help'
+    header 'test sub help'
     c = cmds
     c.add_help = true    
     expectc(/Exit captured/, plac.call, c, ['commit', '-h'])
 
 log_cmds=()->
   parser = parser_from(cmds, {'name': ['commit name help','positional']})
-  console.log(parser.format_help());
-  console.log parser.subparsers._name_parser_map['help'].format_help()
+  console.log(parser.formatHelp());
+  console.log parser.subparsers._name_parser_map['help'].formatHelp()
   console.log 'help foo:', parser.consume(['help','foo'])
   console.log plac.call(cmds, ['help','foo'])
   console.log 'commit:', parser.consume(['commit'])
@@ -245,4 +250,9 @@ log_cmds=()->
 for test in [test_p1, test_p2, test_p3, test_p4, test_p5, test_p6, \
       test_metavar_no_defaults,test_metavar_with_defaults, test_kwargs, \
       test_cmds,test_sub_help,test_cmd_abbrevs]
-  test()
+  try
+    test()
+  catch error
+    print "TODO test error"
+    print error
+    
