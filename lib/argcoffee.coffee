@@ -1139,36 +1139,75 @@ class FileClass # Type
             same values as the builtin open() function.
         - bufsize -- The files desired buffer size. Accepts the same values as
             the builtin open() function.
+    Python uses mode, nodejs uses 'flags'
     ###
     fs = require('fs') # nodejs
-    constructor: (@mode='r') ->
-        # py uses mode, nodejs uses flags
-        # py uses a bufsize, nodejs does not
-        # nodejs has nonsyn version of open, but that requires a callback
-        # with nodejs emphasis on nonsyc operations, this class might not be that useful
-        # requires a new; maybe make a factory fn
-
-    call: (string) ->
+    constructor: (@options) -> 
+      # options that will be passed on to the stream creators
+      
+    # stream creators dont open the file until it is used
+    # so we need to do other tests here if we are to take advantage 
+    # of argparse's argument screening
+    testread: (filename) ->
+        # test if filename can be read
+        if fs.existsSync(filename)
+          stats = fs.statSync(filename)
+          if stats.isFile()
+            'ok'
+          else
+            throw new TypeError("#{filename} is not a file")
+        else
+          throw new TypeError("file #{filename} does not exist")
+    testwrite: (filename) ->
+        # test if filename can be written (created?)
+        # brute force: try to open for writing
+        preexisting = fs.existsSync(filename)
+        try
+          fd =fs.openSync(filename,'w')
+        catch error
+          throw new TypeError(error.message)
+        console.log fs.fstatSync(fd)
+        fs.closeSync(fd)
+        if not preexisting
+          # dont delete if it existing before testing
+          fs.unlinkSync(filename)
+          
+    call: (filename) ->
         # the special argument "-" means sys.std{in,out}
-        openfn = fs.openSync
-        if string == '-'
-            if 'r' in @mode
+        flags = @options.flags
+        console.log @options, flags
+        if filename == '-'
+            if 'r' in flags
                 return process.stdin
-            else if 'w' in @mode
+            else if 'w' in flags
                 return process.stdout
             else
-                msg = "argument '-' with mode #{@mode}"
+                msg = "argument '-' with flags #{flags}"
                 @error(msg) # raise ValueError(msg)
+        # creating read/write streams is consistent with stdin/out
+        # openSync returns fd, not a stream
+        if flags == 'r'
+          openfn = fs.createReadStream
+          @testread(filename)
+        else if flags == 'w'
+          openfn = fs.createWriteStream
+          @testwrite(filename)
+        else
+          throw new TypeError('Unknown file flag')
+          # don't try to handle more complicated flags like r+
+        stream = openfn(filename, @options)
+        # this creats a stream, but does not try to open the file
+        # see nodejs fs for stream options
+        return stream
 
-        # all other arguments are used as file names
-        return openfn(string, @mode)
-
-FileType = (mode) ->
-    # callable fun that can be used by Action store
-    ft = new FileClass(mode)
+FileType = (options={flags:'r'}) ->
+    # callable function that can be used by Action store
+    ft = new FileClass(options)
     fn = (string) ->
         ft.call(string)
+    fn.displayName = 'FileType' # name to use in error messages
     return fn
+
 # use: parser.add_argument('--outfile',{type:ap.FileType('w')})
 # args.outfile should then be a writable filehandle
 exports.FileType = FileType
@@ -1188,7 +1227,9 @@ argumentError = (argument, message) ->
   err.code = ERR_CODE
   return err
 
-
+exports.newParser = (options) -> 
+  if not options.debug then options.debug = true
+  new ArgumentParser(options)
 
 TEST = not module.parent?
 
