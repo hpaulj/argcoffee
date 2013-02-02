@@ -1132,61 +1132,6 @@ class FileClass # Type
     fs = require('fs') # nodejs
     constructor: (@options) -> 
       # options that will be passed on to the stream creators
-      
-    # stream creators dont open the file until it is used
-    # so we need to do other tests here if we are to take advantage 
-    # of argparse's argument screening
-    testread: (filename) ->
-        # test if filename can be read
-        if fs.existsSync(filename)
-          stats = fs.statSync(filename)
-          if stats.isFile()
-            'ok'
-          else
-            throw new TypeError("#{filename} is not a file")
-        else
-          throw new TypeError("file #{filename} does not exist")
-    testwrite: (filename) ->
-        # test if filename can be written (created?)
-        # brute force: try to open for writing
-        preexisting = fs.existsSync(filename)
-        try
-          fd =fs.openSync(filename,'w')
-        catch error
-          throw new TypeError(error.message)
-        console.log fs.fstatSync(fd)
-        fs.closeSync(fd)
-        if not preexisting
-          # dont delete if it existing before testing
-          fs.unlinkSync(filename)
-          
-    call1: (filename) ->
-        # the special argument "-" means sys.std{in,out}
-        flags = @options.flags
-        console.log @options, flags
-        if filename == '-'
-            if 'r' in flags
-                return process.stdin
-            else if 'w' in flags
-                return process.stdout
-            else
-                msg = "argument '-' with flags #{flags}"
-                @error(msg) # raise ValueError(msg)
-        # creating read/write streams is consistent with stdin/out
-        # openSync returns fd, not a stream
-        if flags == 'r'
-          openfn = fs.createReadStream
-          @testread(filename)
-        else if flags == 'w'
-          openfn = fs.createWriteStream
-          @testwrite(filename)
-        else
-          throw new TypeError('Unknown file flag')
-          # don't try to handle more complicated flags like r+
-        stream = openfn(filename, @options)
-        # this creats a stream, but does not try to open the file
-        # see nodejs fs for stream options
-        return stream
         
     call: (filename) ->
         # the special argument "-" means sys.std{in,out}
@@ -1208,6 +1153,8 @@ class FileClass # Type
           throw new TypeError('Unknown file flag')
           # don't try to handle more complicated flags like r+
         try
+          # open file before creating stream
+          # and capture any errors
           fd = fs.openSync(filename, flags)
           @options.fd = fd
           stream = createStream(filename, @options)
