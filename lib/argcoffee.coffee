@@ -891,28 +891,16 @@ class ArgumentParser extends _ActionsContainer
         try
             result = type_func(arg_string)
         catch error
-            if error instanceof TypeError
-                if _.isString(action.type)
-                    name = action.type 
-                else
-                    name = action.type.name || action.type.displayName || '<function>'
-                msg = "Invalid #{name} value: #{arg_string}"
-                if name == '<function>'
-                  msg = msg + '\n' + error.message
-                  
-                # Invalid dateType value: (.*)
-                console.log msg
+            if _.isString(action.type)
+                name = action.type 
+            else
+                name = action.type.name || action.type.displayName || '<function>'
+            msg = "Invalid #{name} value: #{arg_string}"
+            msg = action.getName() + ': ' + msg     
+            if error instanceof TypeError # ArgumentTypeError in py
                 @error(msg)
             else
-              @error(error)
-            
-        ###    
-        # ArgumentTypeErrors indicate errors
-        except ArgumentTypeError:
-            name = getattr(action.type, '__name__', repr(action.type))
-            msg = str(_sys.exc_info()[1])
-            throw argumentError(action, msg)
-        ###
+                @error(msg + '\n' + error.message)
         # return the converted value
         return result
 
@@ -1172,7 +1160,7 @@ class FileClass # Type
           # dont delete if it existing before testing
           fs.unlinkSync(filename)
           
-    call: (filename) ->
+    call1: (filename) ->
         # the special argument "-" means sys.std{in,out}
         flags = @options.flags
         console.log @options, flags
@@ -1199,6 +1187,34 @@ class FileClass # Type
         # this creats a stream, but does not try to open the file
         # see nodejs fs for stream options
         return stream
+        
+    call: (filename) ->
+        # the special argument "-" means sys.std{in,out}
+        flags = @options.flags
+        # console.log @options, flags
+        if filename == '-'
+            if 'r' in flags
+                return process.stdin
+            else if 'w' in flags
+                return process.stdout
+            else
+                msg = "argument '-' with flags #{flags}"
+                @error(msg) # raise ValueError(msg)
+        if flags == 'r'
+          createStream = fs.createReadStream
+        else if flags == 'w'
+          createStream = fs.createWriteStream
+        else
+          throw new TypeError('Unknown file flag')
+          # don't try to handle more complicated flags like r+
+        try
+          fd = fs.openSync(filename, flags)
+          @options.fd = fd
+          stream = createStream(filename, @options)
+        catch error 
+          throw error
+        return stream
+
 
 FileType = (options={flags:'r'}) ->
     # callable function that can be used by Action store
@@ -1212,6 +1228,7 @@ FileType = (options={flags:'r'}) ->
 # args.outfile should then be a writable filehandle
 exports.FileType = FileType
         
+###
 argumentError = (argument, message) ->
   ERR_CODE = 'ARGError'
   if argument.getName?
@@ -1226,7 +1243,7 @@ argumentError = (argument, message) ->
   err = new TypeError(errMessage)
   err.code = ERR_CODE
   return err
-
+###
 exports.newParser = (options) -> 
   if not options.debug then options.debug = true
   new ArgumentParser(options)
