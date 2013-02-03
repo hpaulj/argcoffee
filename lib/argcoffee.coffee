@@ -1171,9 +1171,75 @@ FileType = (options={flags:'r'}) ->
     fn.displayName = 'FileType' # name to use in error messages
     return fn
 
+# don't need a class; just return a function that takes the string argument
+# and returns a file (here a stream) or throws an error
+fileType = (options={flags:'r'}) ->
+    # callable function that can be used by _get_value
+    fs = require('fs')
+    fn = (filename) ->
+        # the special argument "-" means sys.std{in,out}
+        flags = options.flags
+        # console.log @options, flags
+        if filename == '-'
+            if 'r' in flags
+                return process.stdin
+            else if 'w' in flags
+                return process.stdout
+            else
+                msg = "argument '-' with flags #{flags}"
+                throw new Error(msg)
+        if flags == 'r'
+          createStream = fs.createReadStream
+        else if flags == 'w'
+          createStream = fs.createWriteStream
+        else
+          throw new TypeError('Unknown file flag')
+          # don't try to handle more complicated flags like r+
+        try
+          # open file before creating stream
+          # and capture any errors
+          fd = fs.openSync(filename, flags)
+          options.fd = fd
+          stream = createStream(filename, options)
+        catch error 
+          throw error
+        return stream
+    fn.displayName = 'FileType' # name to use in error messages
+    return fn
+
+fileType = (options={flags:'r'}) ->
+    # callable function that can be used by _get_value
+    # or a more compact form
+    fs = require('fs')
+    if _.isString(options)
+      flags = options
+    else
+      {flags} = options
+    if flags == 'r'
+      [std, createStream] = [process.stdin, fs.createReadStream]
+    else if flags == 'w'
+      [std, createStream] = [process.stdout, fs.createWriteStream]
+    else
+      throw new Error("Unknown flag type: #{flags}")
+    fn = (filename) ->
+      if filename == '-'
+        stream = std
+      else
+        # open file before creating stream
+        # and capture any errors
+        fd = fs.openSync(filename, flags)
+        options.fd = fd
+        stream = createStream(filename, options)
+      return stream
+    fn.displayName = 'FileType' # name to use in error messages
+    return fn
+
+
+
 # use: parser.add_argument('--outfile',{type:ap.FileType('w')})
 # args.outfile should then be a writable filehandle
 exports.FileType = FileType
+exports.fileType = fileType
         
 ###
 argumentError = (argument, message) ->

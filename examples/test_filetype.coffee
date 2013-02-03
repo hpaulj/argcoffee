@@ -3,6 +3,8 @@
 fs = require('fs')
 print = console.error
 ap = require('argcoffee')
+ap.FileType = ap.fileType # test the fn version
+print ap.FileType('r').toString()
 meStream = ap.FileType()(process.argv[1])
 
 helpstr = 'Functionality is roughly that of <cat>'
@@ -36,9 +38,9 @@ if readStream?
   readStream.on 'error', (error) -> print error
   
 if writeStream?
-  #writeStream.on('open', () ->
-  #  print "wrote to #{writeStream.path}"
-  #  )
+  writeStream.on('open', () ->
+    print "wrote to #{writeStream.path}"
+    )
   writeStream.on 'error', (error) -> print error
   readStream.on('end', () ->
     print 'pipe end'

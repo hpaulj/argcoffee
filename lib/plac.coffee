@@ -1,10 +1,10 @@
 # adapted from plac_core.py, the core part of plac module
-if not module.parent?
-    DEBUG = (arg...) ->
-      arg.unshift('==> ')
-      console.log arg...
+if module.parent?
+  DEBUG = () ->
 else
-    DEBUG = () ->
+  DEBUG = (arg...) ->
+    arg.unshift('==> ')
+    console.log arg...
 
 util = require('util') # node
 assert = require('assert')
@@ -16,19 +16,19 @@ sources = ['./argparse', 'argcoffee', 'argparse']
 for source in sources
   try
     argparse = require(source)
-    break 
+    break
   catch e
-    'pass'
+    continue
 if argparse?
   exports.source = source
 else
   throw new Error('Failed to find an argparse module')
  
 formal_parameter_list = (fn) ->
-  FN_ARGS = /^function\s*([^\(]*)\(\s*([^\)]*)\)/m;
-  FN_ARG_SPLIT = /,/;
+  FN_ARGS = /^function\s*([^\(]*)\(\s*([^\)]*)\)/m
+  FN_ARG_SPLIT = /,/
   FN_ARG = /^\s*(\S+?)\s*$/
-  STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
+  STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg
   args = []
   name = null
   doc = null
@@ -42,24 +42,25 @@ formal_parameter_list = (fn) ->
   name = arg_decl[1]
   arg_decl = arg_decl[2]
   r = arg_decl.split(FN_ARG_SPLIT)
+  repfn = (all, name) ->
+    args.push(name)
   for a of r
     arg = r[a]
-    arg.replace(FN_ARG, (all, name) ->
-      args.push(name))
+    arg.replace(FN_ARG, repfn)
   if name? and name==''
     name = null
   if doc? and doc.length==0
     doc = null
   return [args, name, doc]
 
-class getfullargspec
+class GetFullArgspec
   constructor: (f) ->
     # inspect.getargspac(f)
     # @args = alt_getarglist(f)
     [@args, @name, @doc] = formal_parameter_list(f)
     @varargs = null
     @varkw = null
-    [first...,last] = @args 
+    [first...,last] = @args
     if last in ['kwarg','kwargs','__kw','varkw']
       [@args, @varkw] = [first, last]
     [first...,last] = @args
@@ -69,21 +70,21 @@ class getfullargspec
     @annotations = f.__annotations__ ? {}
 
 getargspec = (callableobj) ->
-  # Given a callable return an object with attributes .args, .varargs, 
+  # Given a callable return an object with attributes .args, .varargs,
   #  .varkw, .defaults. It tries to do the "right thing" with functions,
   #  methods, classes and generic callables.
   if _.isFunction(callableobj)
-    argspec = new getfullargspec(callableobj)
+    argspec = new GetFullArgspec(callableobj)
     if callableobj.name?
       # explicit name of obj takes presidence over one deduced from string
-      argspec.name = callableobj.name     
+      argspec.name = callableobj.name
     # py has special treatment for method, class, and callable
     # js all is either obj, or function
   else
     throw new TypeError('Could not determine the signature of'+callableobj)
   return argspec
 
-# this distinction between getargspec and getfullargspec is a python artifact
+# this distinction between getargspec and GetFullArgspec is a python artifact
 
 annotations = (ann) ->
   #Returns a decorator annotating a function with the given annotations.
@@ -99,7 +100,7 @@ annotations = (ann) ->
       args.push(fas.varkw)
     for argname of ann
       if not argname in args
-        thrown new Error('Annotating non-existing argument'+ argname)
+        throw new Error('Annotating non-existing argument'+ argname)
     f.__annotations__ = ann
     return f
   return annotate
@@ -116,7 +117,7 @@ class Annotation
     assert(@kind in ['positional', 'option', 'flag'],'kind should be positional, option, or flag')
     if @kind == 'positional'
       assert(@abbrev == null, 'abbrev for positional should be null')
-  @from_ = (obj) -> 
+  @from_ = (obj) ->
     # helper to convert an object into an annotation, if needed
     if is_annotation(obj)
       return obj
@@ -124,10 +125,10 @@ class Annotation
       return new Annotation(obj...)
     return new Annotation(obj)
 
-# PARSER_CFG 
+# PARSER_CFG
 # the default arguments accepted by an ArgumentParser object
 
-PARSER_CFG = 'prog, usage, epilog, parents, formatter_class, fromfile_prefix_chars, '+ 
+PARSER_CFG = 'prog, usage, epilog, parents, formatter_class, fromfile_prefix_chars, '+
     'add_help, debug, description, prefix_chars, argument_default, conflict_handler, '+
     'version'
 PARSER_CFG = PARSER_CFG.split(', ')
@@ -139,11 +140,12 @@ pconf = (obj) ->
     argspec = getargspec(obj)
     doc = argspec.doc ? null
     name = argspec.name ? null
-  catch TypeError
-    ""    
+  catch error
+    # show accept a TypeError; throw others
   if !name? or name==''
     name = null
-  cfg = {prog: name, description: doc} # , formatter_class:argparse.HelpFormatter}
+  cfg = {prog: name, description: doc}
+  # , formatter_class:argparse.HelpFormatter}
   for key of obj when key in PARSER_CFG
     cfg[key] = obj[key]
   return cfg
@@ -177,7 +179,7 @@ exports.parser_from = parser_from
 
 _extract_kwargs = (args) ->
   #"Returns two lists: regular args and name=value args"
-  # not going to work in js; 
+  # not going to work in js;
   arglist = []
   kwargs = {}
   for arg in args
@@ -204,7 +206,7 @@ _match_cmd = (abbrev, commands, case_sensitive=true) ->
   if n==1
     return matches[0]
   else if n>1
-    throw Error("Ambiguous command #{abbrev} matching #{matches}")
+    throw new Error("Ambiguous command #{abbrev} matching #{matches}")
   
 
 class ArgumentParser extends argparse.ArgumentParser
@@ -230,7 +232,7 @@ class ArgumentParser extends argparse.ArgumentParser
       if !subp? and cmd?
         return [cmd, @missing(cmd)]
       else if subp?
-        return subp.consume(arglist) 
+        return subp.consume(arglist)
     if @argspec? and !_.isEmpty(@argspec.varkw)
       [arglist, kwargs] = _extract_kwargs(arglist)
     else
@@ -319,32 +321,35 @@ class ArgumentParser extends argparse.ArgumentParser
           shortlong = [prefix + name.replace('_','-')]
       else if !dflt?   # positional without default
         # @addArgument([name], {nargs:'*',help:a.help, type:a.type, choices:a.choices, metavar:metavar})
-        @addArgument([name], {help:a.help, type:a.type, choices: a.choices, metavar:metavar})
+        @addArgument([name], {help:a.help, type:a.type, \
+          choices: a.choices, metavar:metavar})
       else # default  argument
         nargs = if _.str.endsWith(name,'s') then '*' else '?'  # plural
-        @addArgument([name], {nargs:nargs,help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
+        @addArgument([name], {nargs: nargs, help: a.help, \
+          defaultValue:dflt, type: a.type, choices: a.choices, metavar: metavar})
 
       if a.kind == 'option'
         if defaultValue?
           metavar = metavar ? "#{defaultValue}"
-        @addArgument(shortlong, {help:a.help, defaultValue:dflt, type:a.type, choices:a.choices, metavar:metavar})
+        @addArgument(shortlong, {help: a.help, defaultValue: dflt, \
+          type:a.type, choices:a.choices, metavar:metavar})
       else if a.kind == 'flag'
         if defaultValue? and defaultValue != false
           throw new TypeError("Flag #{name} wants default false, got #{defaultValue}")
-        @addArgument(shortlong, {action:'storeTrue', help:a.help})
+        @addArgument(shortlong, {action: 'storeTrue', help: a.help})
       # 'flag' action is storeTrue
-      # for all others it is the default store with possbiel defaultValue and choices
+      # for all others it is the default store with possible defaultValue and choices
       # nargs is either null (=1), '?' or '*'
         
     if f.varargs?
-        a = Annotation.from_(f.annotations[f.varargs] ? [])
-        @addArgument([f.varargs], {nargs:'*', help:a.help, defaultValue:[],\
+      a = Annotation.from_(f.annotations[f.varargs] ? [])
+      @addArgument([f.varargs], {nargs:'*', help:a.help, defaultValue:[],\
                            type:a.type, metavar:a.metavar})
     if f.varkw?
-        a = Annotation.from_(f.annotations[f.varkw] ? [])
-        @addArgument([f.varkw], {nargs:'*', help:a.help, defaultValue:{},\
+      a = Annotation.from_(f.annotations[f.varkw] ? [])
+      @addArgument([f.varkw], {nargs:'*', help:a.help, defaultValue:{},\
                            type:a.type, metavar:a.metavar})
-    # 
+    #
     # py has simple arg, arg with defaultvalue, arg w/ multiple values, dict arg
     # js only has only has simple arg
     # so has to use other means to identify defaults, indicate '*' and '**' args
@@ -365,10 +370,10 @@ iterable = (obj) ->
   return obj.__iter__? and not _.isString(obj)
 
 call = (obj, arglist=process.argv[2...], options={}) ->
-  # If obj is a function or a bound method, parse the given arglist 
+  # If obj is a function or a bound method, parse the given arglist
   #  by using the parser inferred from the annotations of obj
-  #  and call obj with the parsed arguments. 
-  #  If obj is an object with attribute .commands, dispatch to the 
+  #  and call obj with the parsed arguments.
+  #  If obj is an object with attribute .commands, dispatch to the
   #  associated subparser.
   
   [cmd, result] = parser_from(obj, options).consume(arglist)
@@ -377,7 +382,7 @@ call = (obj, arglist=process.argv[2...], options={}) ->
   return result
   # py iterable is anything that can be turned into a list (array)
   # is there a parallel to a callback?
-  # _.toArray(iterable), convert anything that can be iterated over 
+  # _.toArray(iterable), convert anything that can be iterated over
   # to true array (mainly the psuedo array arguments)
 exports.call = call
 
@@ -407,14 +412,15 @@ if not module.parent?
                 description: 'plac version of argparse sum example',
                 debug: true})
 
-  console.log(parser.formatHelp());
+  console.log(parser.formatHelp())
   # usage: Main [-h] [-aflag] [-anopt ANOPT]
   #          [aposit] [vargs [vargs ...]] [kwargs [kwargs ...]]
 
   console.log parser.consume([])
   # main args: false null posdefault [] {}
 
-  console.log parser.consume(['-aflag','-anopt', '42', 'posarg','var1','var2','one=1', 'two=foo'])
+  console.log parser.consume(['-aflag','-anopt', '42', 'posarg', \
+    'var1','var2','one=1', 'two=foo'])
   # main args: true 42 posarg [ 'var1', 'var2' ] { one: '1', two: 'foo' }
   # looks right
 
@@ -432,13 +438,13 @@ if not module.parent?
 
   console.log "========================\ntest subparsers"
   # _parser_registry = {}
-  afunc = (bar) -> 
+  afunc = (bar) ->
     ### a command ###
     return ['a bar:',bar]
   main = () ->
     return "DONE"
   main.a = afunc
-  main.b = (baz) -> 
+  main.b = (baz) ->
     ### b command takes one arg ###
     return ['b baz:',baz]
     
@@ -448,8 +454,8 @@ if not module.parent?
   main.description = 'documentation for main'
 
   parser = parser_from(main, { # prog: 'Main', \
-                debug: true})
-  console.log(parser.formatHelp());
+    debug: true})
+  console.log(parser.formatHelp())
   
   # console.log parser.parseArgs(['a','-h'])
   # exits; I thought debug was supposed to trap that
@@ -475,9 +481,9 @@ in py
 def foo3(x,y=3,a=None,*z,**w):
     print x,y,z,w
     return 'done'
-   ....: 
+   ....:
 
-vars(plac.getargspec(foo3)) 
+vars(plac.getargspec(foo3))
 {'annotations': {},
  'args': ['x', 'y', 'a'],
  'defaults': (3, None),
@@ -486,7 +492,7 @@ vars(plac.getargspec(foo3))
 
 in js, there are only args
 coffee adds defaults (of sorts)
-and something like *z, array turned into string of args 
+and something like *z, array turned into string of args
 but those aren't directly visible in underlying js
 
 square = function(x) {
