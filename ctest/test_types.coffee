@@ -9,10 +9,10 @@ if true
   dateType = (arg) ->
       x = new Date(arg)
       if x.toString().match('Invalid')
-          throw new TypeError("#{arg} is not a valid date.")
-      return x  
-  dateType.displayName = 'date type'
-else 
+          throw new argparse.ArgumentTypeError("'#{arg}' is not a valid date.")
+      return x
+  dateType.displayName = 'dateType'
+else
   argparse = require('argparse')
   # js function with name
   `function dateType(arg) {
@@ -28,6 +28,7 @@ try
   print dateType('abc')
 catch err
   print err
+  print "#{err}"
 p = new argparse.ArgumentParser({debug:DEBUG})
 p.addArgument(['-d'],{type:dateType})
 p.addArgument(['-i'],{type:'int'})
@@ -53,16 +54,16 @@ try
   print p.parseArgs(['-d','13/1/12'])
 catch err
   print err
-print p.parseArgs(['-f','1.23','-i','123','-d','1/24/2012'])  
+print p.parseArgs(['-f','1.23','-i','123','-d','1/24/2012'])
 try
-  print p.parseArgs(['-d','abc','-f','abc','-i','abc'])  
+  print p.parseArgs(['-d','abc','-f','abc','-i','abc'])
 catch err
   print err
 
 ###
  py error
   error: argument -x: invalid float value: 'abc'
-if fn is 'foo': invalid foo value 
+if fn is 'foo': invalid foo value
   invalid <lambda> value
 
 js:  error: argument "-f": Invalid float value: abc
@@ -83,7 +84,7 @@ In CS, I just pass on the error message from the type execution
 So the message isnt as standardized, but can be tailored by the user
 
 Possible JS solutions:
-- try to parse function name from toString(); I do that for plac 
+- try to parse function name from toString(); I do that for plac
    (but not all js fn have a name; e.g. ones originating in coffee)
 - if action.type is not string, use the unaltered error msg as I do in CS
 
@@ -125,7 +126,7 @@ ArgumentParser.prototype._getValue = function (action, argString) {
         // Python just uses the function's __name__
         // Compromise is to use the error message that the function gave
         throw e
-    }    
+    }
   }
   // return the converted value
   return result;

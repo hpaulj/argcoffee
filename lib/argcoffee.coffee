@@ -5,14 +5,21 @@
  *
  * Inherited from [[ActionContainer]]
 ###
+# TODO - add conflict handler from argparse
+# integrate ArgumentError
+
+util = require('util')
+
 if not module.parent? and (!process.argv[2]? or process.argv[2]!='nodebug')
     DEBUG = (arg...) ->
       arg.unshift('==> ')
       console.log arg...
+
+    #DEBUG = (arg...) -> util.debug(arg)
+    # how is util.debug diff from console.log?
 else
     DEBUG = () ->
 
-util = require('util')
 assert = require('assert')
 path = require('path')
 _ = require('underscore')
@@ -36,13 +43,13 @@ $$ = require('./const')
 _ActionsContainer = require('./argcontainer')._ActionsContainer
 
 HelpFormatter = require('./helpformatter').HelpFormatter
-  
-class Namespace 
+
+class Namespace
   isset: (key) -> @[key]?
   get: (key, defaultValue) -> @[key] ? defaultValue
   set: (key, value) -> @[key] = value
   repr: () -> 'Namespace'+ util.inspect(@)
-    
+
 if DEBUG and 0
   np = new Namespace()
   console.log np
@@ -54,7 +61,7 @@ if DEBUG and 0
   console.log np.isset('test')
   console.log np.get('test','default')
   console.log np.repr()
-    
+
 # argparse separates these exports from definion of ArgumentParser
 exports.Namespace = Namespace
 exports.HelpFormatter = HelpFormatter
@@ -63,15 +70,15 @@ exports.Action = require(adir+'action')
 
 class ArgumentParser extends _ActionsContainer
     constructor: (options={}) ->
-        @prog=options.prog ? path.basename(process.argv[1])    
-        @usage=options.usage ? null    
+        @prog=options.prog ? path.basename(process.argv[1])
+        @usage=options.usage ? null
         @epilog=options.epilog ? null
         @parents=options.parents ? []
         @formatter_class=options.formatter_class ? HelpFormatter
         @fromfile_prefix_chars = options.fromfile_prefix_chars ? null
         @add_help = options.addHelp ? options.add_help ? true
         @debug = options.debug ? false
-    
+
         @description=options.description ? null
         @prefix_chars=options.prefixChars ? options.prefix_chars ? '-'
         @argument_default=options.argumentDefault ? options.argument_default ? null
@@ -90,10 +97,10 @@ class ArgumentParser extends _ActionsContainer
         # Python int, float, etc work
         # JS parseInt, parseFloat return NaN instead of an error
         # type can be user supplied, but these are a few convenience types
-        
+
         # register types
         @register('type', null, (o)->o)  # identity
-        @register('type', 'auto', (o)->o)        
+        @register('type', 'auto', (o)->o)
         @register('type', 'int', (x) ->
             result = parseInt(x, 10)
             if isNaN(result)
@@ -102,28 +109,28 @@ class ArgumentParser extends _ActionsContainer
         @register('type', 'float', (x) ->
             result = parseFloat(x, 10)
             if isNaN(result)
-                throw new TypeError("#{x} is not a valid float.")   
+                throw new TypeError("#{x} is not a valid float.")
             return result)
         @register('type', 'string', (x) ->
-            return '' + x)         
+            return '' + x)
 
         # add help and version arguments if necessary
         # (using explicit default to override global argument_default)
         default_prefix = if '-' in @prefix_chars then '-' else @prefix_chars[0]
         if @add_help
             @addArgument([default_prefix+'h', default_prefix+default_prefix+'help'],\
-                {action:'help', 
+                {action:'help',
                 defaultValue:$$.SUPPRESS, # of default of the action already
                 help:'Show this help message and exit'
             })
-            
+
         if @version
             @addArgument([default_prefix+'v', default_prefix+default_prefix+'version'],\
                 {action:'version', default:$$.SUPPRESS, \
                 version:@version,\
                 help:"show program's version number and exit"
             })
-                
+
         for parent in @parents
             if @_addContainerActions?
               @_addContainerActions(parent)
@@ -134,7 +141,7 @@ class ArgumentParser extends _ActionsContainer
                     if parent._defaults[defaultKey]? # has defaultKey # own?
                         @_defaults[defaultKey] = parent._defaults[defaultKey]
         @
-        
+
     # =======================
     # Pretty __repr__ methods
     # =======================
@@ -161,7 +168,7 @@ class ArgumentParser extends _ActionsContainer
         options.debug = @debug
         options.option_strings = []
         options.parserClass = (options.parserClass || ArgumentParser)
-        
+
         # add the parser class to the arguments if it's not present
         #?options.setdefault('parser_class', type(self))
 
@@ -189,7 +196,7 @@ class ArgumentParser extends _ActionsContainer
           ParsersClass = @_popActionClass(options, 'parsers')
         else
           ParsersClass = @_pop_action_class(options, 'parsers')
-        
+
         action = new ParsersClass(options)
         DEBUG action.nargs
         DEBUG @_subparsers.__super__
@@ -201,7 +208,7 @@ class ArgumentParser extends _ActionsContainer
         # return the created parsers action
         return action
 
-    _add_action: (action) ->  
+    _add_action: (action) ->
         if action.isOptional()
             assert(action.option_strings)
             this._optionals._add_action(action)
@@ -209,13 +216,13 @@ class ArgumentParser extends _ActionsContainer
             # DEBUG 'pos action:',action.dest
             this._positionals._add_action(action)
         return action
-    
+
     _get_optional_actions: () ->
         return (action for action in this._actions when action.isOptional())
-        
+
     _get_positional_actions: () ->
         return (action for action in this._actions when not action.isOptional())
-        
+
     # =====================================
     # Command line argument parsing methods
     # =====================================
@@ -225,16 +232,16 @@ class ArgumentParser extends _ActionsContainer
             msg = "unrecognized arguments: #{argv.join(' ')}"
             @error(msg)
         return args
-        
+
     parse_known_args: (args=null, namespace=null) ->
         # args default to system args
         args = args || process.argv[2...]
-            
+
         # default Namespace built from parser defaults
         namespace = namespace ? new Namespace()
         DEBUG "parse_known_args: '#{@prog}'"
         DEBUG 'namespace:', namespace.repr()
-            
+
         # add any action defaults that aren't present
         for action in @_actions
             DEBUG 'action default: ',action.dest,action.defaultValue
@@ -245,13 +252,13 @@ class ArgumentParser extends _ActionsContainer
                         if _.isString(_default)
                             _default = @_get_value(action, _default)
                         namespace.set(action.dest, _default)
-                      
+
         DEBUG 'with defaults:',namespace.repr()
         # add any parser defaults that aren't present
         for dest of @_defaults
             if not namespace.isset(dest)
                 namespace.set(dest, @_defaults[dest])
-        
+
         # parse the arguments and exit if there are any errors
         if true  # try
             DEBUG 'initial args', args, namespace.repr()
@@ -260,19 +267,19 @@ class ArgumentParser extends _ActionsContainer
                 args.push(namespace.get($$._UNRECOGNIZED_ARGS_ATTR))
                 namespace.unset($$._UNRECOGNIZED_ARGS_ATTR, null)
             return [namespace, args]
-                
+
         else  # catch error
             @error(''+error)
-            
+
         argv = []
         return [args, argv]
-        
+
     _parse_known_args: (arg_strings, namespace) ->
         # replace arg strings that are file references
         if @fromfile_prefix_chars?
             arg_strings = @_read_args_from_files(arg_strings)
             DEBUG 'from files', arg_strings
-            
+
         # map all mutually exclusive arguments to the other arguments
         # they can't occur with
         actionConflicts = {}
@@ -282,19 +289,19 @@ class ArgumentParser extends _ActionsContainer
         for mutex_group in mxgroups
             group_actions = mutex_group._groupActions ? mutex_group._group_actions
             for mutex_action, i in group_actions
-                key =  actionHash(mutex_action) 
+                key =  actionHash(mutex_action)
                 if not actionConflicts[key]?
                     actionConflicts[key] = []
                 conflicts = actionConflicts[key]
                 conflicts.push(group_actions[...i]...)
                 conflicts.push(group_actions[i + 1..]...)
-    
+
         # find all option indices, and determine the arg_string_pattern
         # which has an 'O' if there is an option at an index,
         # an 'A' if there is an argument, or a '-' if there is a '--'
         option_string_indices = {}
         arg_string_pattern_parts = []
-        for arg_string, i in arg_strings  
+        for arg_string, i in arg_strings
             # Py uses iter() to iter over the rest after --
             # all args after -- are non-options
             if arg_string == '--'
@@ -317,12 +324,12 @@ class ArgumentParser extends _ActionsContainer
 
         # join the pieces together to form the pattern
         arg_string_pattern = arg_string_pattern_parts.join('')
-        DEBUG 'pattern:',arg_string_pattern, _.keys(option_string_indices)        
+        DEBUG 'pattern:',arg_string_pattern, _.keys(option_string_indices)
 
         # converts arg strings to the appropriate and then takes the action
         seen_actions = []  # py uses set()
         seen_non_default_actions = []
-        
+
         take_action = (action, argument_strings, option_string=null) =>
             seen_actions.push(action)
             argument_values = @_get_values(action, argument_strings)
@@ -338,14 +345,15 @@ class ArgumentParser extends _ActionsContainer
                         if actionConflict in seen_non_default_actions
                             msg = "not allowed with argument #{actionConflict.getName()}"
                             @error(action.getName() + ': ' + msg)
-              
+                            # throw new ArgumentError(action, msg)
+
             # take the action if we didn't receive a SUPPRESS value
             # (e.g. from a default)
             if argument_values != $$.SUPPRESS
                 action.call(@, namespace, argument_values, option_string)
                 DEBUG 'taken_action:',action.dest,namespace.repr()
                 DEBUG '    ', argument_values, option_string
-                
+
         consume_optional = (start_index) =>
             # get the optional identified at this index
             option_tuple = option_string_indices[start_index]
@@ -376,7 +384,7 @@ class ArgumentParser extends _ActionsContainer
                         action_tuples.push([action, [], option_string])
                         char = option_string[0]
                         option_string = char + explicit_arg[0]
-                        new_explicit_arg = explicit_arg[1...] || null 
+                        new_explicit_arg = explicit_arg[1...] || null
                         optionals_map = @_option_string_actions
                         if optionals_map[option_string]?
                             action = optionals_map[option_string]
@@ -428,7 +436,7 @@ class ArgumentParser extends _ActionsContainer
         # function to convert arg_strings into positional actions
         consume_positionals = (start_index) =>
             # match as many Positionals as possible
-            match_partial = @_match_arguments_partial 
+            match_partial = @_match_arguments_partial
             selected_pattern = arg_string_pattern[start_index...]
             DEBUG 'cp', selected_pattern
             arg_counts = match_partial(positionals, selected_pattern)
@@ -506,7 +514,7 @@ class ArgumentParser extends _ActionsContainer
             if action.required
                 if action not in seen_actions
                     @error("argument #{action.getName()} is required")
-  
+
         # make sure all required groups had one option present
         action_used = false
         for group in @_mutuallyExclusiveGroups ? @_mutually_exclusive_groups
@@ -528,7 +536,7 @@ class ArgumentParser extends _ActionsContainer
 
         DEBUG 'known:',[namespace.repr(), extras]
         return [namespace, extras]
-        
+
     _read_args_from_files: (arg_strings) ->
         # expand arguments referencing files
         fs = require('fs')
@@ -543,20 +551,20 @@ class ArgumentParser extends _ActionsContainer
                   argstrs = []
                   filename = arg_string[1...] # w/o the prefix
                   content = fs.readFileSync(filename, 'utf8')
-                  content = content.trim().split('\n') 
+                  content = content.trim().split('\n')
                   DEBUG filename, content
                   for arg_line in content
                     for arg in @convert_arg_line_to_args(arg_line)
                       argstrs.push(arg)
                     argstrs = @_read_args_from_files(argstrs)
-                  new_arg_strings.push(argstrs...) 
-                catch error 
+                  new_arg_strings.push(argstrs...)
+                catch error
                   console.log error.message
                   @error(error.message)
         return new_arg_strings
 
     _read_args_from_files1: (arg_strings) =>
-        ### expand arguments referencing files 
+        ### expand arguments referencing files
         trying to use .forEach for loops; problems with binding
         ###
         prefix_chars = @fromfile_prefix_chars
@@ -575,7 +583,7 @@ class ArgumentParser extends _ActionsContainer
                   argstrs = []
                   filename = arg_string[1...] # w/o the prefix
                   content = fs.readFileSync(filename, 'utf8')
-                  content = content.trim().split('\n') 
+                  content = content.trim().split('\n')
                   DEBUG filename, content
                   content.forEach((arg_line) ->
                     @convert_arg_line_to_args(arg_line).forEach( (arg) ->
@@ -583,16 +591,16 @@ class ArgumentParser extends _ActionsContainer
                     )
                     argstrs = @_read_args_from_files(argstrs) # recursive call
                   )
-                  new_arg_strings.push(argstrs...) 
-                catch error 
+                  new_arg_strings.push(argstrs...)
+                catch error
                   console.log error.message
                   @error(error.message)
         )
         return new_arg_strings
-  
+
     _read_args_from_files2: (arg_strings) =>
-        ### expand arguments referencing files 
-        try to use the async form of readfile; 
+        ### expand arguments referencing files
+        try to use the async form of readfile;
         it doesn't wait for the read to finish
         ###
         prefix_chars = @fromfile_prefix_chars
@@ -624,15 +632,15 @@ class ArgumentParser extends _ActionsContainer
                     new_arg_strings.push(argstrs...)
                   )
                   # shouldn't proceed until this read is done
-                catch error 
+                catch error
                   console.log error.message
                   @error(error.message)
         )
         return new_arg_strings
-      
+
     convert_arg_line_to_args: (arg_line) ->
         return [arg_line]
-    
+
     _match_argument: (action, arg_strings_pattern) =>
         # match the pattern for this action to the arg strings
         nargs_pattern = @_get_nargs_pattern(action)
@@ -659,7 +667,7 @@ class ArgumentParser extends _ActionsContainer
         #foo = get_nargs_pattern # @_get... not found
         DEBUG 'actions:',(a.dest for a in actions)
         DEBUG 'arg strings pattern:',arg_strings_pattern
-        foo = @_get_nargs_pattern 
+        foo = @_get_nargs_pattern
         for i in [actions.length..0]
             actions_slice = actions[...i]
             pattern = (foo(action) for action in actions_slice).join('')
@@ -672,8 +680,8 @@ class ArgumentParser extends _ActionsContainer
                 break
         # return the list of arg string counts
         DEBUG 'match arguments partial:',result
-        return result        
-            
+        return result
+
     _parse_optional: (arg_string) ->
         # if it's an empty string, it was meant to be a positional
         assert(@prefix_chars?)
@@ -781,7 +789,7 @@ class ArgumentParser extends _ActionsContainer
 
         # return the collected option tuples
         return result
-    
+
     _get_nargs_pattern: (action) ->
         # in all examples below, we have to allow for '--' args
         # which are represented as '-' in the pattern
@@ -823,7 +831,7 @@ class ArgumentParser extends _ActionsContainer
         # return the pattern
         DEBUG nargs, nargs_pattern
         return nargs_pattern
-    
+
     # ========================
     # Value conversion methods
     # ========================
@@ -880,7 +888,7 @@ class ArgumentParser extends _ActionsContainer
 
         # return the converted value
         return value
-        
+
     _get_value: (action, arg_string) ->
         type_func = @_registryGet('type', action.type, action.type)
         if not _.isFunction(type_func) # _callable(type_func):
@@ -892,16 +900,20 @@ class ArgumentParser extends _ActionsContainer
             result = type_func(arg_string)
         catch error
             if _.isString(action.type)
-                name = action.type 
+                name = action.type
             else
                 name = action.type.name || action.type.displayName || '<function>'
             msg = "Invalid #{name} value: #{arg_string}"
-            msg = action.getName() + ': ' + msg     
-            if error instanceof TypeError # ArgumentTypeError in py
-                @error(msg)
+            msg = action.getName() + ': ' + msg
+            if error instanceof TypeError
+              @error(msg)
+              # msg = "invalid #{name} value: #{arg_string}"
+              # raise new ArgumentError(action, msg)
+            else if error instanceof ArgumentTypeError
+              @error(msg + '\n' + error.message)
+              # raise new ArgumentError(action, error.message)
             else
-                @error(msg + '\n' + error.message)
-        # return the converted value
+              throw error
         return result
 
     _check_value: (action, value) ->
@@ -920,7 +932,8 @@ class ArgumentParser extends _ActionsContainer
           if value not in choices
             msg = "invalid choice: #{value} (choose from #{choices})"
             @error(action.getName() + ': ' + msg)
-            
+            # throw new ArgumentError(action, msg)
+
     ###
     # argument_parser.js has more elaborate checkvalue
         ArgumentParser.prototype._checkValue = function (action, value) {
@@ -936,7 +949,7 @@ class ArgumentParser extends _ActionsContainer
         if (_.isObject(choices) && !_.isArray(choices) && choices[value]) {
           return;
         }
-      
+
         if (_.isString(choices)) {
           choices = choices.split('').join(', ');
         }
@@ -954,18 +967,18 @@ class ArgumentParser extends _ActionsContainer
       }
     };
     ###
-            
+
     # ===============
     # Help formatting methods
     # ===============
-    # adapt from javascript version   
-    
+    # adapt from javascript version
+
     format_usage: () ->
         formatter = @_getFormatter()
         formatter.addUsage(@usage, @_actions, @_mutually_exclusive_groups)
         return formatter.formatHelp()
     formatUsage: () -> @format_usage()
-    
+
     format_help: () ->
         formatter = @_getFormatter()
         # usage
@@ -979,23 +992,23 @@ class ArgumentParser extends _ActionsContainer
         formatter.addText(@epilog)
         return formatter.formatHelp()
     formatHelp: () -> @format_help()
-    
+
     _getFormatter: () ->
         FormatterClass = @formatter_class
         formatter = new FormatterClass({prog: @prog})
-    
+
     printUsage: () ->
         @_printMessage(@format_usage())
     print_usage: () -> @printUsage()
     printHelp: () ->
         @_printMessage(@format_help())
     print_help: () -> @printHelp()
-         
+
     #_printMessage: (message, stream) ->
     #    stream = stream ? process.stdout
     #    stream.write('' + message)
-        
-            
+
+
     # ===============
     # Exiting methods
     # ===============
@@ -1012,7 +1025,7 @@ class ArgumentParser extends _ActionsContainer
             throw new Error(msg)
         @print_usage(process.stderr)
         return @exit(2,msg)
-    
+
     exit: (status, message) ->
         if message?
             if status==0
@@ -1024,28 +1037,28 @@ class ArgumentParser extends _ActionsContainer
             throw new Error('Exit captured')
         else
             process.exit(status)
-        
+
     _printMessage: (message, stream=process.stdout) ->
         if message
             stream.write('' + message)
-            
+
     # ===============
     # CamelCase Aliases
     # ===============
-    parseArgs: (args, namespace=null) -> @parse_args(args, namespace)  
+    parseArgs: (args, namespace=null) -> @parse_args(args, namespace)
     parseKnownArgs: (args, namespace=null) -> @parse_known_args(args, namespace)
     addSubparsers: (args) -> @add_subparsers(args)
     if not @::add_argument?
       add_argument: (args..., options) ->
-          # Python like arguments; 
+          # Python like arguments;
           # if last arg is a string, assume it is one of the 'args'
           # and options is an empty object
           if _.isString(options)
-            # assume 
+            # assume
             args.push(options)
             options = {}
           @addArgument(args, options)
-        
+
 # =====================
 # Options and Arguments
 # =====================
@@ -1099,8 +1112,8 @@ _ensure_value = (namespace, name, value) ->
     if getattr(namespace, name, null) is null
         setattr(namespace, name, value)
     return getattr(namespace, name)
-    
-# basic methods in Python, used to access Namespace 
+
+# basic methods in Python, used to access Namespace
 # with these do we need a special Namespace class?
 getattr = (obj, key, defaultValue) ->
     obj[key] ? defaultValue
@@ -1108,7 +1121,7 @@ setattr = (obj, key, value) ->
     obj[key] = value
 hasattr = (obj, key) ->
     obj[key]?
-    
+
 # should I make None a syn of null?
 
 
@@ -1130,9 +1143,11 @@ class FileClass # Type
     Python uses mode, nodejs uses 'flags'
     ###
     fs = require('fs') # nodejs
-    constructor: (@options) -> 
-      # options that will be passed on to the stream creators
-        
+    constructor: (options) ->
+        if _.isString(options)
+          options = {flags:options}
+        @options = options
+
     call: (filename) ->
         # the special argument "-" means sys.std{in,out}
         flags = @options.flags
@@ -1144,7 +1159,8 @@ class FileClass # Type
                 return process.stdout
             else
                 msg = "argument '-' with flags #{flags}"
-                @error(msg) # raise ValueError(msg)
+                throw new TypeError(msg)
+                # @error(msg) # raise ValueError(msg)
         if flags == 'r'
           createStream = fs.createReadStream
         else if flags == 'w'
@@ -1158,8 +1174,8 @@ class FileClass # Type
           fd = fs.openSync(filename, flags)
           @options.fd = fd
           stream = createStream(filename, @options)
-        catch error 
-          throw error
+        catch error
+          throw new ArgumentTypeError(error.message)
         return stream
 
 
@@ -1201,7 +1217,7 @@ fileType = (options={flags:'r'}) ->
           fd = fs.openSync(filename, flags)
           options.fd = fd
           stream = createStream(filename, options)
-        catch error 
+        catch error
           throw error
         return stream
     fn.displayName = 'FileType' # name to use in error messages
@@ -1220,16 +1236,21 @@ fileType = (options={flags:'r'}) ->
     else if flags == 'w'
       [std, createStream] = [process.stdout, fs.createWriteStream]
     else
-      throw new Error("Unknown flag type: #{flags}")
+      msg = "argument '-' with flag #{flags}"
+      throw new TypeError(msg)
     fn = (filename) ->
       if filename == '-'
         stream = std
       else
         # open file before creating stream
         # and capture any errors
-        fd = fs.openSync(filename, flags)
-        options.fd = fd
-        stream = createStream(filename, options)
+        try
+          fd = fs.openSync(filename, flags)
+          options.fd = fd
+          stream = createStream(filename, options)
+        catch err
+          msg = "can't open #{filename}: #{err.message}"
+          throw ArgumentTypeError(msg)
       return stream
     fn.displayName = 'FileType' # name to use in error messages
     return fn
@@ -1240,8 +1261,43 @@ fileType = (options={flags:'r'}) ->
 # args.outfile should then be a writable filehandle
 exports.FileType = FileType
 exports.fileType = fileType
-        
+
+#class ArgumentTypeError(Exception):
+#    """An error from trying to convert a command line string to a type."""
+#    pass
+
+class ArgumentTypeError extends Error
+  constructor: (msg) ->
+    Error.captureStackTrace(@, @)
+    @.message = msg || 'Argument Error'
+    @name = 'ArgumentTypeError'
+
+class ArgumentError extends Error
+    ###
+    An error from creating or using an argument (optional or positional).
+
+    The string value of this exception is the message, augmented with
+    information about the argument that caused it.
+    ###
+  constructor: (@argument, @message) ->
+    try
+      @argument_name = @argument.getName() # action.getName
+    catch err
+      @argument_name = _get_action_name(@argument)
+    @name = "ArgumentError"
+    Error.captureStackTrace(@, @)
+  toString: () ->
+    if @argument_name == null
+      astr = "#{@message}"
+    else
+      astr = "argument #{@argument_name}: #{@message}"
+
+exports.ArgumentTypeError = ArgumentTypeError
+exports.ArgumentError = ArgumentError
+
 ###
+error formating help from argparse
+add argument name to the message
 argumentError = (argument, message) ->
   ERR_CODE = 'ARGError'
   if argument.getName?
@@ -1251,13 +1307,14 @@ argumentError = (argument, message) ->
   if argumentName?
     errMessage = "argument '#{argumentName}': #{message}"
   else
-    errMessage = "#{message}"  
+    errMessage = "#{message}"
   # format = !argumentName ? '%(message)s': 'argument "%(argumentName)s": %(message)s';
   err = new TypeError(errMessage)
   err.code = ERR_CODE
   return err
 ###
-exports.newParser = (options) -> 
+exports.newParser = (options={}) ->
+  # convenience function
   if not options.debug then options.debug = true
   new ArgumentParser(options)
 
@@ -1271,14 +1328,14 @@ testparse = (args) ->
     catch error
       error
   )
-  
+
 if TEST and 0
     parser = new ArgumentParser()
     #console.log 'obj:',util.inspect(parser,false,0)
     #console.log parser._action_groups[0]
     console.log parser.format_help()
     parser.add_subparsers({})
-    console.log 'class:', 
+    console.log 'class:',
     console.log ArgumentParser
     console.log 'proto'
     console.log ArgumentParser.prototype
@@ -1291,7 +1348,7 @@ if TEST and 0
     parentParser = new ArgumentParser({add_help: false, description: 'parent'})
     parentParser.addArgument(['--x'])
     parentParser._defaults = {x:true} # test the propagation to child
-    
+
     childParser = new ArgumentParser({description:'child',parents:[parentParser]})
     childParser.addArgument(['--y'])
     childParser.addArgument(['xxx'])
@@ -1306,7 +1363,7 @@ if TEST and 0
         # _groupActions are different
         # console.log (action.dest for action in childParser._get_optional_actions())
     console.log '====================================='
-    
+
 if TEST and 0
     int1 = (arg) ->
         result = parseInt(arg,10)
@@ -1326,11 +1383,11 @@ if TEST and 0
     if process.argv.length==2
         argv = ['123.5']
         argv = ['-xz','123']
-    else 
+    else
         argv = null
     #console.log parser
     console.log parser.parse_known_args(argv)
-    
+
     args = parser.parseArgs(argv)
     console.log args
     # test python like namespace fns
@@ -1360,7 +1417,7 @@ if TEST and 1
       # args = parser.parseArgs('-x c2'.split(' '))
       console.log args
     catch error
-    
+
     parser.printHelp()
     try
       parser.parseArgs(['-h'])
@@ -1393,8 +1450,8 @@ if TEST and 0
   parser.addArgument(['-x'],{type:'float'});
   parser.addArgument(['-3'],{type:'float', dest:'y'})
   parser.addArgument(['z'],{nargs:'*'})
-  args = parser.parse_args(['-2'])    
-  console.log args 
+  args = parser.parse_args(['-2'])
+  console.log args
 
 # TODO args from files
 

@@ -5,6 +5,7 @@
 var assert = require('assert');
 
 var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentTypeError = require('../lib/argparse').ArgumentTypeError
 
 describe('base', function () {
   var parser;
@@ -96,7 +97,7 @@ describe('base', function () {
     var dateType = function (arg) {
       var x = new Date(arg);
       if (x.toString().match('Invalid')) {
-        throw new TypeError("" + arg + " is not a valid date.");
+        throw new ArgumentTypeError("" + arg + " is not a valid date.");
       }
       return x;
     };
@@ -113,3 +114,7 @@ describe('base', function () {
 });
 // could test for: Error: "dateType" is not callable
 // by using an unregistered string or other nonfunction
+
+// In py, TypeError produces the standard /Invalid ... value: /
+// ArgumentTypeError produces its own message
+// In argcoffee, it compromises and produces both
