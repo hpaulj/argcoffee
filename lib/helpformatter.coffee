@@ -36,18 +36,18 @@ fmtwindent= (fmt, tup) ->
   return text
 
 _textwrap =
-  wrap: (text, width, initial_indent=0, subsequent_indent=0) -> 
+  wrap: (text, width, initial_indent=0, subsequent_indent=0) ->
     return [text]
-  fill: (args...) -> 
+  fill: (args...) ->
     return _textwrap.wrap(args...).join('\n')
-  
+
 pformat = (fmt, params) ->
   # standin for python format
   # params is a list
   for p in params
     fmt=fmt.replace(/%s/,p)
   return fmt
-  
+
 pnformat = (fmt, params) ->
   # standin for python format with named entries
   # params is an object,
@@ -55,8 +55,8 @@ pnformat = (fmt, params) ->
   for k of params
     fmt = fmt.replace("%\(#{k}\)s",params[k])
   return fmt
-    
-  
+
+
 # ===============
 # Formatting Help
 # ===============
@@ -124,7 +124,7 @@ exports.HelpFormatter = class HelpFormatter
             #for [func, args] in @items
             #    func(args...)
             item_help = join(func(args...) for [func, args] in @items)
-      
+
             if @parent?
                 @formatter._dedent()
 
@@ -232,7 +232,7 @@ exports.HelpFormatter = class HelpFormatter
             # split optionals from positionals
             optionals = []
             positionals = []
-            for action in actions
+            for action in actions when action
                 if action.isOptional()
                     optionals.push(action)
                 else
@@ -242,7 +242,7 @@ exports.HelpFormatter = class HelpFormatter
             format = @_format_actions_usage
             action_usage = format([].concat(optionals, positionals), groups)
             usage = (s for s in [prog, action_usage] when s).join(' ')
-              
+
             # wrap the usage parts if it's too long
             text_width = @_width - @_current_indent
             if prefix.length + usage.length > text_width
@@ -251,7 +251,7 @@ exports.HelpFormatter = class HelpFormatter
                 part_regexp = /\(.*?\)+|\[.*?\]+|\S+/g
                 opt_usage = format(optionals, groups)
                 pos_usage = format(positionals, groups)
-                  
+
                 opt_parts = opt_usage.match(part_regexp) ? []
                 pos_parts = pos_usage.match(part_regexp) ? []
                 # helper for wrapping lines
@@ -305,13 +305,13 @@ exports.HelpFormatter = class HelpFormatter
 
                 # join lines into usage
                 usage = lines.join('\n')
-        
+
         # prefix with 'usage:'
         return prefix + usage + "\n\n"
 
     _format_actions_usage: (actions, groups) =>
         # find group indices and identify actions in groups
-        group_actions = [] 
+        group_actions = []
         # set() in python; could use {}, but using action as key is awkward
         inserts = {}
         for group in groups
@@ -428,7 +428,7 @@ exports.HelpFormatter = class HelpFormatter
         # no help; start on same line and add a final newline
         if not action.help?
             action_header = fmtwindent('%*s%s\n',[@_current_indent, action_header])
-      
+
         # short action name; start on the same line and pad two spaces
         else if action_header.length <= action_width
             tup = [@_current_indent, action_header, action_width]
@@ -462,8 +462,8 @@ exports.HelpFormatter = class HelpFormatter
             @_indent()
             parts.push(@_format_action(subaction))
             @_dedent()
-          
-            
+
+
 
         # return a single string
         return @_join_parts(parts)
@@ -474,7 +474,7 @@ exports.HelpFormatter = class HelpFormatter
             return metavar
         else
             parts = []
-            
+
             # if the Optional doesn't take a value, format is
             #    -s, --long
             if action.nargs == 0
@@ -510,8 +510,8 @@ exports.HelpFormatter = class HelpFormatter
             result = default_metavar
 
         format = (tuple_size) ->
-            return (result for i in [0...tuple_size]) 
-                
+            return (result for i in [0...tuple_size])
+
         return format
 
     _format_args: (action, default_metavar) ->
@@ -534,7 +534,7 @@ exports.HelpFormatter = class HelpFormatter
         return result
 
     _expand_help: (action) ->
-        # return @_get_help_string(action)    
+        # return @_get_help_string(action)
         # params = dict(vars(action), prog=@_prog)
         params = _.clone(action); params.prog = @_prog
         # for name in _.keys(params)
@@ -547,7 +547,7 @@ exports.HelpFormatter = class HelpFormatter
             choices_str = (''+c for c in params.choices).join(', ')
             params.choices = choices_str
         return pnformat(@_get_help_string(action), params)
-        
+
     _indented_subactions: (action) ->
         # was iter in py
         # replace with inline code to get the indent right
@@ -569,7 +569,7 @@ exports.HelpFormatter = class HelpFormatter
             cnt = wd.length+1
         lines.push(line.join(' '))
         return lines
-        # return text.split('\n') 
+        # return text.split('\n')
         # py: split text in lines roughly width long
         # text = @_whitespace_matcher.sub(' ', text).strip()
         # return _textwrap.wrap(text, width)
@@ -650,7 +650,7 @@ if not module.parent?
   formatter.add_usage(parser.usage, parser._actions, [])
   formatter.add_text('a description %(prog)s')
   console.log 'format_help\n', formatter.format_help()
-  
+
   for ag in parser._action_groups
     formatter.start_section(ag.title)
     formatter.add_text(ag.description)
@@ -662,10 +662,10 @@ if not module.parent?
   # DEBUG = () -> # turn it off
   console.log 'help wrapping'
   parser = new ap({prog:'PROG', debug: true, \
-      description: '   oddly    formatted\n' + 
-                    'description\n' + 
-                    '\n' + 
-                    'that is so long that it should go onto multiple ' + 
+      description: '   oddly    formatted\n' +
+                    'description\n' +
+                    '\n' +
+                    'that is so long that it should go onto multiple ' +
                     'lines when wrapped'})
   parser.add_argument('-x',{metavar:'XX',help: 'oddly\n'+
                                      '    formatted -x help'})
@@ -678,7 +678,7 @@ if not module.parent?
               help: ' oddly \n'+
                    'formatted    -a  help  \n'+
                    '    again, so long that it should be wrapped over '+
-                   'multiple lines'})                    
+                   'multiple lines'})
   console.log parser.format_help()
   console.log '------------------'
   formatter = setup(parser)
@@ -729,15 +729,15 @@ if not module.parent?
   # create the parser for the "b" command
   parser_b = subparsers.addParser('b', {help:'b help',formatter_class:HelpFormatter_js})
   parser_b.add_argument('--baz', {choices:'XYZ', help:'baz help, default: %(defaultValue)s', defaultValue: 'X'})
-  
+
   console.log parser.format_help()
   console.log parser_a.format_help()
   console.log parser_b.format_help()
   console.log '-------------------'
-  formatter = setup(parser) 
+  formatter = setup(parser)
   console.log formatter.format_help()
-  
-  parser_a.formatter_class = HelpFormatter 
+
+  parser_a.formatter_class = HelpFormatter
   console.log parser_a.format_help()
   console.log parser_b.format_help()
 
@@ -750,4 +750,4 @@ if false
   console.log parser.format_help()
   console.log '-------------------'
   console.log formatter.format_help()
-  
+

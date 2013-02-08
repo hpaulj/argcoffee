@@ -12,11 +12,9 @@ path = require('path')
 _ = require('underscore')
 _.str = require('underscore.string')
 
-adir = './'
-# adir = '../node_modules/argparse/lib/'
-
 # Constants
-$$ = require(adir+'const');
+$$ = require('./const');
+ArgumentError = require('./error').ArgumentError
 
 
 # ==============
@@ -99,7 +97,7 @@ class Action
         x = ("#{key}: #{foo(value)}" for own key,value of @ when key != 'container' and value?)
         x = x.join(', ')
         "Action {#{x}}"
-        
+
     ###
     def _get_kwargs(self):
         names = [
@@ -129,11 +127,11 @@ class Action
             @.metavar
         else if @dest ? @dest != $$.SUPPRESS
             @.dest
-            
+
     isOptional: () ->
         # convenience used by argparse
         not @isPositional()
-        
+
     isPositional: () ->
         @option_strings.length == 0
 
@@ -161,7 +159,7 @@ class _StoreConstAction extends Action
             throw new Error('StoreConstAction needs a constant parameter')
         # type, choices ignored (error if given?)
         super(options)
-        
+
     __call__: (parser, namespace, values, option_string=null) ->
         namespace.set(@dest, @constant)
 
@@ -196,7 +194,7 @@ class _AppendAction extends Action
         items = _.clone(_ensure_value(namespace, @dest, []))
         items.push(values)
         namespace.set(@dest, items)
-        
+
 
 class _AppendConstAction extends Action
 
@@ -266,13 +264,13 @@ class _SubParsersAction extends Action
 
     class _ChoicesPseudoAction extends Action
 
-        constructor: (name, aliases, help) -> 
+        constructor: (name, aliases, help) ->
             metavar = dest = name
             if aliases.length>0
               metavar += " (#{aliases.join(', ')})"
             options = {option_strings:[], dest:name, help:help, metavar:metavar}
             super(options)
-    
+
     constructor: (options) ->
         @_prog_prefix = options.prog
         @_parser_class = options.parser_class ? options.parserClass
@@ -295,7 +293,7 @@ class _SubParsersAction extends Action
         else
             aliases = []
         options.debug ?= @debug # passed via group
-        
+
         # create a pseudo-action to hold the choice help
         if options.help?
             help = options.help
@@ -306,11 +304,11 @@ class _SubParsersAction extends Action
         # create the parser and add it to the map
         parser = new @_parser_class(options)
         @_name_parser_map[name] = parser
-        
+
         # make parser available under aliases also
         for alias in aliases
             @._name_parser_map[alias] = parser
-            
+
         return parser
     addParser: (name, options) -> @add_parser(name, options)
 
@@ -330,8 +328,10 @@ class _SubParsersAction extends Action
         parser = @_name_parser_map[parser_name] ? null
         if parser == null
             choices = _.keys(@.name_parser.map).join(', ')
+            # we get an invalid choices error first
             msg = "unknown parser #{parse_name} (choices: #{choices})"
-            throw new Error(msg)
+            # throw new Error(msg)
+            throw new ArgumentError(@, msg)
 
         # parse all the remaining options into the namespace
         # store any unrecognized options on the object, so that the top
@@ -347,7 +347,7 @@ _ensure_value = (namespace, name, value) ->
     if getattr(namespace, name, null) is null
         setattr(namespace, name, value)
     return getattr(namespace, name)
-    
+
 exports.ActionHelp = _HelpAction
 exports.ActionAppend = _AppendAction
 exports.ActionAppendConstant = _AppendConstAction
@@ -359,8 +359,8 @@ exports.ActionStoreFalse = _StoreFalseAction
 exports.ActionVersion = _VersionAction
 exports.ActionSubparsers = _SubParsersAction
 
-    
-# basic methods in Python, used to access Namespace 
+
+# basic methods in Python, used to access Namespace
 # with these do we need a special Namespace class?
 getattr = (obj, key, defaultValue) ->
     obj[key] ? defaultValue
@@ -375,10 +375,10 @@ Namespace::isset = (key) ->
 Namespace::get = (key, defaultValue) ->
     this[key] ? defaultValue
 Namespace::set = (key, value) ->
-  this[key] = value 
+  this[key] = value
 Namespace::repr = () ->
     'Namespace'+ util.inspect(@)
-    
+
 # should I make None a syn of null?
 
 if not module.parent?
@@ -391,29 +391,29 @@ if not module.parent?
   action.call(null, namespace = new Namespace()); console.log namespace
   console.log action = new _StoreFalseAction({dest:'xxx',help:'testing storeFalse'})
   action.call(null, namespace = new Namespace()); console.log namespace
-  
+
   console.log action = new _AppendAction({dest:'xxx',help:'testing AppendAction',constant:'x',nargs:'?'})
   namespace = new Namespace(); namespace.set('xxx',[2,3])
   action.call(null, namespace, 1); console.log namespace
-  
+
   console.log action = new _AppendConstAction({dest:'xxx',constant:0, help:'testing AppendConstAction',nargs:'?'})
   action.call(null, namespace, 1); console.log namespace
   console.log action = new _CountAction({dest:'xxx',help:'testing CountAction',nargs:'?'})
   action.call(null, namespace=new Namespace()); console.log namespace
   action.call(null, namespace); console.log namespace
-  
+
   parser = {}; parser.debug=false
   parser.print_help = ()->console.log "HELP"
   parser.exit = (msg='') -> console.log "EXIT", msg
   console.log 'parser', parser
   console.log action = new _HelpAction({})
   action.call(parser)
-  parser._get_formatter = () -> 
+  parser._get_formatter = () ->
     formatter  = {}
-    formatter.add_text = (@text) -> 
+    formatter.add_text = (@text) ->
     formatter.format_help = () -> "help;version #{@text}"
     formatter
   console.log action = new _VersionAction({version:'1.2.3'})
   action.call(parser)
 
-  
+

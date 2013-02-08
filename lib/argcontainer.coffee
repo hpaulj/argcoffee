@@ -17,11 +17,9 @@ path = require('path')
 _ = require('underscore')
 _.str = require('underscore.string')
 
-adir = './'
-# adir = '../node_modules/argparse/lib/'
-
 # Constants
-$$ = require(adir+'const');
+$$ = require('./const');
+{ArgumentError} = require('./error')
 
 # Actions
 if false
@@ -47,7 +45,7 @@ else
   ActionStoreFalse = action.ActionStoreFalse
   ActionVersion = action.ActionVersion
   ActionSubparsers = action.ActionSubparsers
-  
+
 class _ActionsContainer
   constructor: (options={}) ->
     # description, prefixChars, argument_default, conflictHandler):
@@ -79,7 +77,7 @@ class _ActionsContainer
         this.register('action', 'parsers', ActionSubparsers);
 
         # raise an exception if the conflict handler is invalid
-        @_get_handler() # TODO
+        @_get_handler()
 
         # action storage
         @_actions = []
@@ -127,7 +125,7 @@ class _ActionsContainer
             if action.dest of options
                 action.default = options[action.dest]
   setDefaults: (options) -> @set_defaults(options)
-    
+
   get_default: (dest) ->
         for action in @_actions
             if action.dest == dest and action.defaultValue != null
@@ -146,14 +144,14 @@ class _ActionsContainer
         add_argument(option_string, option_string, ..., name=value, ...)
         """
         if _.isString(options)
-          # assume 
+          # assume
           args.push(options)
           options = {}
         if not options?
           options = {}
         # at this point, args is list of strings (possibly empty)
         # options is an object (py dict)
-        DEBUG 'args, options: ', args, options          
+        DEBUG 'args, options: ', args, options
         # if no positional args are supplied or only one is supplied and
         # it doesn't look like an option string, parse a positional
         # argument
@@ -177,7 +175,7 @@ class _ActionsContainer
         # and always use action.option_strings
         # leave options_strings else where
         # positional has [], optional [...]
-        
+
         # if no default was supplied, use the parser-level default
         if 'defaultValue' not of options
             dest = options['dest']
@@ -222,7 +220,7 @@ class _ActionsContainer
         @_mutually_exclusive_groups.push(group)
         return group
   addMutuallyExclusiveGroup: (options) -> @add_mutually_exclusive_group(options)
-  
+
   _add_action: (action) ->
         # resolve any conflicts
         @_check_conflict(action)
@@ -249,7 +247,10 @@ class _ActionsContainer
         i = @_actions.indexOf(action)
         if i>=0
           delete @_actions[i]
-          
+        # this delete leaves gaps in the array
+        # (i for i in @_actions when i) to avoid stubling on those gaps
+        # @_actions.forEach() handles the gaps ok
+
 
   _add_container_actions: (container) =>
         # collect groups by titles
@@ -304,15 +305,15 @@ class _ActionsContainer
         if 'required' of options
             msg = "'required' is an invalid argument for positionals"
             throw new TypeError(msg)
-            
+
         if _.isArray(dest)
           if dest.length==0
             dest = null
           else
             dest = dest[0]
-            
+
         DEBUG 'in pos', dest, options
-        
+
         # mark positional arguments as required if at least one is
         # always required
         ###
@@ -320,12 +321,12 @@ class _ActionsContainer
             options['required'] = True
         if options.get('nargs') == $$.ZERO_OR_MORE and 'defaultValue' not of options
             options['required'] = True
-        ###    
+        ###
 
         if options.nargs not in [$$.OPTIONAL, $$.ZERO_OR_MORE]
           options.required = true
         else if options.nargs == $$.ZERO_OR_MORE and not options.defaultValue?
-          options.required = true    
+          options.required = true
         else
           options.required = false
 
@@ -415,34 +416,36 @@ class _ActionsContainer
             conflictHandler(action, confl_optionals)
 
     _handle_conflict_error: (action, conflicting_actions) ->
-        #message = ")
         #conflict_string = ', '.join([option_string
         #                             for option_string, action
         #                             in conflicting_actions]) TODO
-        conflict_string = 'TODO'
-        message = ": conflicting option string(s): #{conflict_string}"
-        throw new Error(action.getName() + message )
-  ###
-    _handle_conflict_resolve: (action, conflicting_actions) ->
+        conflict_string = [tpl[0] for tpl in conflicting_actions].join(', ')
+        message = "Conflicting option string(s): "+ conflict_string
+        # throw new Error(action.getName() + message )
+        DEBUG 'conflict action',action
+        throw new ArgumentError(action, message)
 
+    _handle_conflict_resolve: (action, conflicting_actions) =>
         # remove all conflicting options
+        #console.log conflicting_actions
         for [option_string, action] in conflicting_actions
+          # remove the conflicting option
+          # action.option_strings.remove(option_string)
+          i = action.option_strings.indexOf(option_string)
+          if i>=0
+            console.log action.option_strings[i], i
+            delete action.option_strings[i]
+            # (y for y,j in x when j!=i) deletes w/o gap
+            # but option_strings is shared with groups
+          # @_option_string_actions.pop(option_string, null)
+          console.log @_option_string_actions[option_string]
+          delete @_option_string_actions[option_string]
+          # if the option now has no option string, remove it from the
+          # container holding it
+          console.log action.option_strings
+          if (i for i in action.option_strings when i).length==0
+            action.container._remove_action(action)
 
-            # remove the conflicting option
-            #action.option_strings.remove(option_string)
-            i = action.option_strings.indexOf(option_string)
-            if i>=0
-              delete action.option_strings[i]
-            # @_option_string_actions.pop(option_string, null)
-            delete @_option_string_actions[option_string]
-            
-
-            # if the option now has no option string, remove it from the
-            # container holding it
-            if action.option_strings.length==0
-                action.container._remove_action(action)
-  ###
-  
 exports._ActionsContainer = _ActionsContainer
 
 class _ArgumentGroup extends _ActionsContainer
@@ -453,7 +456,7 @@ class _ArgumentGroup extends _ActionsContainer
         options.prefix_chars = options.prefixChars ? container.prefix_chars
         options.argument_default = options.argument_default ? container.argument_default
         options.conflictHandler = options.conflictHandler ? container.conflictHandler
-    
+
         # super_init = super(_ArgumentGroup, self).__init__
         # _ActionsContainer.call(this, options)
         # super_init(description=description, **kwargs)
@@ -480,7 +483,7 @@ class _ArgumentGroup extends _ActionsContainer
     _remove_action: (action) ->
         #super(_ArgumentGroup, self)._remove_action(action)
         super(action)
-        @_group_actions.remove(action) # TODO, [].remove not valid JS
+        delete @_group_actions[action] # TODO, [].remove not valid JS
 
 
 class _MutuallyExclusiveGroup extends _ArgumentGroup
@@ -497,11 +500,11 @@ class _MutuallyExclusiveGroup extends _ArgumentGroup
         if action.required
             msg = 'mutually exclusive arguments must be optional'
             raise new Error(msg)
-        # action = super(action) 
+        # action = super(action)
         # super doesn't work here because an exclusive group is simply a
         # variation on group; an action can be in both an xgroup and a group
         # like optionals; where as an action cannot be in 2 regular groups
-        action = @_container._add_action(action)        
+        action = @_container._add_action(action)
         @_group_actions.push(action)
         return action
 

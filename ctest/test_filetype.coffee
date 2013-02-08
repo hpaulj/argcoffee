@@ -28,7 +28,7 @@ setup_tempdir = () ->
   process.chdir(tdir)
   console.log 'Now in '+ process.cwd()
   return oldcwd
-  
+
 teardown_tempdir = (oldcwd) ->
   tdir = process.cwd()
   process.chdir(oldcwd)
@@ -37,7 +37,7 @@ teardown_tempdir = (oldcwd) ->
       fs.unlinkSync(path.join(tdir,f))
     fs.rmdir(tdir)
     console.log 'Removed ' + tdir
-  
+
 oldcwd = setup_tempdir()
 
 psplit = (astring) ->
@@ -88,20 +88,22 @@ print parser.formatHelp()
 
 args = parser.parseArgs(['foo'])
 print args
-# args.spam is fd (filehandle, e.g. 7)
-print fs.readSync(args.spam, 1000)
 
-print 'fd stats', fs.fstatSync(args.spam)
+fd = args.spam.fd
+print args.spam.path, fs.readSync(fd, 1000)
+
+print 'fd stats', fs.fstatSync(fd)
 print 'foo stats', fs.statSync('foo')
-fs.closeSync(args.spam)
+fs.closeSync(fd)
 
 args = parser.parseArgs(psplit('-x foo bar'))
 print args
-print 'boo', fs.fstatSync(args.spam)
-fs.closeSync(args.x)
-fs.closeSync(args.spam)
+print args.spam.path, 'stats', fs.fstatSync(args.spam.fd)
+fs.closeSync(args.x.fd)
+fs.closeSync(args.spam.fd)
 
 args = parser.parseArgs(psplit('-x - -'))
-print args.x.fd, args.spam.fd
+print '- fd', args.x.fd, args.spam.fd
 # args.x is process.stdin, an object
-# 
+#
+print 'done'

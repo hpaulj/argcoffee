@@ -34,16 +34,13 @@ _.zipShortest = ->
     results[i] = _.pluck arguments, String i
   results
 
-
-# other argparse
-adir = './'
-#adir = '../node_modules/argparse/lib/'
 $$ = require('./const')
 
 _ActionsContainer = require('./argcontainer')._ActionsContainer
 
 HelpFormatter = require('./helpformatter').HelpFormatter
 
+{ArgumentError, ArgumentTypeError} = require('./error')
 class Namespace
   isset: (key) -> @[key]?
   get: (key, defaultValue) -> @[key] ? defaultValue
@@ -66,7 +63,9 @@ if DEBUG and 0
 exports.Namespace = Namespace
 exports.HelpFormatter = HelpFormatter
 exports.Const = $$
-exports.Action = require(adir+'action')
+exports.Action = require('./action')
+exports.ArgumentTypeError = ArgumentTypeError
+
 
 class ArgumentParser extends _ActionsContainer
     constructor: (options={}) ->
@@ -82,7 +81,7 @@ class ArgumentParser extends _ActionsContainer
         @description=options.description ? null
         @prefix_chars=options.prefixChars ? options.prefix_chars ? '-'
         @argument_default=options.argumentDefault ? options.argument_default ? null
-        @conflict_handler=options.conflict_handler ? 'error'
+        @conflict_handler=options.conflict_handler ? options.conflictHandler ? 'error'
         acoptions = {
             description: @description,
             prefixChars: @prefix_chars,
@@ -221,7 +220,7 @@ class ArgumentParser extends _ActionsContainer
         return (action for action in this._actions when action.isOptional())
 
     _get_positional_actions: () ->
-        return (action for action in this._actions when not action.isOptional())
+        return (action for action in this._actions when action? and not action.isOptional())
 
     # =====================================
     # Command line argument parsing methods
@@ -243,7 +242,7 @@ class ArgumentParser extends _ActionsContainer
         DEBUG 'namespace:', namespace.repr()
 
         # add any action defaults that aren't present
-        for action in @_actions
+        for action in @_actions when action
             DEBUG 'action default: ',action.dest,action.defaultValue
             if action.dest != $$.SUPPRESS
                 if not namespace.isset(action.dest)
@@ -260,7 +259,7 @@ class ArgumentParser extends _ActionsContainer
                 namespace.set(dest, @_defaults[dest])
 
         # parse the arguments and exit if there are any errors
-        if true  # try
+        try # if true
             DEBUG 'initial args', args, namespace.repr()
             [namespace, args] = @_parse_known_args(args, namespace)
             if namespace.isset($$._UNRECOGNIZED_ARGS_ATTR)
@@ -268,8 +267,15 @@ class ArgumentParser extends _ActionsContainer
                 namespace.unset($$._UNRECOGNIZED_ARGS_ATTR, null)
             return [namespace, args]
 
-        else  # catch error
-            @error(''+error)
+        catch error
+            if error instanceof ArgumentError
+                console.log 'pna: passing ArgumentError to @error'
+                @error(error)
+            else
+                #console.log 'pna: passing error to @error'
+                #@error(error)
+                console.log 'pna: rethrowing error'
+                throw error
 
         argv = []
         return [args, argv]
@@ -344,8 +350,8 @@ class ArgumentParser extends _ActionsContainer
                     for actionConflict in actionConflicts[key]
                         if actionConflict in seen_non_default_actions
                             msg = "not allowed with argument #{actionConflict.getName()}"
-                            @error(action.getName() + ': ' + msg)
-                            # throw new ArgumentError(action, msg)
+                            # @error(action.getName() + ': ' + msg)
+                            throw new ArgumentError(action, msg)
 
             # take the action if we didn't receive a SUPPRESS value
             # (e.g. from a default)
@@ -391,7 +397,8 @@ class ArgumentParser extends _ActionsContainer
                             explicit_arg = new_explicit_arg
                         else
                             msg = "ignored explicit argument #{explicit_arg}"
-                            @error(action.getName() + ': ' + msg)
+                            #@error(action.getName() + ': ' + msg)
+                            throw new ArgumentError(action, msg)
 
                     # if the action expect exactly one argument, we've
                     # successfully matched the option; exit the loop
@@ -510,7 +517,7 @@ class ArgumentParser extends _ActionsContainer
             @error('too few arguments')
 
         # make sure all required actions were present
-        for action in @_actions
+        for action in @_actions when action
             if action.required
                 if action not in seen_actions
                     @error("argument #{action.getName()} is required")
@@ -655,7 +662,8 @@ class ArgumentParser extends _ActionsContainer
             args_errors[$$.ONE_OR_MORE] = 'expected at least one argument'
             msg = args_errors[action.nargs] ? "expected #{action.nargs} argument(s)"
             #msg = "#{msg} for action #{action.dest}"
-            @error(action.getName() + ': ' + msg)
+            #@error(action.getName() + ': ' + msg)
+            throw new ArgumentError(action, msg)
 
         # return the number of arguments matched
         return matches[1].length
@@ -903,15 +911,14 @@ class ArgumentParser extends _ActionsContainer
                 name = action.type
             else
                 name = action.type.name || action.type.displayName || '<function>'
-            msg = "Invalid #{name} value: #{arg_string}"
-            msg = action.getName() + ': ' + msg
+            #msg = "Invalid #{name} value: #{arg_string}"
+            #msg = action.getName() + ': ' + msg
             if error instanceof TypeError
-              @error(msg)
-              # msg = "invalid #{name} value: #{arg_string}"
-              # raise new ArgumentError(action, msg)
+              msg = "Invalid #{name} value: #{arg_string}"
+              throw new ArgumentError(action, msg)
             else if error instanceof ArgumentTypeError
-              @error(msg + '\n' + error.message)
-              # raise new ArgumentError(action, error.message)
+              #@error(msg + '\n' + error.message)
+              throw new ArgumentError(action, error.message)
             else
               throw error
         return result
@@ -931,8 +938,8 @@ class ArgumentParser extends _ActionsContainer
             choices = _.keys(action.choices)
           if value not in choices
             msg = "invalid choice: #{value} (choose from #{choices})"
-            @error(action.getName() + ': ' + msg)
-            # throw new ArgumentError(action, msg)
+            # @error(action.getName() + ': ' + msg)
+            throw new ArgumentError(action, msg)
 
     ###
     # argument_parser.js has more elaborate checkvalue
@@ -1016,12 +1023,14 @@ class ArgumentParser extends _ActionsContainer
         assert(@debug?,'@ error in @error')
         if (err instanceof Error)
             if @debug
+                console.log '@error debug error'
                 throw err
             message = err.message
         else
             message = err
         msg = "#{@prog}: error: #{message}#{$$.EOL}"
         if @debug
+            console.log '@error debug message'
             throw new Error(msg)
         @print_usage(process.stderr)
         return @exit(2,msg)
@@ -1063,17 +1072,7 @@ class ArgumentParser extends _ActionsContainer
 # Options and Arguments
 # =====================
 
-_get_action_name = (argument) ->
-    if argument is null
-        return null
-    else if argument.isOptional()
-        return  argument.option_strings.join('/')
-    else if argument.metavar not in [null, $$.SUPPRESS]
-        return argument.metavar
-    else if argument.dest not in [null, $$.SUPPRESS]
-        return argument.dest
-    else
-        return null
+
 
 exports.ArgumentParser = ArgumentParser
 
@@ -1262,38 +1261,6 @@ fileType = (options={flags:'r'}) ->
 exports.FileType = FileType
 exports.fileType = fileType
 
-#class ArgumentTypeError(Exception):
-#    """An error from trying to convert a command line string to a type."""
-#    pass
-
-class ArgumentTypeError extends Error
-  constructor: (msg) ->
-    Error.captureStackTrace(@, @)
-    @.message = msg || 'Argument Error'
-    @name = 'ArgumentTypeError'
-
-class ArgumentError extends Error
-    ###
-    An error from creating or using an argument (optional or positional).
-
-    The string value of this exception is the message, augmented with
-    information about the argument that caused it.
-    ###
-  constructor: (@argument, @message) ->
-    try
-      @argument_name = @argument.getName() # action.getName
-    catch err
-      @argument_name = _get_action_name(@argument)
-    @name = "ArgumentError"
-    Error.captureStackTrace(@, @)
-  toString: () ->
-    if @argument_name == null
-      astr = "#{@message}"
-    else
-      astr = "argument #{@argument_name}: #{@message}"
-
-exports.ArgumentTypeError = ArgumentTypeError
-exports.ArgumentError = ArgumentError
 
 ###
 error formating help from argparse

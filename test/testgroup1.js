@@ -17,7 +17,7 @@ describe('ArgumentParser', function () {
       // parser = new ArgumentParser({prog: 'PROG', addHelp: false, debug: true});
       // parser.addArgument([ '-f', '--foo' ]);
     });
-    
+
     it('group test', function () {
       parser = new ArgumentParser({prog: 'PROG', addHelp: false, debug: true});
       group = parser.addArgumentGroup({title: 'group'});
@@ -59,7 +59,7 @@ describe('ArgumentParser', function () {
       // Python: Namespace(bar=False, foo=False)
       assert.equal(args.foo || args.bar, false);
     });
-    
+
     it('mutually exclusive group test', function () {
       parser = new ArgumentParser({prog: 'PROG', debug: true});
       group = parser.addMutuallyExclusiveGroup();
@@ -79,7 +79,11 @@ describe('ArgumentParser', function () {
           // allow for variations in formatting
           var pat = /(.*): not allowed with argument (.*)/i;
           if (err instanceof Error) {
-            var m = err.message.match(pat);
+            // var m = err.message.match(pat);
+            // ArgumentError message does not have the (.*): part
+            // that is added in toString()
+            // var m = err.toString().match(pat);
+            var m = (''+err).match(pat);
             return m && m[1] !== m[2];
           }
         },
@@ -112,7 +116,7 @@ describe('ArgumentParser', function () {
       group.addArgument(['--baz'], {nargs: '?', constant: 'Z', help: 'baz help'});
       args = parser.parseArgs(['--bar', 'X']);
       assert.deepEqual(args, {bar: 'X', baz: null});
-   
+
       assert.throws(
         function () {
           args = parser.parseArgs('--bar X --baz Y'.split(' '));
