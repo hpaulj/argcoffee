@@ -220,7 +220,7 @@ class ArgumentParser extends _ActionsContainer
         return (action for action in this._actions when action.isOptional())
 
     _get_positional_actions: () ->
-        return (action for action in this._actions when action? and not action.isOptional())
+        return (action for action in this._actions when action.isPositional())
 
     # =====================================
     # Command line argument parsing methods
@@ -242,14 +242,17 @@ class ArgumentParser extends _ActionsContainer
         DEBUG 'namespace:', namespace.repr()
 
         # add any action defaults that aren't present
-        for action in @_actions when action
+        for action in @_actions
             DEBUG 'action default: ',action.dest,action.defaultValue
             if action.dest != $$.SUPPRESS
                 if not namespace.isset(action.dest)
                     if action.defaultValue != $$.SUPPRESS
                         _default = action.defaultValue
-                        if _.isString(_default)
-                            _default = @_get_value(action, _default)
+                        #if _.isString(_default)
+                        #    _default = @_get_value(action, _default)
+                        # correction in python to prevent calling action
+                        # on default if not needed
+                        # rev/62b5667ef2f4
                         namespace.set(action.dest, _default)
 
         DEBUG 'with defaults:',namespace.repr()
@@ -269,12 +272,10 @@ class ArgumentParser extends _ActionsContainer
 
         catch error
             if error instanceof ArgumentError
-                console.log 'pna: passing ArgumentError to @error'
+                DEBUG 'pna: passing ArgumentError to @error'
                 @error(error)
             else
-                #console.log 'pna: passing error to @error'
-                #@error(error)
-                console.log 'pna: rethrowing error'
+                DEBUG 'pna: rethrowing error'
                 throw error
 
         argv = []
@@ -283,7 +284,7 @@ class ArgumentParser extends _ActionsContainer
     _parse_known_args: (arg_strings, namespace) ->
         # replace arg strings that are file references
         if @fromfile_prefix_chars?
-            arg_strings = @_read_args_from_files(arg_strings)
+            arg_strings = @_read_args_from_files1(arg_strings)
             DEBUG 'from files', arg_strings
 
         # map all mutually exclusive arguments to the other arguments
@@ -455,7 +456,7 @@ class ArgumentParser extends _ActionsContainer
             # in subparser case there is a subcommand name
             # js version tests for arg_count.length
             #if arg_counts.length
-            for [action, arg_count] in _.zipShortest(positionals, arg_counts) #when arg_count?
+            for [action, arg_count] in _.zipShortest(positionals, arg_counts)
                 args = arg_strings[start_index...start_index + arg_count]
                 start_index += arg_count
                 DEBUG 'take action:',action.dest, args
@@ -517,10 +518,28 @@ class ArgumentParser extends _ActionsContainer
             @error('too few arguments')
 
         # make sure all required actions were present
-        for action in @_actions when action
+        for action in @_actions
+            ###
             if action.required
                 if action not in seen_actions
                     @error("argument #{action.getName()} is required")
+            ###
+            if action not in seen_actions
+                if action.required
+                    @error("argument #{action.getName()} is required")
+                    # modification in dev python that can show multiple missing actions
+                else
+                    # Convert action default now instead of doing it before
+                    # parsing arguments to avoid calling convert functions
+                    # twice (which may fail) if the argument was given, but
+                    # only if it was defined already in the namespace
+                    # http://hg.python.org/cpython/rev/62b5667ef2f4
+                    # python checks defaultValue is not None
+                    # but here the isString test takes care of that
+                    if _.isString(action.defaultValue) and \
+                            namespace[action.dest]? \
+                            and action.defaultValue == namespace[action.dest]
+                        namespace[action.dest] = @_get_value(action, action.defaultValue)
 
         # make sure all required groups had one option present
         action_used = false
@@ -572,7 +591,7 @@ class ArgumentParser extends _ActionsContainer
 
     _read_args_from_files1: (arg_strings) =>
         ### expand arguments referencing files
-        trying to use .forEach for loops; problems with binding
+        adding ,@ context to forEach takes care of binding problems
         ###
         prefix_chars = @fromfile_prefix_chars
         convert_line = @convert_arg_line_to_args
@@ -580,7 +599,7 @@ class ArgumentParser extends _ActionsContainer
         #console.log prefix_chars, convert_line, read_args
         fs = require('fs')
         new_arg_strings = []
-        arg_strings.forEach( (arg_string) =>
+        arg_strings.forEach( (arg_string) ->
             ### for regular arguments, just add them back into the list ###
             if @fromfile_prefix_chars.indexOf(arg_string[0])<0
                 new_arg_strings.push(arg_string)
@@ -596,19 +615,19 @@ class ArgumentParser extends _ActionsContainer
                     @convert_arg_line_to_args(arg_line).forEach( (arg) ->
                       argstrs.push(arg)
                     )
-                    argstrs = @_read_args_from_files(argstrs) # recursive call
-                  )
+                    argstrs = @_read_args_from_files1(argstrs) # recursive call
+                  , @)
                   new_arg_strings.push(argstrs...)
                 catch error
                   console.log error.message
                   @error(error.message)
-        )
+        , @)
         return new_arg_strings
 
     _read_args_from_files2: (arg_strings) =>
         ### expand arguments referencing files
         try to use the async form of readfile;
-        it doesn't wait for the read to finish
+        it doesnt wait for the read to finish
         ###
         prefix_chars = @fromfile_prefix_chars
         convert_line = @convert_arg_line_to_args
@@ -634,7 +653,7 @@ class ArgumentParser extends _ActionsContainer
                       @convert_arg_line_to_args(arg_line).forEach( (arg) ->
                         argstrs.push(arg)
                       )
-                      argstrs = @_read_args_from_files(argstrs) # recursive call
+                      argstrs = @_read_args_from_files2(argstrs) # recursive call
                     )
                     new_arg_strings.push(argstrs...)
                   )
@@ -1023,14 +1042,14 @@ class ArgumentParser extends _ActionsContainer
         assert(@debug?,'@ error in @error')
         if (err instanceof Error)
             if @debug
-                console.log '@error debug error'
+                DEBUG '@error debug error'
                 throw err
             message = err.message
         else
             message = err
         msg = "#{@prog}: error: #{message}#{$$.EOL}"
         if @debug
-            console.log '@error debug message'
+            DEBUG '@error debug message'
             throw new Error(msg)
         @print_usage(process.stderr)
         return @exit(2,msg)
@@ -1261,30 +1280,14 @@ fileType = (options={flags:'r'}) ->
 exports.FileType = FileType
 exports.fileType = fileType
 
-
-###
-error formating help from argparse
-add argument name to the message
-argumentError = (argument, message) ->
-  ERR_CODE = 'ARGError'
-  if argument.getName?
-    argumentName = argument.getName()
-  else
-    argumentName = '' + argument
-  if argumentName?
-    errMessage = "argument '#{argumentName}': #{message}"
-  else
-    errMessage = "#{message}"
-  # format = !argumentName ? '%(message)s': 'argument "%(argumentName)s": %(message)s';
-  err = new TypeError(errMessage)
-  err.code = ERR_CODE
-  return err
-###
 exports.newParser = (options={}) ->
   # convenience function
   if not options.debug then options.debug = true
   new ArgumentParser(options)
 
+#============================================
+# Testing
+#============================================
 TEST = not module.parent?
 
 testparse = (args) ->

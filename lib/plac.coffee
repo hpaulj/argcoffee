@@ -23,7 +23,7 @@ if argparse?
   exports.source = source
 else
   throw new Error('Failed to find an argparse module')
- 
+
 formal_parameter_list = (fn) ->
   FN_ARGS = /^function\s*([^\(]*)\(\s*([^\)]*)\)/m
   FN_ARG_SPLIT = /,/
@@ -47,6 +47,7 @@ formal_parameter_list = (fn) ->
   for a of r
     arg = r[a]
     arg.replace(FN_ARG, repfn)
+  # _.each(r, (arg, a)-> arg.replace(FN_ARG, repfn))
   if name? and name==''
     name = null
   if doc? and doc.length==0
@@ -89,7 +90,7 @@ getargspec = (callableobj) ->
 annotations = (ann) ->
   #Returns a decorator annotating a function with the given annotations.
   #This is a trick to support function annotations in Python 2.X.
-  
+
   annotate = (f) ->
     fas = getargspec(f)
     # check that the names in 'ann' match those found by getargspec
@@ -149,7 +150,7 @@ pconf = (obj) ->
   for key of obj when key in PARSER_CFG
     cfg[key] = obj[key]
   return cfg
-  
+
 # PY stores the parser in this dictionary, using the function (obj) as key
 # looks like JS uses obj.toString() as the key in _parser_registry[obj]
 # thus 2 anonymous fn with same string reference the same parser
@@ -198,7 +199,9 @@ _match_cmd = (abbrev, commands, case_sensitive=true) ->
   if not case_sensitive
     abbrev = abbrev.toUpperCase()
     commands = (c.toUpperCase() for c in commands)
+    # commands = _.map(args,(c)->c.toUpperCase())
   perfect_matches = (name for name in commands when name == abbrev)
+  # _.filter(commands, (name)-> name == abbrev)
   if perfect_matches.length == 1
     return perfect_matches[0]
   matches = (name for name in commands when _.str.startsWith(name, abbrev))
@@ -207,23 +210,23 @@ _match_cmd = (abbrev, commands, case_sensitive=true) ->
     return matches[0]
   else if n>1
     throw new Error("Ambiguous command #{abbrev} matching #{matches}")
-  
+
 
 class ArgumentParser extends argparse.ArgumentParser
    # An ArgumentParser with .func and .argspec attributes, and possibly
    # .commands and .subparsers.
   constructor: (options) ->
     super(options)
-    
+
   case_sensitive = true
   alias: (arg) ->
     # Can be overridden to preprocess command-line arguments
     return arg
-    
+
   consume: (args) ->
     # Call the underlying function with the args. Works also for
     #   command containers, by dispatching to the right subparser.
-    
+
     arglist = (@alias(a) for a in args)
     cmd = null
     if @subparsers?
@@ -253,7 +256,7 @@ class ArgumentParser extends argparse.ArgumentParser
     DEBUG 'alist', alist
     DEBUG 'kwargs', kwargs
     return [cmd, @func(alist..., kwargs)]
-    
+
   _extract_subparser_cmd: (arglist) ->
     # Extract the right subparser from the first recognized argument
     optprefix = (@prefix_chars ? @prefixChars)[0]
@@ -263,7 +266,7 @@ class ArgumentParser extends argparse.ArgumentParser
       arglist = arglist.splice(i+1) # [(i+1)...]
       return [name_parser_map[cmd], cmd || arg, arglist]
     return [null, null, arglist] # none found
-    
+
   addsubcommands: (commands, obj, title=null, cmdprefix='') ->
     # Extract a list of subcommands from obj and add them to the parser
     options = {title:title}
@@ -280,7 +283,7 @@ class ArgumentParser extends argparse.ArgumentParser
       options = {add_help: add_help, help: 'subparser help'}
       subparser = @subparsers.addParser(cmd, options)
       subparser.populate_from(func)
-    
+
   _set_func_argspec: (obj) ->
     # Extracts the signature from a callable object and adds an .argspec
     # attribute to the parser. Also adds a .func reference to the object.
@@ -340,7 +343,7 @@ class ArgumentParser extends argparse.ArgumentParser
       # 'flag' action is storeTrue
       # for all others it is the default store with possible defaultValue and choices
       # nargs is either null (=1), '?' or '*'
-        
+
     if f.varargs?
       a = Annotation.from_(f.annotations[f.varargs] ? [])
       @addArgument([f.varargs], {nargs:'*', help:a.help, defaultValue:[],\
@@ -360,12 +363,12 @@ class ArgumentParser extends argparse.ArgumentParser
     # may raise a system exit
     miss = @obj['__missing__'] ? (name) => @error("No command #{name}")
     return miss(name)
-    
+
   print_actions: () ->
     #useful for debugging
     return (a.repr() for a in @_actions).join('\n')
 
-    
+
 iterable = (obj) ->
   return obj.__iter__? and not _.isString(obj)
 
@@ -375,7 +378,7 @@ call = (obj, arglist=process.argv[2...], options={}) ->
   #  and call obj with the parsed arguments.
   #  If obj is an object with attribute .commands, dispatch to the
   #  associated subparser.
-  
+
   [cmd, result] = parser_from(obj, options).consume(arglist)
   #if iterable(result) and eager # listify the result
   #  return list(result)
@@ -396,7 +399,7 @@ if not module.parent?
      vargs... is not usable; coffee just uses 'arguments' ###
     console.log 'main args:', aflag, anopt, aposit, vargs, kwargs
     return 'Done'
-    
+
   d = {
     aflag: ["a flag", 'flag'],
     anopt: ["an optional", 'option'],
@@ -434,7 +437,7 @@ if not module.parent?
                  color:['color', 'option', 'c']})
                  # color default "black"
   console.log p4.formatHelp()
-                 
+
 
   console.log "========================\ntest subparsers"
   # _parser_registry = {}
@@ -447,7 +450,7 @@ if not module.parent?
   main.b = (baz) ->
     ### b command takes one arg ###
     return ['b baz:',baz]
-    
+
   d = {}
   main = annotations(d)(main)
   main.commands = ['a','b']
@@ -456,7 +459,7 @@ if not module.parent?
   parser = parser_from(main, { # prog: 'Main', \
     debug: true})
   console.log(parser.formatHelp())
-  
+
   # console.log parser.parseArgs(['a','-h'])
   # exits; I thought debug was supposed to trap that
 
@@ -466,14 +469,14 @@ if not module.parent?
     console.log 'b',parser.consume(['b','BAZ'])
   catch error
     console.log error
-  
+
   try
     parser.consume(['-h'])
   catch error
   try
     parser.consume(['a','-h'])
   catch error
-  
+
 
   console.log 'done'
 ###

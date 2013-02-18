@@ -232,7 +232,7 @@ exports.HelpFormatter = class HelpFormatter
             # split optionals from positionals
             optionals = []
             positionals = []
-            for action in actions when action
+            for action in actions
                 if action.isOptional()
                     optionals.push(action)
                 else

@@ -32,9 +32,10 @@ class ArgumentError extends Error
     #console.log _get_action_name(@argument)
   toString: () ->
     if @argument_name?
-      astr = "#{@argument_name}: #{@message}"
+      astr = "argument \"#{@argument_name}\": #{@message}"
     else
       astr = ""+@message
+    astr = @name + ': ' + astr
 
 exports.ArgumentTypeError = ArgumentTypeError
 exports.ArgumentError = ArgumentError

@@ -246,10 +246,7 @@ class _ActionsContainer
         # @_actions.remove(action)
         i = @_actions.indexOf(action)
         if i>=0
-          delete @_actions[i]
-        # this delete leaves gaps in the array
-        # (i for i in @_actions when i) to avoid stubling on those gaps
-        # @_actions.forEach() handles the gaps ok
+          @_actions.splice(i,1)
 
 
   _add_container_actions: (container) =>
@@ -395,14 +392,14 @@ class _ActionsContainer
         #return @conflictHandler == 'error'
         # skip more elaborate test for now
         handler_func_name = "_handle_conflict_#{@conflictHandler}"
-        try
-            return @[handler_func_name]
-        catch error
-            msg = "invalid conflict_resolution value: #{@conflictHandler}"
+        func = @[handler_func_name]
+        if func?
+          return func
+        else
+            msg = "invalid conflict resolution value: #{@conflictHandler}"
             throw new Error(msg)
 
   _check_conflict: (action) ->
-        DEBUG 'check', action
         # find all options that conflict with this option
         confl_optionals = []
         for option_string in action.option_strings
@@ -416,34 +413,23 @@ class _ActionsContainer
             conflictHandler(action, confl_optionals)
 
     _handle_conflict_error: (action, conflicting_actions) ->
-        #conflict_string = ', '.join([option_string
-        #                             for option_string, action
-        #                             in conflicting_actions]) TODO
-        conflict_string = [tpl[0] for tpl in conflicting_actions].join(', ')
+        conflict_string = (tpl[0] for tpl in conflicting_actions).join(', ')
         message = "Conflicting option string(s): "+ conflict_string
         # throw new Error(action.getName() + message )
-        DEBUG 'conflict action',action
         throw new ArgumentError(action, message)
 
     _handle_conflict_resolve: (action, conflicting_actions) =>
         # remove all conflicting options
-        #console.log conflicting_actions
         for [option_string, action] in conflicting_actions
           # remove the conflicting option
-          # action.option_strings.remove(option_string)
           i = action.option_strings.indexOf(option_string)
           if i>=0
-            console.log action.option_strings[i], i
-            delete action.option_strings[i]
-            # (y for y,j in x when j!=i) deletes w/o gap
-            # but option_strings is shared with groups
-          # @_option_string_actions.pop(option_string, null)
-          console.log @_option_string_actions[option_string]
+            action.option_strings.splice(i,1)
+            # array delete is wrong here
           delete @_option_string_actions[option_string]
           # if the option now has no option string, remove it from the
           # container holding it
-          console.log action.option_strings
-          if (i for i in action.option_strings when i).length==0
+          if action.option_strings.length==0
             action.container._remove_action(action)
 
 exports._ActionsContainer = _ActionsContainer
@@ -483,7 +469,10 @@ class _ArgumentGroup extends _ActionsContainer
     _remove_action: (action) ->
         #super(_ArgumentGroup, self)._remove_action(action)
         super(action)
-        delete @_group_actions[action] # TODO, [].remove not valid JS
+        # delete @_group_actions[action] # TODO, [].remove not valid JS
+        i = @_group_actions.indexOf(action)
+        if i>=0
+          @_group_actions.splice(i,1)
 
 
 class _MutuallyExclusiveGroup extends _ArgumentGroup
