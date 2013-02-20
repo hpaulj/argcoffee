@@ -594,7 +594,10 @@ class RawDescriptionHelpFormatter extends HelpFormatter
     ###
 
     _fill_text: (text, width, indent) ->
-        return (indent + line for line in text.splitlines(true)).join('')
+        lines = text.split('\n')
+        # add back \n (splitlines(true)
+        return (indent + line + '\n' for line in lines).join('')
+
 
 
 class RawTextHelpFormatter extends RawDescriptionHelpFormatter
@@ -608,6 +611,7 @@ class RawTextHelpFormatter extends RawDescriptionHelpFormatter
         return text.split('\n')  # text.splitlines()
 
 
+
 class ArgumentDefaultsHelpFormatter extends HelpFormatter
     ###Help message formatter which adds default values to argument help.
 
@@ -617,12 +621,18 @@ class ArgumentDefaultsHelpFormatter extends HelpFormatter
 
     _get_help_string: (action) ->
         help = action.help
-        if not '%(default)' in action.help
+        if action.help.indexOf('%(defaultValue)s')==-1
             if action.defaultValue != $$.SUPPRESS
                 defaulting_nargs = [$$.OPTIONAL, $$.ZERO_OR_MORE]
                 if action.isOptional() or action.nargs in defaulting_nargs
-                    help += ' (default: %(default)s)'
+                    help += ' (default: %(defaultValue)s)'
         return help
+
+exports.RawDescriptionHelpFormatter = RawDescriptionHelpFormatter
+exports.RawTextHelpFormatter = RawTextHelpFormatter
+exports.ArgumentDefaultsHelpFormatter = ArgumentDefaultsHelpFormatter
+
+
 
 setup = (parser) ->
   formatter = new HelpFormatter({prog:'PROG'})

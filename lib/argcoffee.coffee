@@ -73,7 +73,7 @@ class ArgumentParser extends _ActionsContainer
         @usage=options.usage ? null
         @epilog=options.epilog ? null
         @parents=options.parents ? []
-        @formatter_class=options.formatter_class ? HelpFormatter
+        @formatter_class=options.formatter_class ? options.formatterClass ? HelpFormatter
         @fromfile_prefix_chars = options.fromfile_prefix_chars ? null
         @add_help = options.addHelp ? options.add_help ? true
         @debug = options.debug ? false
@@ -524,6 +524,7 @@ class ArgumentParser extends _ActionsContainer
                 if action not in seen_actions
                     @error("argument #{action.getName()} is required")
             ###
+            DEBUG action.dest, _.pluck(seen_actions,'dest')
             if action not in seen_actions
                 if action.required
                     @error("argument #{action.getName()} is required")
@@ -585,7 +586,7 @@ class ArgumentParser extends _ActionsContainer
                     argstrs = @_read_args_from_files(argstrs)
                   new_arg_strings.push(argstrs...)
                 catch error
-                  console.log error.message
+                  DEBUG error.message
                   @error(error.message)
         return new_arg_strings
 
@@ -619,7 +620,7 @@ class ArgumentParser extends _ActionsContainer
                   , @)
                   new_arg_strings.push(argstrs...)
                 catch error
-                  console.log error.message
+                  DEBUG error.message
                   @error(error.message)
         , @)
         return new_arg_strings
@@ -659,7 +660,7 @@ class ArgumentParser extends _ActionsContainer
                   )
                   # shouldn't proceed until this read is done
                 catch error
-                  console.log error.message
+                  DEBUG error.message
                   @error(error.message)
         )
         return new_arg_strings
@@ -1366,7 +1367,7 @@ if TEST and 0
     setattr(args,'foo','found')
     console.log getattr(args,'foo'), args
     console.log '====================================='
-if TEST and 1
+if TEST and 0
     parser = new ArgumentParser({debug: true});
     #parser.add_argument('-x', {action:'storeTrue'})
     #parser.add_argument('foobar')
@@ -1423,6 +1424,16 @@ if TEST and 0
   args = parser.parse_args(['-2'])
   console.log args
 
-# TODO args from files
+
+if TEST and 1
+  console.log '====================================='
+  p = new ArgumentParser({debug:true})
+  a = p.addArgument(['bar'], {type: 'float', defaultValue: 'abc', nargs:'*'})
+  args = p.parseArgs([])
 
 
+if TEST and 1
+  console.log '====================================='
+  p = new ArgumentParser({debug:true})
+  a = p.addArgument(['bar'], {type: 'float', defaultValue: 'abc', nargs:'?'})
+  args = p.parseArgs([])
