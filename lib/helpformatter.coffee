@@ -202,7 +202,6 @@ exports.HelpFormatter = class HelpFormatter
     format_help: () ->
         help = @_root_section.format_help()
         if help? and help.length>0
-            # help = @_long_break_matcher.sub('\n\n', help)
             help = help.replace(@_long_break_matcher, '\n\n')
             help = _.str.strip(help,'\n') + '\n'
         return help
@@ -512,6 +511,11 @@ exports.HelpFormatter = class HelpFormatter
         format = (tuple_size) ->
             return (result for i in [0...tuple_size])
 
+        format = (tuple_size) ->
+          if _.isArray(result)
+            return result
+          else
+            return (result for i in [0...tuple_size])
         return format
 
     _format_args: (action, default_metavar) ->
@@ -576,6 +580,7 @@ exports.HelpFormatter = class HelpFormatter
 
     _fill_text: (text, width, indent=0) ->
         text = @_split_lines(text,width, indent)
+        text = (indent+line for line in text)
         text = text.join('\n')
         return text
         # py returns text reformed into indented lines
@@ -595,10 +600,10 @@ class RawDescriptionHelpFormatter extends HelpFormatter
 
     _fill_text: (text, width, indent) ->
         lines = text.split('\n')
-        # add back \n (splitlines(true)
-        return (indent + line + '\n' for line in lines).join('')
-
-
+        lines = (indent + line for line in lines)
+        lines = (_.str.rtrim(line) for line in lines)
+        return lines.join('\n')
+        # use rtrim to prevent sequence like '\n  \n\n'
 
 class RawTextHelpFormatter extends RawDescriptionHelpFormatter
     ###Help message formatter which retains formatting of all help text.

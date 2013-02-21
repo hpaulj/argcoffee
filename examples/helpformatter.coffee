@@ -9,15 +9,14 @@ parser = new argparse.ArgumentParser({debug: true,\
 
 a=parser.addArgument(['--foo'], {help:'foo help - oh and by the way, %(defaultValue)s'})
 
-parser.addArgument(['--bar'], {action:'store_true', help:'bar help'})
+parser.addArgument(['--bar'], {action:'storeTrue', help:'bar help'})
 parser.addArgument(['spam'], {help:'spam help'})
 parser.addArgument(['badger'], {nargs:'?', defaultValue:'wooden', help:'badger help'})
 
-group = parser.addArgumentGroup({title: 'title', description: 'description'})
+group = parser.addArgumentGroup({title: 'title', description: 'group description'})
 group.addArgument(['--baz'], {type:'int', defaultValue: 42, help:'baz help'})
 console.log parser.formatHelp()
 
-# missing indent on group description
 ###
 
 usage: PROG [-h] [--foo FOO] [--bar] [--baz BAZ] spam [badger]
@@ -85,7 +84,7 @@ title:
       exactly like it is here
 
   --bar BAR   bar help
-# got extra space after group description
+
 ###
 console.log "===> argparse.RawTextHelpFormatter"
 parser = new argparse.ArgumentParser({debug: true, \
@@ -130,31 +129,25 @@ title:
 ###
 
 console.log "===> metavar as a tuple"
+parser = new argparse.ArgumentParser({prog:'PROG'})
+parser.addArgument(['-w'], {help: 'w', nargs:'+', metavar:['W1','W2']})
+parser.addArgument(['-x'], {help: 'x', nargs:'*', metavar:['X1','X2']})
+parser.addArgument(['-y'], {help: 'y', nargs:3, metavar:['Y1','Y2','Y3']})
+parser.addArgument(['-z'], {help: 'z', nargs:'?', metavar:['Z1']})
+console.log parser.formatHelp()
 ###
 not working
 class TestHelpTupleMetavar(HelpTestCase):
     """Test specifying metavar as a tuple"""
 
-    parser_signature = Sig(prog='PROG')
-    argument_signatures = [
-        Sig('-w', help='w', nargs='+', metavar=('W1', 'W2')),
-        Sig('-x', help='x', nargs='*', metavar=('X1', 'X2')),
-        Sig('-y', help='y', nargs=3, metavar=('Y1', 'Y2', 'Y3')),
-        Sig('-z', help='z', nargs='?', metavar=('Z1', )),
-    ]
-    argument_group_signatures = []
-    usage = '''\
-        usage: PROG [-h] [-w W1 [W2 ...]] [-x [X1 [X2 ...]]] [-y Y1 Y2 Y3] \
+usage: PROG [-h] [-w W1 [W2 ...]] [-x [X1 [X2 ...]]] [-y Y1 Y2 Y3] \
 [-z [Z1]]
-        '''
-    help = usage + '''\
 
-        optional arguments:
-          -h, --help        show this help message and exit
-          -w W1 [W2 ...]    w
-          -x [X1 [X2 ...]]  x
-          -y Y1 Y2 Y3       y
-          -z [Z1]           z
-        '''
-    version = ''
+optional arguments:
+  -h, --help        show this help message and exit
+  -w W1 [W2 ...]    w
+  -x [X1 [X2 ...]]  x
+  -y Y1 Y2 Y3       y
+  -z [Z1]           z
+
 ###
