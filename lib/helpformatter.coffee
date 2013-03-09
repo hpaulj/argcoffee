@@ -53,7 +53,7 @@ pnformat = (fmt, params) ->
   # params is an object,
   # if {k:v} in params, then fmt='%(k)s' becomes 'v'
   for k of params
-    fmt = fmt.replace("%\(#{k}\)s",params[k])
+    fmt = fmt.replace("%(#{k})s",params[k])
   return fmt
 
 

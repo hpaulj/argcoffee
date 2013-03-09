@@ -1,4 +1,5 @@
 # adapted from plac_core.py, the core part of plac module
+### jshint eqnull:true, strict:false, unused:false, -W088, -W093, -W030, -W004 ###
 if module.parent?
   DEBUG = () ->
 else
@@ -24,7 +25,8 @@ if argparse?
 else
   throw new Error('Failed to find an argparse module')
 
-formal_parameter_list = (fn) ->
+parse_function = (fn) ->
+  # deduce function args, name and doc from toString()
   FN_ARGS = /^function\s*([^\(]*)\(\s*([^\)]*)\)/m
   FN_ARG_SPLIT = /,/
   FN_ARG = /^\s*(\S+?)\s*$/
@@ -33,32 +35,33 @@ formal_parameter_list = (fn) ->
   name = null
   doc = null
   fn_text = fn.toString().replace(STRIP_COMMENTS, '')
+  # doc is the first comment, if any
   cmts = fn.toString().match(STRIP_COMMENTS)
   # could refine this to take just the comment at the start
   # also remove the comment marks
-  if cmts? and cmts.length>0
+  if cmts # and cmts.length>0
     doc = cmts[0]
+  # get function name and args
   arg_decl = fn_text.match(FN_ARGS)  # function name(args)
   name = arg_decl[1]
   arg_decl = arg_decl[2]
   r = arg_decl.split(FN_ARG_SPLIT)
-  repfn = (all, name) ->
-    args.push(name)
-  for a of r
-    arg = r[a]
-    arg.replace(FN_ARG, repfn)
-  # _.each(r, (arg, a)-> arg.replace(FN_ARG, repfn))
-  if name? and name==''
-    name = null
-  if doc? and doc.length==0
-    doc = null
+  pushfn = (all, name) -> args.push(name)
+  # for a, arg of r then arg.replace(FN_ARG, pushfn)
+  _.each(r, (arg)-> arg.replace(FN_ARG, pushfn))
+  # if name? and name=='' then name = null
+  name = name || null
+  # if doc? and doc.length==0 then doc = null
+  doc = doc || null
   return [args, name, doc]
 
 class GetFullArgspec
-  constructor: (f) ->
-    # inspect.getargspac(f)
-    # @args = alt_getarglist(f)
-    [@args, @name, @doc] = formal_parameter_list(f)
+  constructor: (fn) ->
+    # from the simiple js list of args, try to ones that are
+    # equivalent to the python defaults, varargs and varkw
+    # the last arg may be a varkw (**kwarg)
+    # 2nd to the last may be a vararg (*arg)
+    [@args, @name, @doc] = parse_function(fn)
     @varargs = null
     @varkw = null
     [first...,last] = @args
@@ -67,20 +70,39 @@ class GetFullArgspec
     [first...,last] = @args
     if last in ['vargs','_arg']
       [@args, @varargs] = [first, last]
-    @defaults = f.defaults ? []
-    @annotations = f.__annotations__ ? {}
+    @defaults = fn.defaults ? []
+    @annotations = fn.__annotations__ ? {}
+
+class GetFullArgspec
+  constructor: (fn) ->
+    # from the simiple js list of args, try to ones that are
+    # equivalent to the python defaults, varargs and varkw
+    # the last arg may be a varkw (**kwarg)
+    # 2nd to the last may be a vararg (*arg)
+    # this version should compile into cleaner js
+    [@args, @name, @doc] = parse_function(fn)
+    @varargs = null
+    @varkw = null
+    first = _.initial(@args)
+    last = _.last(@args)
+    if _.contains(['kwarg','kwargs','__kw','varkw'], last)
+      @args = first; @varkw = last
+    first = _.initial(@args)
+    last = _.last(@args)
+    if _.contains(['vargs','_arg'], last)
+       @args = first; @varargs = last
+    @defaults = fn.defaults || []
+    @annotations = fn.__annotations__ || {}
 
 getargspec = (callableobj) ->
   # Given a callable return an object with attributes .args, .varargs,
-  #  .varkw, .defaults. It tries to do the "right thing" with functions,
-  #  methods, classes and generic callables.
+  #  .varkw, .defaults. It tries to do the "right thing" with functions
   if _.isFunction(callableobj)
     argspec = new GetFullArgspec(callableobj)
-    if callableobj.name?
+    # fn.name is always a string, '' or longer
+    if callableobj.name
       # explicit name of obj takes presidence over one deduced from string
       argspec.name = callableobj.name
-    # py has special treatment for method, class, and callable
-    # js all is either obj, or function
   else
     throw new TypeError('Could not determine the signature of'+callableobj)
   return argspec
@@ -95,12 +117,12 @@ annotations = (ann) ->
     fas = getargspec(f)
     # check that the names in 'ann' match those found by getargspec
     args = fas.args
-    if fas.varargs?
+    if fas.varargs
       args.push(fas.varargs)
-    if  fas.varkw?
+    if fas.varkw
       args.push(fas.varkw)
     for argname of ann
-      if not argname in args
+      if argname not in args
         throw new Error('Annotating non-existing argument'+ argname)
     f.__annotations__ = ann
     return f
@@ -154,6 +176,7 @@ pconf = (obj) ->
 # PY stores the parser in this dictionary, using the function (obj) as key
 # looks like JS uses obj.toString() as the key in _parser_registry[obj]
 # thus 2 anonymous fn with same string reference the same parser
+# turn this off
 
 _parser_registry = {}
 _parser_registry.get = (obj) -> return null
@@ -169,8 +192,8 @@ parser_from = (obj, confparams={}) ->
   parser = new ArgumentParser(conf)
   _parser_registry.set(obj,parser)
   parser.obj = obj
-  parser.case_sensitive = confparams['case_sensitive'] ? obj['case_sensitive'] ? true
-  if obj['commands']?
+  parser.case_sensitive = confparams.case_sensitive ? obj.case_sensitive ? true
+  if obj.commands?
     # a command container instance
     parser.addsubcommands(obj.commands, obj, 'subcommands')
   else
@@ -270,8 +293,8 @@ class ArgumentParser extends argparse.ArgumentParser
   addsubcommands: (commands, obj, title=null, cmdprefix='') ->
     # Extract a list of subcommands from obj and add them to the parser
     options = {title:title}
-    options['parser_class'] = ArgumentParser
-    options['parserClass'] = ArgumentParser
+    options.parser_class = ArgumentParser
+    options.parserClass = ArgumentParser
     if !@subparsers?
       @subparsers = @addSubparsers(options)
     else if title?
@@ -309,7 +332,7 @@ class ArgumentParser extends argparse.ArgumentParser
     # args with possible defaults
     for [name, defaultValue] in _.zip(f.args, alldefaults)
       ann = f.annotations[name] ? []
-      a = Annotation.from_(ann) # annotation_from(ann)
+      a = Annotation.from_(ann)
       metavar = a.metavar
       if !defaultValue?
         dflt = null
@@ -361,7 +384,7 @@ class ArgumentParser extends argparse.ArgumentParser
 
   missing: (name) ->
     # may raise a system exit
-    miss = @obj['__missing__'] ? (name) => @error("No command #{name}")
+    miss = @obj.__missing__ ? (name) => @error("No command #{name}")
     return miss(name)
 
   print_actions: () ->
@@ -431,7 +454,7 @@ if not module.parent?
   parser_from1 = (f, kw) ->
     f.__annotations__ = kw
     return parser_from(f, {debug:true})
-  p4 = parser_from1(((delete_, delete_all, color)-> None),
+  p4 = parser_from1(((delete_, delete_all, color)-> null),
                  {delete_:['delete a file', 'option', 'd'],
                  delete_all:['delete all files', 'flag', 'a'],
                  color:['color', 'option', 'c']})

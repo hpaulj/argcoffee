@@ -187,7 +187,7 @@ class ArgumentParser extends _ActionsContainer
             positionals = @_get_positional_actions()
             groups = @_mutuallyExclusiveGroups ? @_mutually_exclusive_groups
             formatter.addUsage(@usage, positionals, groups, '')
-            options['prog'] = _.str.strip(formatter.formatHelp())
+            options.prog = _.str.strip(formatter.formatHelp())
 
         # create the parsers action and add it to the positionals list
         # ParsersClass = (@_popActionClass ? @_pop_action_class)(options, 'parsers')
@@ -389,8 +389,7 @@ class ArgumentParser extends _ActionsContainer
                     if arg_count == 0 and option_string[1] not in chars
                         DEBUG "explicit arg: '#{explicit_arg}', '#{option_string}'"
                         action_tuples.push([action, [], option_string])
-                        char = option_string[0]
-                        option_string = char + explicit_arg[0]
+                        option_string = option_string[0] + explicit_arg[0]
                         new_explicit_arg = explicit_arg[1...] || null
                         optionals_map = @_option_string_actions
                         if optionals_map[option_string]?
@@ -478,10 +477,13 @@ class ArgumentParser extends _ActionsContainer
         else
             max_option_string_index = -1
         DEBUG 'index',_.keys(option_string_indices), max_option_string_index
+        foo = (start_index) ->
+            (index for index in index_keys when index >= start_index)
         while start_index <= max_option_string_index
 
             # consume any Positionals preceding the next option
-            next_option_string_index = Math.min((index for index in index_keys when index >= start_index)...)
+            #next_option_string_index = Math.min((index for index in index_keys when index >= start_index)...)
+            next_option_string_index = Math.min(foo(start_index)...)
             if start_index != next_option_string_index
                 DEBUG 'lp consume positional:',start_index
                 positionals_end_index = consume_positionals(start_index)
@@ -558,8 +560,8 @@ class ArgumentParser extends _ActionsContainer
                     DEBUG 'not action used'
                     names = (action.getName() for action in gactions \
                         when action.help != $$.SUPPRESS)
-                        msg = "one of the arguments #{names.join(' ')} is required"
-                        @error(msg)
+                    msg = "one of the arguments #{names.join(' ')} is required"
+                    @error(msg)
 
         DEBUG 'known:',[namespace.repr(), extras]
         return [namespace, extras]
@@ -570,7 +572,8 @@ class ArgumentParser extends _ActionsContainer
         new_arg_strings = []
         for arg_string in arg_strings
             # for regular arguments, just add them back into the list
-            if arg_string[0] not in @fromfile_prefix_chars
+            firstchar = arg_string[0]
+            if firstchar not in @fromfile_prefix_chars
                 new_arg_strings.push(arg_string)
             # replace arguments referencing files with the file content
             else
@@ -696,15 +699,16 @@ class ArgumentParser extends _ActionsContainer
         DEBUG 'actions:',(a.dest for a in actions)
         DEBUG 'arg strings pattern:',arg_strings_pattern
         foo = @_get_nargs_pattern
+        strlength = (string) -> string.length
         for i in [actions.length..0]
             actions_slice = actions[...i]
-            pattern = (foo(action) for action in actions_slice).join('')
+            pattern = actions_slice.map(foo).join('')
             m = arg_strings_pattern.match('^'+pattern)
             DEBUG 'pattern:',pattern
             DEBUG 'matches:',m
             if m?
-                m = m[1...]
-                result.push((string.length for string in m)...)
+                # m = m[1...]
+                result.push(m[1...].map(strlength)...)
                 break
         # return the list of arg string counts
         DEBUG 'match arguments partial:',result

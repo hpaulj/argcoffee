@@ -1,0 +1,12 @@
+{
+    // options to jshint on coffee output
+    "eqnull": true, // == null, W041
+    "white": false,
+    "node": true,
+    "-W093": false,  //Expected an assignment or function call and instead saw an expression
+    "-W088": false, // Creating global 'for' variable. Should be 'for (var k ...'.
+    "-W030": false,   // Expected an assignment or function call and instead saw an expression
+    "-W004": false  // <class name> is already defined.
+
+
+}

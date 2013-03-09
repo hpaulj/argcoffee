@@ -4,12 +4,12 @@
 # may need to do action group at the same time
 ###
 
-if not module.parent?
+if module.parent?
+    DEBUG = () ->
+else
     DEBUG = (arg...) ->
       arg.unshift('====> ')
       console.log arg...
-else
-    DEBUG = () ->
 
 util = require('util') # node
 assert = require('assert')
@@ -178,13 +178,13 @@ class _ActionsContainer
 
         # if no default was supplied, use the parser-level default
         if 'defaultValue' not of options
-            dest = options['dest']
+            dest = options.dest
             if dest of @_defaults
-                options['defaultValue'] = @_defaults[dest]
+                options.defaultValue = @_defaults[dest]
             else if @argument_default != null
-                options['defaultValue'] = @argument_default
+                options.defaultValue = @argument_default
             else
-                options['defaultValue'] = null
+                options.defaultValue = null
 
         # create the action object, and add it to the parser
         action_class = @_pop_action_class(options)
@@ -315,9 +315,9 @@ class _ActionsContainer
         # always required
         ###
         if options.get('nargs') not in [$$.OPTIONAL, $$.ZERO_OR_MORE]
-            options['required'] = True
+            options.required = True
         if options.get('nargs') == $$.ZERO_OR_MORE and 'defaultValue' not of options
-            options['required'] = True
+            options.required = True
         ###
 
         if options.nargs not in [$$.OPTIONAL, $$.ZERO_OR_MORE]
@@ -331,8 +331,8 @@ class _ActionsContainer
         # return dict(options, dest=dest, option_strings=[])
         result = _.clone(options)
         if dest?
-          result['dest'] = dest
-        result['option_strings'] = []
+          result.dest = dest
+        result.option_strings = []
         return result
 
   _get_optional_options: (args, options) ->
@@ -341,23 +341,25 @@ class _ActionsContainer
         long_option_strings = []
         for option_string in args
             # error on strings that don't start with an appropriate prefix
-            if not option_string[0] in @prefix_chars
-                msg = "invalid option string #{option_string}: '
-                        'must start with a character #{@prefix_chars}"
+            firstchar = option_string[0]
+            secondchar = option_string[1]
+            if firstchar not in @prefix_chars
+                msg = "invalid option string #{option_string}: " +
+                      "must start with a character #{@prefix_chars}"
                 throw new Error(msg)
 
             # strings starting with two prefix characters are long options
             option_strings.push(option_string)
-            if option_string[0] in @prefix_chars
+            if firstchar in @prefix_chars
                 if option_string.length > 1
-                    if option_string[1] in @prefix_chars
+                    if secondchar in @prefix_chars
                         long_option_strings.push(option_string)
 
         # infer destination, '--foo-bar' -> 'foo_bar' and '-x' -> 'x'
         # dest = options.pop('dest', null)
-        if options['dest']?
-          dest = options['dest']
-          delete options['dest']
+        if options.dest?
+          dest = options.dest
+          delete options.dest
         else
           dest = null
         if dest is null
@@ -374,15 +376,15 @@ class _ActionsContainer
         # return the updated keyword arguments
         # return dict(options, dest=dest, option_strings=option_strings)
         result = _.clone(options)
-        result['dest'] = dest
-        result['option_strings'] = option_strings
+        result.dest = dest
+        result.option_strings = option_strings
         return result
 
   _pop_action_class: (options, defaultValue=null) ->
         # action = options.pop('action', defaultValue)
-        if options['action']?
-          action = options['action']
-          delete options['action']
+        if options.action?
+          action = options.action
+          delete options.action
         else
           action = defaultValue
         return @_registry_get('action', action, action)
