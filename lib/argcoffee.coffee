@@ -854,7 +854,8 @@ class ArgumentParser extends _ActionsContainer
         # all others should be integers
         else
             # nargs_pattern = '(-*%s-*)' % '-*'.join('A' * nargs)
-            nargs_pattern = "(-*#{('A' for i in [0...nargs]).join('')}-*)"
+            # nargs_pattern = "(-*#{('A' for i in [0...nargs]).join('')}-*)"
+            nargs_pattern = "(-*#{new Array(nargs+1).join('A')}-*)"
         # if this is an optional action, -- is not allowed
         if action.isOptional()
             nargs_pattern = nargs_pattern.replace(/-\*/g, '')

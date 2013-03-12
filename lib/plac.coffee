@@ -1,5 +1,6 @@
 # adapted from plac_core.py, the core part of plac module
 ### jshint eqnull:true, strict:false, unused:false, -W088, -W093, -W030, -W004 ###
+
 if module.parent?
   DEBUG = () ->
 else
@@ -7,12 +8,10 @@ else
     arg.unshift('==> ')
     console.log arg...
 
-util = require('util') # node
 assert = require('assert')
-path = require('path')
 _ = require('underscore')
-_.str = require('underscore.string')
 
+# let it load from one of several places
 sources = ['./argparse', 'argcoffee', 'argparse']
 for source in sources
   try
@@ -34,6 +33,7 @@ parse_function = (fn) ->
   args = []
   name = null
   doc = null
+
   fn_text = fn.toString().replace(STRIP_COMMENTS, '')
   # doc is the first comment, if any
   cmts = fn.toString().match(STRIP_COMMENTS)
@@ -227,7 +227,8 @@ _match_cmd = (abbrev, commands, case_sensitive=true) ->
   # _.filter(commands, (name)-> name == abbrev)
   if perfect_matches.length == 1
     return perfect_matches[0]
-  matches = (name for name in commands when _.str.startsWith(name, abbrev))
+  # matches = (name for name in commands when _.str.startsWith(name, abbrev))
+  matches = (name for name in commands when name.match('^'+abbrev))
   n = matches.length
   if n==1
     return matches[0]
@@ -326,7 +327,8 @@ class ArgumentParser extends argparse.ArgumentParser
     defaults = f.defaults ? []
     n_args = f.args.length
     n_defaults = defaults.length
-    alldefaults = (null for i in [0...(n_args-n_defaults)]).concat(defaults)
+    # alldefaults = (null for i in [0...(n_args-n_defaults)]).concat(defaults)
+    alldefaults = _.times(n_args-n_defaults, ()->null).concat(defaults)
     DEBUG f.args, alldefaults
     prefix = @prefix = (func.prefix_chars ? '-')[0]
     # args with possible defaults
@@ -350,7 +352,8 @@ class ArgumentParser extends argparse.ArgumentParser
         @addArgument([name], {help:a.help, type:a.type, \
           choices: a.choices, metavar:metavar})
       else # default  argument
-        nargs = if _.str.endsWith(name,'s') then '*' else '?'  # plural
+        # add a test for a plural
+        nargs = if name.slice(-1)=='s' then '*' else '?'
         @addArgument([name], {nargs: nargs, help: a.help, \
           defaultValue:dflt, type: a.type, choices: a.choices, metavar: metavar})
 

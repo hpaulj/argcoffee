@@ -25,7 +25,7 @@ expectc = (errpat, func, obj, args) ->
         if (m = error.message.match(errpat))
           console.log "got expected error: '#{errpat}' with #{args}"
         else
-          console.log 'unexpected error'
+          console.log 'UNEXPECTED ERROR'
           console.log error
 
 None = null
@@ -36,11 +36,11 @@ parser_from = (f, kw, dflt) ->
     if dflt?
       f.defaults = dflt
     return plac.parser_from(f, {debug:true})
-    
+
 p1 = parser_from(((delete1, vargs) -> null),
                  {delete1:['delete a file', 'option']})
 
-print 'p1'                 
+print 'p1'
 print p1.formatHelp()
 
 test_p1 = () ->
@@ -71,7 +71,7 @@ test_p2 = () ->
     assert arg.delete1 is null, arg.delete1
     assert.deepEqual arg.vargs, [], arg.vargs
     assert arg, arg
-    
+
     #console.log p2.parseArgs([])
     expect(/too few arguments/, p2.parseArgs, p2, [])
 
@@ -112,7 +112,7 @@ test_p4=()->
     arg = p4.parseArgs(['--color=red'])
     assert arg.color == 'red'
 
-p5 = parser_from(((dry_run)-> None), 
+p5 = parser_from(((dry_run)-> None),
     {dry_run:['Dry run', 'flag', 'x']})
     # default is false
 console.log p5.formatHelp()
@@ -142,20 +142,20 @@ assert_usage = (parser, expected) ->
 test_metavar_no_defaults=()->
     header 'test metavar no defaults'
     # positional
-    p = parser_from(((x)->None), 
+    p = parser_from(((x)->None),
                    {x:['first argument', 'positional', null, 'int', [], 'METAVAR']})
-          
+
     assert_usage(p, /\[-h\] METAVAR/)
     # assert_usage(p, 'usage: test_plac.py [-h] METAVAR\n')
 
     # option
-    p = parser_from(((y)->None),  
+    p = parser_from(((y)->None),
                     {y:['first argument', 'option', null, null, [], 'METAVAR']})
     assert_usage(p, /\[-h\] \[-y METAVAR\]/)
     #assert_usage(p, 'usage: test_plac.py [-h] [-y METAVAR]\n')
 
     # have to chg the fn so registry doesn't find the old
-    # 
+    #
 
 test_metavar_with_defaults = () ->
     header 'test metavar with defaults'
@@ -198,13 +198,13 @@ test_kwargs=()->
     argskw = plac.call(main, ['arg1', 'arg2', 'a=1', 'b=2'])
     assert.deepEqual(argskw, [['arg2'], {'a': '1', 'b': '2'}], argskw)
     print argskw
-    
+
     argskw = plac.call(main, ['arg1', 'arg2', 'a=1', '-o', '2'])
     assert.deepEqual(argskw, [['arg2'], {'a': '1'}], argskw)
     print argskw
 
     expectc(/colliding keyword arguments/, plac.call, main, ['arg1', 'arg2', 'a=1', 'opt=2'] )
-    
+
 cmds = {
     add_help: false
     commands: ['help', 'commit']
@@ -231,7 +231,7 @@ test_cmd_abbrevs=() ->
 test_sub_help=()->
     header 'test sub help'
     c = cmds
-    c.add_help = true    
+    c.add_help = true
     expectc(/Exit captured/, plac.call, c, ['commit', '-h'])
 
 log_cmds=()->
@@ -241,7 +241,7 @@ log_cmds=()->
   console.log 'help foo:', parser.consume(['help','foo'])
   console.log plac.call(cmds, ['help','foo'])
   console.log 'commit:', parser.consume(['commit'])
-    
+
 # other tests in test_plac.py are not applicable
 # yield, script, batch etc
 
@@ -255,4 +255,4 @@ for test in [test_p1, test_p2, test_p3, test_p4, test_p5, test_p6, \
   catch error
     print "TODO test error"
     print error
-    
+

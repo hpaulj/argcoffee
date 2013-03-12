@@ -23,7 +23,8 @@ fmtwindent= (fmt, tup) ->
   [indent, text, width, spc] = tup
   spc = spc ? ' '
   text = text ? ''
-  indentstr = (spc for i in [0...indent]).join('')
+  #indentstr = (spc for i in [0...indent]).join('')
+  indentstr = new Array(indent+1).join(spc)
   text = indentstr + text
   if width?
     text = _.str.pad(text, width+indent, ' ', 'right')
@@ -508,14 +509,15 @@ exports.HelpFormatter = class HelpFormatter
         else
             result = default_metavar
 
-        format = (tuple_size) ->
-            return (result for i in [0...tuple_size])
+        #format = (tuple_size) ->
+        #    return (result for i in [0...tuple_size])
 
         format = (tuple_size) ->
           if _.isArray(result)
             return result
           else
-            return (result for i in [0...tuple_size])
+            # return (result for i in [0...tuple_size])
+            return _.times(tuple_size, ()->result)
         return format
 
     _format_args: (action, default_metavar) ->
@@ -533,7 +535,8 @@ exports.HelpFormatter = class HelpFormatter
         else if action.nargs == $$.PARSER
             result = pformat('%s ...', get_metavar(1))
         else
-            formats = ('%s' for i in [0...action.nargs]).join(' ')
+            # formats = ('%s' for i in [0...action.nargs]).join(' ')
+            formats = Array(action.nargs+1).join('%s')
             result = pformat(formats ,get_metavar(action.nargs))
         return result
 
