@@ -1765,6 +1765,10 @@ class ArgumentParser extends _ActionsContainer
         @prefix_chars=options.prefixChars ? options.prefix_chars ? '-'
         @argument_default=options.argumentDefault ? options.argument_default ? null
         @conflict_handler=options.conflict_handler ? options.conflictHandler ? 'error'
+
+        # re python issue9334
+        @args_default_to_positional = options.args_default_to_positional ? false
+
         acoptions = {
             description: @description,
             prefixChars: @prefix_chars,
@@ -2458,6 +2462,10 @@ class ArgumentParser extends _ActionsContainer
         else if option_tuples.length == 1
             option_tuple = option_tuples[0]
             return option_tuple
+
+        # option to make parser more like optparse
+        if @args_default_to_positional
+            return null
 
         # if it was not found as an option, but it looks like a negative
         # number, it was meant to be positional
