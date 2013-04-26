@@ -18,7 +18,7 @@ _ = require('underscore')
 _.str = require('underscore.string')
 
 # Constants
-$$ = require('./const');
+{$$} = require('./const');
 {ArgumentError} = require('./error')
 
 # Actions
@@ -92,6 +92,11 @@ class _ActionsContainer
 
         # determines whether an "option" looks like a negative number
         @_negative_number_matcher = /^-\d+$|^-\d*\.\d+$/
+        # as per my argparse.py patch
+        # keep this matcher simple, since its main job is to identify
+        # number-like options
+        # in parser._parse_optional, use a more general matcher
+        # in py, use a try: coffee(arg_string)
 
         # whether or not there are any optionals that look like negative
         # numbers -- uses a list so it can be shared and edited
@@ -236,6 +241,8 @@ class _ActionsContainer
         # set the flag if any option strings look like negative numbers
         for option_string in action.option_strings
             if option_string.match(@_negative_number_matcher)
+                #console.log '_add_action NNO', option_string
+                #console.log @.title
                 if not _.any(@_hasNegativeNumberOptionals)
                     @_hasNegativeNumberOptionals.push(true)
 

@@ -14,7 +14,7 @@ _.str = require('underscore.string')
 # other argparse
 adir = './'
 #adir = '../node_modules/argparse/lib/'
-$$ = require('./const')
+{$$} = require('./const')
 
 fmtwindent= (fmt, tup) ->
   # @_current_indent, '', action_width, action_header

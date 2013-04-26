@@ -13,7 +13,7 @@ _ = require('underscore')
 _.str = require('underscore.string')
 
 # Constants
-$$ = require('./const');
+{$$} = require('./const');
 ArgumentError = require('./error').ArgumentError
 
 

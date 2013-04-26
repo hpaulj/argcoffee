@@ -1,7 +1,7 @@
 # separate these error classes to facilitate importation
 # into several other modules
 
-$$ = require('./const')
+{$$} = require('./const')
 
 ###
 class ArgumentTypeError(Exception):

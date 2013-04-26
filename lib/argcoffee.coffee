@@ -28,17 +28,18 @@ _.str = require('underscore.string')
 # Zip together multiple lists into a single array -- elements that share
 # an index go together.
 _.zipShortest = ->
-  length =  _.min _.pluck arguments, 'length'
-  results = new Array length
+  length =  _.min(_.pluck(arguments, 'length'))
+  results = new Array(length)
   for i in [0...length]
-    results[i] = _.pluck arguments, String i
+    results[i] = _.pluck(arguments, String(i))
   results
 
-$$ = require('./const')
+if not $$?
+    {$$} = require('./const')
 
-_ActionsContainer = require('./argcontainer')._ActionsContainer
+{_ActionsContainer} = require('./argcontainer')
 
-HelpFormatter = require('./helpformatter').HelpFormatter
+{HelpFormatter} = require('./helpformatter')
 
 {ArgumentError, ArgumentTypeError} = require('./error')
 class Namespace
@@ -82,6 +83,10 @@ class ArgumentParser extends _ActionsContainer
         @prefix_chars=options.prefixChars ? options.prefix_chars ? '-'
         @argument_default=options.argumentDefault ? options.argument_default ? null
         @conflict_handler=options.conflict_handler ? options.conflictHandler ? 'error'
+
+        # re python issue9334
+        @args_default_to_positional= options.args_default_to_positional ? false
+
         acoptions = {
             description: @description,
             prefixChars: @prefix_chars,
@@ -267,7 +272,8 @@ class ArgumentParser extends _ActionsContainer
             [namespace, args] = @_parse_known_args(args, namespace)
             if namespace.isset($$._UNRECOGNIZED_ARGS_ATTR)
                 args.push(namespace.get($$._UNRECOGNIZED_ARGS_ATTR))
-                namespace.unset($$._UNRECOGNIZED_ARGS_ATTR, null)
+                #namespace.unset($$._UNRECOGNIZED_ARGS_ATTR, null)
+                delete namespace[$$._UNRECOGNIZED_ARGS_ATTR]
             return [namespace, args]
 
         catch error
@@ -760,17 +766,84 @@ class ArgumentParser extends _ActionsContainer
             option_tuple = option_tuples[0]
             return option_tuple
 
+        # option to make parser more like optparse
+        if @args_default_to_positional
+            return null
+
         # if it was not found as an option, but it looks like a negative
         # number, it was meant to be positional
         # unless there are negative-number-like options
-        if arg_string.match(@_negative_number_matcher)
+
+        ###
+        my argparse.py patch
+        if not self._has_negative_number_optionals:
+            try:
+                complex(arg_string)
+                return None
+            except ValueError:
+                pass         \
+        JS does not have complex()
+        JS parseFloat() handles scientific notation
+        returns NaN is cannot parse
+        but also only parses as much of string as it can, where as py
+        equiv would raise a value error if it cannot parse to end
+
+        JS Number() (or +arg_string) is more like py float
+        only thing is Number('')==0; but that case has already been addressed
+        `x.trim() ? Number(x) : NaN` takes care of the '' part
+
+        number_matcher = /^-(\d+\.?|\d*\.\d+)([eE][+\-]?\d+)?$/
+        if not _.any(@_hasNegativeNumberOptionals)
+            if number_matcher.test(arg_string)
+                # assert(!isNaN(Number(arg_string)))
+                assert(!isNaN(arg_string)) # isNaN does the necessary conversion
+                return null
+        ###
+
+        if not _.any(@_hasNegativeNumberOptionals) and not isNaN(arg_string)
+            return null
+
+        ###
+        Or make a utility float parser/matcher function
+        pack all these details into that
+
+        # more general number matcher
+        # http://stackoverflow.com/questions/638565/parsing-scientific-notation-sensibly/658662
+        # @_negative_number_matcher = /^-(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?$/
+        # a little looser, ok with -.002 and 2.e4
+        # but this allows '-' and '-e4'
+        @_negative_number_matcher = /^-(\d*)(\.\d*)?([eE][+\-]?\d+)?$/
+        # this requires at least one digit in the front part
+        @_negative_number_matcher = /^-(\d+\.?|\d*\.\d+)([eE][+\-]?\d+)?$/
+        # almost anything goes; http://bugs.python.org/issue9334
+        # assume it is a positional
+        # this too general. _optionals._neg... is used to set _hasNegativeNumberOptionals
+        # '-h' would set that flag
+        # @_negative_number_matcher = /^-.+$/
+
+
+        # if arg_string.match(@_negative_number_matcher)
+        if @_negative_number_matcher.test(arg_string)
+            if isNaN(Number(arg_string))
+                DEBUG 'NNM:',arg_string, 'passes', @_negative_number_matcher
+        else
+            if !isNaN(Number(arg_string))
+                DEBUG 'NNM:',arg_string, 'does not pass', @_negative_number_matcher
+
+        # prob with general matcher, regular optional can turn on hasNegativeNO
+        # if arg_string.match(@_negative_number_matcher)
+        if @_negative_number_matcher.test(arg_string)
+            DEBUG 'parse opt pass NNM'
+            DEBUG @_hasNegativeNumberOptionals
             if not _.any(@_hasNegativeNumberOptionals)
                 return null
+        ###
 
         # if it contains a space, it was meant to be a positional
         if ' ' in arg_string
             return null
 
+        DEBUG 'parse opt end', arg_string
         # it was meant to be an optional but there is no such option
         # in this parser (though it might be a valid option in a subparser)
         return [null, arg_string, null]
@@ -1009,7 +1082,8 @@ class ArgumentParser extends _ActionsContainer
         formatter = @_getFormatter()
         formatter.addUsage(@usage, @_actions, @_mutually_exclusive_groups)
         return formatter.formatHelp()
-    formatUsage: () -> @format_usage()
+    #formatUsage: () -> @format_usage()
+    formatUsage: @::format_usage
 
     format_help: () ->
         formatter = @_getFormatter()
@@ -1023,7 +1097,8 @@ class ArgumentParser extends _ActionsContainer
             formatter.endSection()
         formatter.addText(@epilog)
         return formatter.formatHelp()
-    formatHelp: () -> @format_help()
+    #formatHelp: () -> @format_help()
+    formatHelp: @::format_help
 
     _getFormatter: () ->
         FormatterClass = @formatter_class
@@ -1031,10 +1106,12 @@ class ArgumentParser extends _ActionsContainer
 
     printUsage: () ->
         @_printMessage(@format_usage())
-    print_usage: () -> @printUsage()
+    #print_usage: () -> @printUsage()
+    print_usage: @::printUsage
     printHelp: () ->
         @_printMessage(@format_help())
-    print_help: () -> @printHelp()
+    # print_help: () -> @printHelp()
+    print_help: @::printHelp
 
     #_printMessage: (message, stream) ->
     #    stream = stream ? process.stdout
@@ -1079,9 +1156,12 @@ class ArgumentParser extends _ActionsContainer
     # ===============
     # CamelCase Aliases
     # ===============
-    parseArgs: (args, namespace=null) -> @parse_args(args, namespace)
-    parseKnownArgs: (args, namespace=null) -> @parse_known_args(args, namespace)
-    addSubparsers: (args) -> @add_subparsers(args)
+    # parseArgs: (args, namespace=null) -> @parse_args(args, namespace)
+    parseArgs: @::parse_args
+    # parseKnownArgs: (args, namespace=null) -> @parse_known_args(args, namespace)
+    parseKnownArgs: @::parse_known_args
+    # addSubparsers: (args) -> @add_subparsers(args)
+    addSubparsers: @::add_subparsers
     if not @::add_argument?
       add_argument: (args..., options) ->
           # Python like arguments;
@@ -1297,12 +1377,12 @@ exports.newParser = (options={}) ->
 TEST = not module.parent?
 
 testparse = (args) ->
-  console.log args
+  console.log '\ntesting', args
   console.log (
     try
       parser.parseArgs(args)
     catch error
-      error
+      error+''
   )
 
 if TEST and 0
@@ -1421,23 +1501,74 @@ if TEST and 0
     testparse(['-2'])
 
     console.log '====================================='
-if TEST and 0
+if TEST and 1
+  console.log '-3 argument'
   parser = new ArgumentParser({debug: true});
   parser.addArgument(['-x'],{type:'float'});
-  parser.addArgument(['-3'],{type:'float', dest:'y'})
+  parser.addArgument(['-3','--3item'],{type:'float', dest:'y'})
   parser.addArgument(['z'],{nargs:'*'})
-  args = parser.parse_args(['-2'])
-  console.log args
-
+  testparse(['-2'])
+  testparse(['-3', '1.5'])
+  testparse(['-3','-1.5'])
+  testparse(['-3', '  -3.5  '])
+  testparse(['-3e5'])
+  testparse(['-3-3e-5', 'a','b'])
+  testparse(['-x-3.34','-3-1e4','-3.14159'])
+  testparse(['--3=-1.23e4'])
+  testparse(['--3','   -1.23e-4   '])
 
 if TEST and 1
+  console.log '====================================='
+  console.log 'neg exponentials were problem; fixed '
+  parser = new ArgumentParser({debug:true});
+  parser.addArgument(['--xlim'], {nargs: 2, type: 'float'});
+  testparse(['--xlim', '-.002', '1e4']);
+  testparse(['--xlim', '-0.002', '1e4']);
+  testparse(['--xlim', '2.e3', '-1e4'])
+  testparse(['--xlim', '-2.12e3', '-1e4'])
+  testparse(['--xlim', '-0xff', '0x123'])
+
+if TEST and 1
+  console.log '====================================='
+  console.log 'option-like positionals not accepted'
+  parser = new ArgumentParser({debug:true});
+  parser.addArgument(['--onetwo'], {nargs: 2});
+  testparse(['--onetwo', 'one', 'two']);
+  testparse(['--onetwo', 'one', '-two'])
+  testparse(['--onetwo', 'one', '--', '-two'])
+
+  parser = new ArgumentParser({debug:true});
+  parser.addArgument(['--one'],{nargs:1});
+  parser.addArgument(['two'],{nargs:'?'})
+  testparse(['--one', 'one', 'two']);
+  testparse(['--one', 'one','--', '-two'])
+  testparse(['--one=-one', '-two'])
+  #parser._negative_number_matcher = /^-.+$/
+  #testparse(['--one', '-one', '-two']);
+  #testparse(['-two', '--one', '-one'])
+
+
+  console.log '\nargs_default_to_positional:true'
+  parser = new ArgumentParser({debug:true, args_default_to_positional:true});
+  parser.addArgument(['--onetwo'], {nargs: 2});
+  testparse(['--onetwo', 'one', 'two']);
+  testparse(['--onetwo', 'one', '-two'])
+
+  parser = new ArgumentParser({debug:true, args_default_to_positional:true});
+  parser.addArgument(['--one'],{nargs:1});
+  parser.addArgument(['two'],{nargs:'?'})
+  testparse(['--one', 'one', 'two']);
+  testparse(['--one', 'one','--', '-two'])
+  testparse(['--one=-one', '-two'])
+
+if TEST and 0
   console.log '====================================='
   p = new ArgumentParser({debug:true})
   a = p.addArgument(['bar'], {type: 'float', defaultValue: 'abc', nargs:'*'})
   args = p.parseArgs([])
 
 
-if TEST and 1
+if TEST and 0
   console.log '====================================='
   p = new ArgumentParser({debug:true})
   a = p.addArgument(['bar'], {type: 'float', defaultValue: 'abc', nargs:'?'})
