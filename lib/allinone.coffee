@@ -1959,7 +1959,7 @@ class ArgumentParser extends _ActionsContainer
             [namespace, args] = @_parse_known_args(args, namespace)
             if namespace.isset($$._UNRECOGNIZED_ARGS_ATTR)
                 args.push(namespace.get($$._UNRECOGNIZED_ARGS_ATTR))
-                namespace.unset($$._UNRECOGNIZED_ARGS_ATTR, null)
+                delete namespace[$$._UNRECOGNIZED_ARGS_ATTR]
             return [namespace, args]
 
         catch error
@@ -2004,18 +2004,11 @@ class ArgumentParser extends _ActionsContainer
             # Py uses iter() to iter over the rest after --
             # all args after -- are non-options
             if arg_string == '--'
-              if true
                 arg_string_pattern_parts.push('-')
                 # for arg_string in arg_strings_iter:
                 for arg_string in arg_strings[(i+1)...]
                     # iterate over the rest of arg_strings
                     arg_string_pattern_parts.push('A')
-                break
-              else
-                for arg_string in arg_strings[(i+1)...]
-                    # iterate over the rest of arg_strings
-                    arg_string_pattern_parts.push('A')
-                arg_strings[i..i] = [] # remove this '--'
                 break
             # otherwise, add the arg to the arg strings
             # and note the index if it was an option
@@ -2156,16 +2149,16 @@ class ArgumentParser extends _ActionsContainer
             #if arg_counts.length
             for [action, arg_count] in _.zipShortest(positionals, arg_counts)
                 args = arg_strings[start_index...start_index + arg_count]
-                pats = arg_string_pattern[start_index...start_index + arg_count]
+                if action.nargs not in [$$.PARSER, $$.REMAINDER]
+                    pats = arg_string_pattern[start_index...start_index + arg_count]
+                    DEBUG 'take action:',action.dest, args, pats
+                    # remove a '--' corresponding to a '-' in pats
+                    ii = pats.indexOf('-')
+                    if ii>-1
+                        assert(args[ii]=='--')
+                        args[ii..ii] = []
+                        DEBUG 'take action:',action.dest, args
                 start_index += arg_count
-                DEBUG 'take action:',action.dest, args, pats
-                # remove a '--' corresponding to a '-' in pats
-                ii = pats.indexOf('-')
-                if ii>-1
-                    assert(args[ii]=='--')
-                    args[ii..ii] = []
-                    DEBUG 'take action:',action.dest, args
-                # DEBUG namespace.repr()
                 take_action(action, args)
 
             # slice off the Positionals that we just parsed and return the
@@ -3049,3 +3042,16 @@ if TEST
         # WITH ALT -- GETTING: {"x":["a","b"],"y":[]}
         # ie removing --, but classing A as positional
         # 'OAA' v 'OA-A'
+
+    if TEST and 1
+        console.log '====================================='
+        console.log 'TestAddSubparsers'
+        parser = exports.newParser()
+        parser.add_argument('--foo', {action:'store_true', help:'foo help'})
+        parser.add_argument('bar', {type:'float', help:'bar help'})
+        subparsers = parser.add_subparsers({title:'commands',help:'command help'})
+        parser2 = subparsers.add_parser('2')
+        parser2.add_argument('-y', {choices:'123', help:'y help'})
+        parser2.add_argument('z', {nargs:'*', help:'z help',type:'float'})
+        testparse('0.25 --foo 2 -y 2 3e3 -1e1')
+        testparse('0.25 --foo 2 -y 2 3e3 -- -1e1') # -- should operate at subparser level, to allow 'neg' arg
