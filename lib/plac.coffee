@@ -12,10 +12,11 @@ assert = require('assert')
 _ = require('underscore')
 
 # let it load from one of several places
-sources = ['./argparse', 'argcoffee', 'argparse']
+sources = ['./allinone','./argparse', 'argcoffee', 'argparse']
 for source in sources
   try
     argparse = require(source)
+    console.log 'argparse: ', source
     break
   catch e
     continue
@@ -417,94 +418,94 @@ exports.call = call
 
 #=======================================================
 if not module.parent?
+  do () ->
+    console.log require.module == module
+    # example3.py
+    main = (aflag, anopt, aposit, vargs, kwargs) ->
+      ### Do something with the database
+       vargs... is not usable; coffee just uses 'arguments' ###
+      console.log 'main args:', aflag, anopt, aposit, vargs, kwargs
+      return 'Done'
 
-  console.log require.module == module
-  # example3.py
-  main = (aflag, anopt, aposit, vargs, kwargs) ->
-    ### Do something with the database
-     vargs... is not usable; coffee just uses 'arguments' ###
-    console.log 'main args:', aflag, anopt, aposit, vargs, kwargs
-    return 'Done'
+    d = {
+      aflag: ["a flag", 'flag'],
+      anopt: ["an optional", 'option'],
+      aposit: ["a positional", 'positional'],
+      vargs: ["multi element ", 'positional'],
+      kwargs: ["keyword args", 'positional']}
+    main = annotations(d)(main)
+    main.defaults = ['posdefault']
+    main.name = 'MAIN'
+    main.description = 'documentation for main'
 
-  d = {
-    aflag: ["a flag", 'flag'],
-    anopt: ["an optional", 'option'],
-    aposit: ["a positional", 'positional'],
-    vargs: ["multi element ", 'positional'],
-    kwargs: ["keyword args", 'positional']}
-  main = annotations(d)(main)
-  main.defaults = ['posdefault']
-  main.name = 'MAIN'
-  main.description = 'documentation for main'
+    parser = parser_from(main, {prog: 'Main', \
+                  description: 'plac version of argparse sum example',
+                  debug: true})
 
-  parser = parser_from(main, {prog: 'Main', \
-                description: 'plac version of argparse sum example',
-                debug: true})
+    console.log(parser.formatHelp())
+    # usage: Main [-h] [-aflag] [-anopt ANOPT]
+    #          [aposit] [vargs [vargs ...]] [kwargs [kwargs ...]]
 
-  console.log(parser.formatHelp())
-  # usage: Main [-h] [-aflag] [-anopt ANOPT]
-  #          [aposit] [vargs [vargs ...]] [kwargs [kwargs ...]]
+    console.log parser.consume([])
+    # main args: false null posdefault [] {}
 
-  console.log parser.consume([])
-  # main args: false null posdefault [] {}
+    console.log parser.consume(['-aflag','-anopt', '42', 'posarg', \
+      'var1','var2','one=1', 'two=foo'])
+    # main args: true 42 posarg [ 'var1', 'var2' ] { one: '1', two: 'foo' }
+    # looks right
 
-  console.log parser.consume(['-aflag','-anopt', '42', 'posarg', \
-    'var1','var2','one=1', 'two=foo'])
-  # main args: true 42 posarg [ 'var1', 'var2' ] { one: '1', two: 'foo' }
-  # looks right
-
-  console.log '===================================='
-  parser_from1 = (f, kw) ->
-    f.__annotations__ = kw
-    return parser_from(f, {debug:true})
-  p4 = parser_from1(((delete_, delete_all, color)-> null),
-                 {delete_:['delete a file', 'option', 'd'],
-                 delete_all:['delete all files', 'flag', 'a'],
-                 color:['color', 'option', 'c']})
-                 # color default "black"
-  console.log p4.formatHelp()
-
-
-  console.log "========================\ntest subparsers"
-  # _parser_registry = {}
-  afunc = (bar) ->
-    ### a command ###
-    return ['a bar:',bar]
-  main = () ->
-    return "DONE"
-  main.a = afunc
-  main.b = (baz) ->
-    ### b command takes one arg ###
-    return ['b baz:',baz]
-
-  d = {}
-  main = annotations(d)(main)
-  main.commands = ['a','b']
-  main.description = 'documentation for main'
-
-  parser = parser_from(main, { # prog: 'Main', \
-    debug: true})
-  console.log(parser.formatHelp())
-
-  # console.log parser.parseArgs(['a','-h'])
-  # exits; I thought debug was supposed to trap that
-
-  console.log 'a bar', parser.consume(['a',42])
-  console.log ''
-  try
-    console.log 'b',parser.consume(['b','BAZ'])
-  catch error
-    console.log error
-
-  try
-    parser.consume(['-h'])
-  catch error
-  try
-    parser.consume(['a','-h'])
-  catch error
+    console.log '===================================='
+    parser_from1 = (f, kw) ->
+      f.__annotations__ = kw
+      return parser_from(f, {debug:true})
+    p4 = parser_from1(((delete_, delete_all, color)-> null),
+                   {delete_:['delete a file', 'option', 'd'],
+                   delete_all:['delete all files', 'flag', 'a'],
+                   color:['color', 'option', 'c']})
+                   # color default "black"
+    console.log p4.formatHelp()
 
 
-  console.log 'done'
+    console.log "========================\ntest subparsers"
+    # _parser_registry = {}
+    afunc = (bar) ->
+      ### a command ###
+      return ['a bar:',bar]
+    main = () ->
+      return "DONE"
+    main.a = afunc
+    main.b = (baz) ->
+      ### b command takes one arg ###
+      return ['b baz:',baz]
+
+    d = {}
+    main = annotations(d)(main)
+    main.commands = ['a','b']
+    main.description = 'documentation for main'
+
+    parser = parser_from(main, { # prog: 'Main', \
+      debug: true})
+    console.log(parser.formatHelp())
+
+    # console.log parser.parseArgs(['a','-h'])
+    # exits; I thought debug was supposed to trap that
+
+    console.log 'a bar', parser.consume(['a',42])
+    console.log ''
+    try
+      console.log 'b',parser.consume(['b','BAZ'])
+    catch error
+      console.log error
+
+    try
+      parser.consume(['-h'])
+    catch error
+    try
+      parser.consume(['a','-h'])
+    catch error
+
+
+    console.log 'done'
 ###
 in py
 def foo3(x,y=3,a=None,*z,**w):
@@ -522,7 +523,7 @@ vars(plac.getargspec(foo3))
 in js, there are only args
 coffee adds defaults (of sorts)
 and something like *z, array turned into string of args
-but those aren't directly visible in underlying js
+but those arent directly visible in underlying js
 
 square = function(x) {
   return x * x;
