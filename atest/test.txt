@@ -1,0 +1,177 @@
+
+
+  base
+    ◦ should parse argument in short form: [2K[0G    ✓ should parse argument in short form 
+    ◦ should parse argument in long form: [2K[0G    ✓ should parse argument in long form 
+    ◦ should parse multiple arguments: [2K[0G    ✓ should parse multiple arguments 
+    ◦ should check argument type: [2K[0G    ✓ should check argument type 
+    ◦ should not drop down with empty args (without positional arguments): [2K[0G    ✓ should not drop down with empty args (without positional arguments) 
+    ◦ should drop down with empty args (positional arguments): [2K[0G    ✓ should drop down with empty args (positional arguments) 
+    ◦ should support pseudo-argument: [2K[0G    ✓ should support pseudo-argument 
+    ◦ should support #setDefaults: [2K[0G    ✓ should support #setDefaults 
+    ◦ should throw TypeError with conflicting options: [2K[0G    ✓ should throw TypeError with conflicting options 
+    ◦ should parse negative arguments: [2K[0G    ✓ should parse negative arguments 
+    ◦ No negative number options; neg number is positional argument: [2K[0G    ✓ No negative number options; neg number is positional argument 
+    ◦ negative number options present, so any neg number is an option: [2K[0G    ✓ negative number options present, so any neg number is an option 
+    ◦ should infer option destination from long and short options: [2K[0G    ✓ should infer option destination from long and short options 
+    ◦ should accept 0 defaultValue: [2K[0G    ✓ should accept 0 defaultValue 
+    ◦ getDefault() should get defaults: [2K[0G    ✓ getDefault() should get defaults 
+    ◦ should handle mixed positional and optional args: [2K[0G    ✓ should handle mixed positional and optional args 
+    ◦ test empty and space containing arguments: [2K[0G    ✓ test empty and space containing arguments 
+
+  child group
+    ◦ compare help parent and child: [2K[0G    ✓ compare help parent and child 
+    ◦ child should  throw error if an xclusive group member is missing: [2K[0G    1) child should  throw error if an xclusive group member is missing
+    ◦ child accepts an xgroup item and positional arg from parent: [2K[0G    ✓ child accepts an xgroup item and positional arg from parent 
+    ◦ child throws error if both xclusive options are given: [2K[0G    2) child throws error if both xclusive options are given
+
+  choices
+    ◦ should store correct choice(choices defined as string): [2K[0G    ✓ should store correct choice(choices defined as string) 
+    ◦ should drop down with 'Invalid choice' error for incorrect choices(choices defined as string): [2K[0G    ✓ should drop down with 'Invalid choice' error for incorrect choices(choices defined as string) 
+    ◦ should store correct choice(choices defined as array): [2K[0G    ✓ should store correct choice(choices defined as array) 
+    ◦ should drop down with 'Invalid choice' error for incorrect choices(choices defined as array): [2K[0G    ✓ should drop down with 'Invalid choice' error for incorrect choices(choices defined as array) 
+
+  Argument conflict handling
+    ◦ test_bad_type: [2K[0G    3) test_bad_type
+    ◦ test_conflict_error: [2K[0G    ✓ test_conflict_error 
+    ◦ test_resolve_error: [2K[0G    4) test_resolve_error
+    ◦ TypeError with multiple conflicts: [2K[0G    ✓ TypeError with multiple conflicts 
+    ◦ resolving multiple conflicts: [2K[0G    5) resolving multiple conflicts
+
+  constant actions
+    ◦ storeConst should store constant as given: [2K[0G    ✓ storeConst should store constant as given 
+    ◦ storeConst should give error if constant not given (or misspelled): [2K[0G    6) storeConst should give error if constant not given (or misspelled)
+    ◦ appendConst should append constant as given: [2K[0G    ✓ appendConst should append constant as given 
+    ◦ appendConst should give error if constant not given (or misspelled): [2K[0G    7) appendConst should give error if constant not given (or misspelled)
+
+  formatterClass alternatives
+    ◦ ArgumentDefaultsHelpFormatter: [2K[0G    ✓ ArgumentDefaultsHelpFormatter 
+    ◦ RawDescriptionHelpFormatter: [2K[0G    ✓ RawDescriptionHelpFormatter 
+    ◦ RawTextHelpFormatter: [2K[0G    ✓ RawTextHelpFormatter 
+    ◦ should handle metavar as an array: [2K[0G    ✓ should handle metavar as an array 
+
+  from file
+    ◦ test reading arguments from a file: [2K[0G    8) test reading arguments from a file
+    ◦ test recursive reading arguments from files: [2K[0G    9) test recursive reading arguments from files
+    ◦ fest reading arguments from an invalid file: [2K[0G    10) fest reading arguments from an invalid file
+    ◦ test reading arguments from an missing file: [2K[0G    11) test reading arguments from an missing file
+    ◦ test custom convertArgLineToArgs function: [2K[0G    12) test custom convertArgLineToArgs function
+
+  group
+    ◦ group test: [2K[0G    13) group test
+    ◦ 2 groups test: [2K[0G    14) 2 groups test
+    ◦ mutually exclusive group test: [2K[0G    ✓ mutually exclusive group test 
+    ◦ mutually exclusive group test (2): [2K[0G    15) mutually exclusive group test (2)
+    ◦ mutually exclusive group test (3): [2K[0G    16) mutually exclusive group test (3)
+    ◦ mutually exclusive group usage: [2K[0G    ✓ mutually exclusive group usage 
+    ◦ mutually exclusive optional and positional: [2K[0G    ✓ mutually exclusive optional and positional 
+    ◦ two mutually exclusive groups: [2K[0G    ✓ two mutually exclusive groups 
+    ◦ suppressed and single action groups: [2K[0G    ✓ suppressed and single action groups 
+
+  nargs
+    ◦ test specifying the 1 arg for an Optional: [2K[0G    ✓ test specifying the 1 arg for an Optional 
+    ◦ test specifying the 3 args for an Optional: [2K[0G    ✓ test specifying the 3 args for an Optional 
+    ◦ tests not specifying the number of args for an Optional: [2K[0G    ✓ tests not specifying the number of args for an Optional 
+    ◦ test specifying an args for an Optional, that accepts one or more: [2K[0G    ✓ test specifying an args for an Optional, that accepts one or more 
+    ◦ test specifying an Optional arg for an Optional: [2K[0G    ✓ test specifying an Optional arg for an Optional 
+    ◦ test specifying an args for an Optional that accepts zero or more: [2K[0G    ✓ test specifying an args for an Optional that accepts zero or more 
+    ◦ test a Positional that specifies an nargs of 1: [2K[0G    ✓ test a Positional that specifies an nargs of 1 
+    ◦ test a Positional that specifies an nargs of 2: [2K[0G    ✓ test a Positional that specifies an nargs of 2 
+    ◦ test a Positional with 2 nargs followed by one with none: [2K[0G    ✓ test a Positional with 2 nargs followed by one with none 
+    ◦ test a Positional with 2 nargs followed by one with one or more: [2K[0G    ✓ test a Positional with 2 nargs followed by one with one or more 
+    ◦ test a Positional with 2 nargs followed by one optional: [2K[0G    ✓ test a Positional with 2 nargs followed by one optional 
+    ◦ test a Positional with 2 nargs followed by one with unlimited: [2K[0G    ✓ test a Positional with 2 nargs followed by one with unlimited 
+    ◦ test a Positional that doesn't specify nargs: [2K[0G    ✓ test a Positional that doesn't specify nargs 
+    ◦ test a Positional with no nargs followed by one with 1: [2K[0G    ✓ test a Positional with no nargs followed by one with 1 
+    ◦ test two Positionals that don't specify nargs: [2K[0G    ✓ test two Positionals that don't specify nargs 
+    ◦ test a Positional with no nargs followed by one with one or more: [2K[0G    ✓ test a Positional with no nargs followed by one with one or more 
+    ◦ test three Positionals: no nargs, one or more nargs and 1 nargs: [2K[0G    ✓ test three Positionals: no nargs, one or more nargs and 1 nargs 
+    ◦ test a Positional with no nargs followed by one with an Optional: [2K[0G    ✓ test a Positional with no nargs followed by one with an Optional 
+    ◦ test three Positionals: no nargs, optional narg and 1 nargs: [2K[0G    ✓ test three Positionals: no nargs, optional narg and 1 nargs 
+    ◦ test a Positional with no nargs followed by one with unlimited: [2K[0G    ✓ test a Positional with no nargs followed by one with unlimited 
+    ◦ test three Positionals: no nargs, unlimited nargs and 1 nargs: [2K[0G    ✓ test three Positionals: no nargs, unlimited nargs and 1 nargs 
+    ◦ test a Positional that specifies one or more nargs: [2K[0G    ✓ test a Positional that specifies one or more nargs 
+    ◦ test a Positional with one or more nargs followed by one with 1: [2K[0G    ✓ test a Positional with one or more nargs followed by one with 1 
+    ◦ test a Positional with one or more nargs followed by one with none: [2K[0G    ✓ test a Positional with one or more nargs followed by one with none 
+    ◦ tests an Optional Positional: [2K[0G    ✓ tests an Optional Positional 
+    ◦ test a Positional with an Optional nargs followed by one with 1: [2K[0G    ✓ test a Positional with an Optional nargs followed by one with 1 
+    ◦ test an Optional Positional with a default value (that needs to be converted to the appropriate type.): [2K[0G    ✓ test an Optional Positional with a default value (that needs to be converted to the appropriate type.) 
+    ◦ tests an Optional Positional with a default value: [2K[0G    ✓ tests an Optional Positional with a default value 
+    ◦ test a Positional with an Optional nargs followed by one with none: [2K[0G    ✓ test a Positional with an Optional nargs followed by one with none 
+    ◦ test an Optional narg followed by one or more nargs: [2K[0G    ✓ test an Optional narg followed by one or more nargs 
+    ◦ test two optional nargs: [2K[0G    ✓ test two optional nargs 
+    ◦ test an Optional narg followed by unlimited nargs: [2K[0G    ✓ test an Optional narg followed by unlimited nargs 
+    ◦ test a Positional that specifies unlimited nargs: [2K[0G    ✓ test a Positional that specifies unlimited nargs 
+    ◦ test a `nargs` + `append` combination. Not obvious result - nested array: [2K[0G    ✓ test a `nargs` + `append` combination. Not obvious result - nested array 
+    ◦ test a Positional with unlimited nargs followed by one with 1: [2K[0G    ✓ test a Positional with unlimited nargs followed by one with 1 
+    ◦ test a Positional that specifies unlimited nargs and a default: [2K[0G    ✓ test a Positional that specifies unlimited nargs and a default 
+    ◦ test a Positional with unlimited nargs followed by one with none: [2K[0G    ✓ test a Positional with unlimited nargs followed by one with none 
+    ◦ test specifying a positional with nargs=REMAINDER: [2K[0G    ✓ test specifying a positional with nargs=REMAINDER 
+    ◦ test specifying an args for an Optional that accepts zero or more: [2K[0G    ✓ test specifying an args for an Optional that accepts zero or more 
+    ◦ should accept defaultValue for nargs:'*': [2K[0G    ✓ should accept defaultValue for nargs:'*' 
+
+  optionals
+    ◦ test options that may or may not be arguments: [2K[0G    ✓ test options that may or may not be arguments 
+    ◦ test the append action for an Optional: [2K[0G    ✓ test the append action for an Optional 
+    ◦ test the append_const action for an Optional: [2K[0G    ✓ test the append_const action for an Optional 
+    ◦ test the append_const action for an Optional: [2K[0G    ✓ test the append_const action for an Optional 
+    ◦ test the append action for an Optional: [2K[0G    ✓ test the append action for an Optional 
+    ◦ test the count action for an Optional: [2K[0G    ✓ test the count action for an Optional 
+    ◦ test the store action for an Optional: [2K[0G    ✓ test the store action for an Optional 
+    ◦ test the store_const action for an Optional: [2K[0G    ✓ test the store_const action for an Optional 
+    ◦ test the store_false action for an Optional: [2K[0G    ✓ test the store_false action for an Optional 
+    ◦ test the store_true action for an Optional: [2K[0G    ✓ test the store_true action for an Optional 
+    ◦ test negative number args when almost numeric options are present: [2K[0G    ✓ test negative number args when almost numeric options are present 
+    ◦ test specifying the choices for an Optional: [2K[0G    ✓ test specifying the choices for an Optional 
+    ◦ test specifying a default for an Optional: [2K[0G    ✓ test specifying a default for an Optional 
+    ◦ test various means of setting destination: [2K[0G    ✓ test various means of setting destination 
+    ◦ test an Optional with a double-dash option string: [2K[0G    ✓ test an Optional with a double-dash option string 
+    ◦ tests partial matching with a double-dash option string: [2K[0G    ✓ tests partial matching with a double-dash option string 
+    ◦ test an Optional with a short opt string: [2K[0G    ✓ test an Optional with a short opt string 
+    ◦ test negative number args when numeric options are present: [2K[0G    ✓ test negative number args when numeric options are present 
+    ◦ tests the an optional action that is required: [2K[0G    ✓ tests the an optional action that is required 
+    ◦ test a combination of single- and double-dash option strings: [2K[0G    ✓ test a combination of single- and double-dash option strings 
+    ◦ test an Optional with a single-dash option string: [2K[0G    ✓ test an Optional with a single-dash option string 
+    ◦ test Optionals that partially match but are not subsets: [2K[0G    ✓ test Optionals that partially match but are not subsets 
+    ◦ test an Optional with a single-dash option string: [2K[0G    ✓ test an Optional with a single-dash option string 
+    ◦ test an Optional with a multi-character single-dash option string: [2K[0G    ✓ test an Optional with a multi-character single-dash option string 
+    ◦ test Optionals where option strings are subsets of each other: [2K[0G    ✓ test Optionals where option strings are subsets of each other 
+    ◦ test an Optional with single- and double-dash option strings: [2K[0G    ✓ test an Optional with single- and double-dash option strings 
+
+  parents
+    ◦ should parse args from parents parser: [2K[0G    ✓ should parse args from parents parser 
+    ◦ should throw error if has same args as parent: [2K[0G    ✓ should throw error if has same args as parent 
+
+  positionals
+    ◦ test the 'append' action: [2K[0G    ✓ test the 'append' action 
+    ◦ test a set of integer choices: [2K[0G    ✓ test a set of integer choices 
+    ◦ test a set of single-character choices: [2K[0G    ✓ test a set of single-character choices 
+
+  prefix
+    ◦ test an Optional with option strings with custom prefixes: [2K[0G    ✓ test an Optional with option strings with custom prefixes 
+    ◦ when "-" not in prefix_chars, default operators created for help should use the prefix_chars in use rather than - or --: [2K[0G    ✓ when "-" not in prefix_chars, default operators created for help should use the prefix_chars in use rather than - or -- 
+    ◦ verify that Optionals must be called with their defined prefixes: [2K[0G    ✓ verify that Optionals must be called with their defined prefixes 
+    ◦ test when one double-dash option string is a prefix of another: [2K[0G    ✓ test when one double-dash option string is a prefix of another 
+    ◦ test arguments from prefix chars only: [2K[0G    ✓ test arguments from prefix chars only 
+
+  sub-commands
+    ◦ should store command name: [2K[0G    ✓ should store command name 
+    ◦ should store command arguments: [2K[0G    ✓ should store command arguments 
+    ◦ should have same behavior for alias and original command: [2K[0G    ✓ should have same behavior for alias and original command 
+    ◦ should have different behavior for different commands: [2K[0G    ✓ should have different behavior for different commands 
+    ◦ should drop down with "Invalid choice" error if parse unrecognized command: [2K[0G    ✓ should drop down with "Invalid choice" error if parse unrecognized command 
+    ◦ should drop down with empty args ('too few arguments' error): [2K[0G    ✓ should drop down with empty args ('too few arguments' error) 
+    ◦ should support #setDefaults: [2K[0G    ✓ should support #setDefaults 
+
+  suppress defaults
+    ◦ test actions with suppressed defaults: [2K[0G    ✓ test actions with suppressed defaults 
+    ◦ test actions with a parser-level default of SUPPRESS: [2K[0G    ✓ test actions with a parser-level default of SUPPRESS 
+
+  user defined type
+    ◦ should handle builtin types: [2K[0G    ✓ should handle builtin types 
+    ◦ should handle user-defined type: [2K[0G    ✓ should handle user-defined type 
+    ◦ should give consistent type errors: [2K[0G    ✓ should give consistent type errors 
+    ◦ test a user-defined type by registering it: [2K[0G    ✓ test a user-defined type by registering it 
+    ◦ test an anonymous user-defined type: [2K[0G    17) test an anonymous user-defined type
+
+

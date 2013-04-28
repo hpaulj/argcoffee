@@ -4,7 +4,7 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentParser = require('argcoffee').ArgumentParser;
 
 describe('optionals', function () {
   var parser;
@@ -460,7 +460,7 @@ describe('optionals', function () {
     });
   });
 
-  
+
 
   it('test an Optional with a short opt string', function () {
     parser = new ArgumentParser({debug: true});

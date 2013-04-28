@@ -4,7 +4,7 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentParser = require('argcoffee').ArgumentParser;
 
 describe('constant actions', function () {
   var parser;
@@ -34,7 +34,7 @@ describe('constant actions', function () {
             }
           );
         },
-        /constant option is required for storeAction/
+        /constant option is required for storeAction/i
       );
   });
 
@@ -53,7 +53,7 @@ describe('constant actions', function () {
           parser.addArgument(['-a'], {action: 'appendConst', dest:   'answer',
               help:   'store constant', const: 42});
         },
-      /constant option is required for appendAction/
+      /constant option is required for appendAction/i
     );
   });
 });

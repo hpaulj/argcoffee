@@ -5,7 +5,7 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentParser = require('argcoffee').ArgumentParser;
 
 describe('base', function () {
   var parser;
@@ -154,14 +154,14 @@ describe('base', function () {
       function () {
         parser.parseArgs(['-2']);
       },
-      /Unrecognized arguments: -2/
+      /Unrecognized arguments: -2/i
     );
     // negative number options present, so both -1s are options
     assert.throws(
       function () {
         parser.parseArgs(['-1', '-1']);
       },
-      /argument "-1": Expected one argument/
+      /argument "-1": Expected one argument/i
     );
     args = parser.parseArgs(['--', '-f']);
     // Namespace(foo='-f', one=None)

@@ -4,7 +4,7 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentParser = require('argcoffee').ArgumentParser;
 
 describe('positionals', function () {
   var parser;

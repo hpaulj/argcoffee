@@ -5,7 +5,7 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentParser = require('argcoffee').ArgumentParser;
 
 describe('sub-commands', function () {
   var parser;
@@ -62,7 +62,7 @@ describe('sub-commands', function () {
   it('should drop down with "Invalid choice" error if parse unrecognized command', function () {
     assert.throws(
       function () {parser.parseArgs('command --baz 1'.split(' ')); },
-      /Invalid choice:/
+      /Invalid choice:/i
     );
   });
 

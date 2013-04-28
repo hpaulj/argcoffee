@@ -4,9 +4,9 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentParser = require('argcoffee').ArgumentParser;
 
-var $$ = require('../lib/const');
+var $$ = require('argcoffee').Const;
 
 describe('nargs', function () {
   var parser;
@@ -840,7 +840,7 @@ describe('nargs', function () {
 
   });
 
-  
+
   it("should accept defaultValue for nargs:'*'", function () {
     parser = new ArgumentParser({debug: true});
     parser.addArgument(['-f', '--foo']);

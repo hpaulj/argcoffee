@@ -4,7 +4,7 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentParser = require('argcoffee').ArgumentParser;
 
 var assert  = require('assert');
 var path    = require('path');
@@ -70,6 +70,8 @@ describe('from file', function () {
         args = args.filter(function (arg) {return arg.length > 0; });
         return args;
       };
+    parser.convert_arg_line_to_args = parser.convertArgLineToArgs
+    // argcoffee uses underscore name here
     args = parser.parseArgs(['X', '@hello']);
     assert.deepEqual(args, {a: null, x: 'X', y: ['hello', 'world!']});
   });

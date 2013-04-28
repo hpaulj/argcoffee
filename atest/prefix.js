@@ -4,7 +4,7 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentParser = require('argcoffee').ArgumentParser;
 
 describe('prefix', function () {
   var parser;
@@ -219,5 +219,5 @@ describe('prefix', function () {
       args = parser.parseArgs([ '+', '-' ]);
     });
   });
- 
+
 });

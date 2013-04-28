@@ -5,7 +5,7 @@ var assert = require('assert');
 var _ = require('underscore');
 _.str = require('underscore.string');
 
-var argparse = require('argparse');
+var argparse = require('argcoffee');
 
 describe('formatterClass alternatives', function () {
   var a, group, parser, helptext;

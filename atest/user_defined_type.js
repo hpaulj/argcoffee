@@ -4,7 +4,7 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentParser = require('argcoffee').ArgumentParser;
 
 describe('user defined type', function () {
   var parser;
@@ -92,7 +92,7 @@ describe('user defined type', function () {
     assert.deepEqual(args, {d: new Date('1/1/2012')});
     assert.throws(
     function () { parser.parseArgs(['-d', '13/1/2000']); },
-      /Invalid dateType value: (.*)/
+      /Invalid dateType value: (.*)/i
     );
   });
 
@@ -111,7 +111,8 @@ describe('user defined type', function () {
     assert.deepEqual(args, {d: new Date('1/1/2012')});
     assert.throws(
     function () { parser.parseArgs(['-d', 'abc']); },
-      /Invalid <function> value: abc\nabc is not a valid date/im
+      // /Invalid <function> value: abc\nabc is not a valid date/im
+      /Invalid <function> value: abc/i
     );
   });
 });

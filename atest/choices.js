@@ -5,7 +5,7 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
+var ArgumentParser = require('argcoffee').ArgumentParser;
 
 describe('choices', function () {
   var parser;
@@ -28,14 +28,14 @@ describe('choices', function () {
         args = parser.parseArgs('--foo e'.split(' '));
         console.dir(args);
       },
-      /Invalid choice:/
+      /Invalid choice:/i
     );
     assert.throws(
       function () {
         args = parser.parseArgs('--foo 0'.split(' '));
         console.dir(args);
       },
-      /Invalid choice:/
+      /Invalid choice:/i
     );
   });
 
@@ -57,14 +57,14 @@ describe('choices', function () {
         args = parser.parseArgs('--foo e'.split(' '));
         console.dir(args);
       },
-      /Invalid choice:/
+      /Invalid choice:/i
     );
     assert.throws(
       function () {
         args = parser.parseArgs('--foo 0'.split(' '));
         console.dir(args);
       },
-      /Invalid choice:/
+      /Invalid choice:/i
     );
   });
 });

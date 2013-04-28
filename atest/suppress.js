@@ -4,8 +4,8 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('../lib/argparse').ArgumentParser;
-var $$ = require('../lib/const');
+var ArgumentParser = require('argcoffee').ArgumentParser;
+var $$ = require('argcoffee').Const;
 
 describe('suppress defaults', function () {
   var parser;
