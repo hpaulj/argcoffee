@@ -1302,13 +1302,13 @@ if true
 
 class _ActionsContainer
   constructor: (options={}) ->
-    # description, prefixChars, argument_default, conflictHandler):
+    # description, prefixChars, argument_default, conflict_handler):
     # super(_ActionsContainer, self).__init__()
 
         @description = options.description
         @argument_default = options.argument_default
         @prefix_chars = options.prefixChars ? options.prefix_chars
-        @conflictHandler = options.conflictHandler
+        @conflict_handler = options.conflict_handler
 
         # set up registries
         @_registries = {}
@@ -1529,7 +1529,7 @@ class _ActionsContainer
                 title_group_map[group.title] = @add_argument_group({
                     title:group.title,
                     description:group.description,
-                    conflictHandler:group.conflictHandler})
+                    conflict_handler:group.conflict_handler})
 
             # map the actions to their new group
             for action in group._group_actions
@@ -1649,14 +1649,14 @@ class _ActionsContainer
 
   _get_handler: () ->
         # determine function from conflict handler string
-        #return @conflictHandler == 'error'
-        # skip more elaborate test for now
-        handler_func_name = "_handle_conflict_#{@conflictHandler}"
+        handler_func_name = "_handle_conflict_#{@conflict_handler}"
         func = @[handler_func_name]
+
         if func?
           return func
         else
-            msg = "invalid conflict resolution value: #{@conflictHandler}"
+            return @_handle_conflict_error # temp fix TODO
+            msg = "invalid conflict resolution value: #{@conflict_handler}"
             throw new Error(msg)
 
   _check_conflict: (action) ->
@@ -1669,8 +1669,8 @@ class _ActionsContainer
 
         # resolve any conflicts
         if confl_optionals.length>0
-            conflictHandler = @_get_handler()
-            conflictHandler(action, confl_optionals)
+            conflict_handler = @_get_handler()
+            conflict_handler(action, confl_optionals)
 
     _handle_conflict_error: (action, conflicting_actions) ->
         conflict_string = (tpl[0] for tpl in conflicting_actions).join(', ')
@@ -1699,7 +1699,7 @@ class _ArgumentGroup extends _ActionsContainer
         # add any missing keyword arguments by checking the container
         options.prefix_chars = options.prefixChars ? container.prefix_chars
         options.argument_default = options.argument_default ? container.argument_default
-        options.conflictHandler = options.conflictHandler ? container.conflictHandler
+        options.conflict_handler = options.conflict_handler ? container.conflict_handler
 
 
         # super_init = super(_ArgumentGroup, self).__init__
@@ -1792,7 +1792,7 @@ class ArgumentParser extends _ActionsContainer
         @epilog=options.epilog ? null
         @parents=options.parents ? []
         @formatter_class=options.formatter_class ? options.formatterClass ? HelpFormatter
-        @fromfile_prefix_chars = options.fromfile_prefix_chars ? null
+        @fromfile_prefix_chars = options.fromfile_prefix_chars ? options.fromfilePrefixChars ? null
         @add_help = options.addHelp ? options.add_help ? true
         @debug = options.debug ? false
 
@@ -1808,7 +1808,7 @@ class ArgumentParser extends _ActionsContainer
             description: @description,
             prefixChars: @prefix_chars,
             argument_default: @argument_default,
-            conflictHandler: @conflict_handler}
+            conflict_handler: @conflict_handler}
         _ActionsContainer.call(this, acoptions)
         @_positionals = @add_argument_group({title: 'Positional arguments'})
         @_optionals = @add_argument_group({title: 'Optional arguments'})
