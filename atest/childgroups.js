@@ -54,7 +54,7 @@ describe('child group', function () {
       function () {
         args = childParser.parseArgs(['--xfoo', '--xbar']);
       },
-      /Not allowed with argument/
+      /Not allowed with argument/i
     );
   });
 });

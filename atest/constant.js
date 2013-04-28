@@ -1,6 +1,8 @@
 /*global describe, it, beforeEach*/
 
 'use strict';
+// cf to argparse, argcoffee allows 'const'
+// it also has different error messages
 
 var assert = require('assert');
 
@@ -30,11 +32,12 @@ describe('constant actions', function () {
               action: 'storeConst',
               dest:   'answer',
               help:   'store constant',
-              const:  42
+              const1:  42
             }
           );
         },
-        /constant option is required for storeAction/i
+        // /constant option is required for storeAction/i
+        /StoreConstAction needs a constant parameter/i
       );
   });
 
@@ -51,9 +54,10 @@ describe('constant actions', function () {
     assert.throws(
       function () {
           parser.addArgument(['-a'], {action: 'appendConst', dest:   'answer',
-              help:   'store constant', const: 42});
+              help:   'store constant', const1: 42});
         },
-      /constant option is required for appendAction/i
+      // /constant option is required for appendAction/i
+      /constant required for AppendConstAction/i
     );
   });
 });

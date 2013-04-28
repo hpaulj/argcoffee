@@ -1543,7 +1543,7 @@ class _ActionsContainer
         # description= then this code will need to be expanded as above
         for group in container._mutually_exclusive_groups
             mutex_group = @add_mutually_exclusive_group(
-                required=group.required)
+                {required:group.required})
 
             # map the actions to their new mutex group
             for action in group._group_actions
@@ -1655,7 +1655,6 @@ class _ActionsContainer
         if func?
           return func
         else
-            return @_handle_conflict_error # temp fix TODO
             msg = "invalid conflict resolution value: #{@conflict_handler}"
             throw new Error(msg)
 
@@ -1853,10 +1852,7 @@ class ArgumentParser extends _ActionsContainer
             })
 
         for parent in @parents
-            if @_addContainerActions?
-              @_addContainerActions(parent)
-            else
-              @_add_container_actions(parent)
+            @_add_container_actions(parent)
             if parent._defaults?
                 for defaultKey of parent._defaults
                     if parent._defaults[defaultKey]? # has defaultKey # own?
