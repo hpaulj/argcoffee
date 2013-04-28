@@ -150,8 +150,13 @@ _textwrap =
 pformat = (fmt, params) ->
   # standin for python format
   # params is a list
+  # add error checking as in python %
   for p in params
+    if fmt.indexOf('%s')<0
+      throw new Error('not all arguments converted during string formatting')
     fmt=fmt.replace(/%s/,p)
+  if fmt.indexOf('%s')>-1
+    throw new Error('not enough arguments for format string')
   return fmt
 
 pnformat = (fmt, params) ->
@@ -618,28 +623,42 @@ class HelpFormatter
           if _.isArray(result)
             return result
           else
-            # return (result for i in [0...tuple_size])
-            return _.times(tuple_size, ()->result)
+            if tuple_size>0
+              return (result for i in [0...tuple_size])
+            else
+              return []
         return format
 
     _format_args: (action, default_metavar) ->
         get_metavar = @_metavar_formatter(action, default_metavar)
-        if !action.nargs?
+        nargs = action.nargs
+        if !nargs?  #  null
             result = pformat('%s', get_metavar(1))
-        else if action.nargs == $$.OPTIONAL
+        else if nargs == $$.OPTIONAL
             result = pformat('[%s]', get_metavar(1))
-        else if action.nargs == $$.ZERO_OR_MORE
+        else if nargs == $$.ZERO_OR_MORE
             result = pformat('[%s [%s ...]]',get_metavar(2))
-        else if action.nargs == $$.ONE_OR_MORE
+        else if nargs == $$.ONE_OR_MORE
             result = pformat('%s [%s ...]',get_metavar(2))
-        else if action.nargs == $$.REMAINDER
+        else if nargs == $$.REMAINDER
             result = '...'
-        else if action.nargs == $$.PARSER
+        else if nargs == $$.PARSER
             result = pformat('%s ...', get_metavar(1))
         else
+            if not isFinite(nargs)  # other integer test?, '1' passes
+              throw new Error("nargs '#{nargs}' not a valid string or integer")
             # formats = ('%s' for i in [0...action.nargs]).join(' ')
-            formats = Array(action.nargs+1).join('%s')
-            result = pformat(formats ,get_metavar(action.nargs))
+            # formats = Array(action.nargs+1).join('%s')
+            if nargs>0
+              formats = ('%s' for i in [0...nargs]).join(' ')
+            else if nargs<0
+              throw new Error("nargs '#{nargs}' less than 0")
+            else
+              formats = ''
+            try
+              result = pformat(formats ,get_metavar(nargs))
+            catch error
+              throw new Error("length of metavar tuple does not match nargs")
         return result
 
     _expand_help: (action) ->
@@ -876,6 +895,18 @@ class Action
             @.metavar
         else if @dest ? @dest != $$.SUPPRESS
             @.dest
+
+    getName: () ->
+        # essentially the same as _get_action_name
+        if @option_strings.length > 0
+            return @option_strings.join('/')
+        else if @metavar != null and @metavar != $$.SUPPRESS
+            return @metavar
+        else if @dest? and @dest != $$.SUPPRESS
+            return @dest;
+        else
+            return null
+
 
     isOptional: () ->
         # convenience used by argparse
@@ -1422,14 +1453,17 @@ class _ActionsContainer
         if not _.isFunction(type_func) # _callable(type_func)
             throw new Error("#{type_func} is not callable")
 
+        if @_check_argument?
+            @_check_argument(action)
+        ###
         # raise an error if the metavar does not match the type
-        # if hasattr (this, "_get_formatter")
+        # replaced by above check_argument
         if @_get_formatter?
             try
                 @_get_formatter()._format_args(action, null)
             catch error
                 throw new Error("length of metavar tuple does not match nargs")
-        #DEBUG 'action', action
+        ###
         return @_add_action(action)
   addArgument: (args, options) -> @add_argument(args..., options)
 
@@ -1667,6 +1701,7 @@ class _ArgumentGroup extends _ActionsContainer
         options.argument_default = options.argument_default ? container.argument_default
         options.conflictHandler = options.conflictHandler ? container.conflictHandler
 
+
         # super_init = super(_ArgumentGroup, self).__init__
         # _ActionsContainer.call(this, options)
         # super_init(description=description, **kwargs)
@@ -1681,7 +1716,7 @@ class _ArgumentGroup extends _ActionsContainer
         @_defaults = container._defaults
         @_hasNegativeNumberOptionals = container._hasNegativeNumberOptionals
         @_mutually_exclusive_groups = container._mutually_exclusive_groups
-
+        @_check_argument = container._check_argument
         @_container = container;
 
     _add_action: (action) ->
@@ -1879,7 +1914,7 @@ class ArgumentParser extends _ActionsContainer
         # prog defaults to the usage message of this parser, skipping
         # optional arguments and with no "usage:" prefix
         if not options.prog?
-            formatter = @_getFormatter()
+            formatter = @_get_formatter()
             positionals = @_get_positional_actions()
             groups = @_mutuallyExclusiveGroups ? @_mutually_exclusive_groups
             formatter.addUsage(@usage, positionals, groups, '')
@@ -1917,6 +1952,16 @@ class ArgumentParser extends _ActionsContainer
 
     _get_positional_actions: () ->
         return (action for action in @_actions when action.isPositional())
+
+    _check_argument: (action) =>
+        # check action arguments
+        # focus on the arguments that the parent container does not know about
+        # check nargs and metavar tuple
+        # use 'bind' so a group can use its container's method
+        try
+            @_get_formatter()._format_args(action, null)
+        catch error
+            throw new ArgumentError(action, error.message)
 
     # =====================================
     # Command line argument parsing methods
@@ -2564,7 +2609,8 @@ class ArgumentParser extends _ActionsContainer
         else
             # nargs_pattern = '(-*%s-*)' % '-*'.join('A' * nargs)
             # nargs_pattern = "(-*#{('A' for i in [0...nargs]).join('')}-*)"
-            nargs_pattern = "(-*#{new Array(nargs+1).join('A')}-*)"
+            # nargs_pattern = "(-*#{new Array(nargs+1).join('A')}-*)"
+            nargs_pattern = "(-*#{_.str.repeat('-*A', nargs)}-*)"
         # if this is an optional action, -- is not allowed
         if action.isOptional()
             nargs_pattern = nargs_pattern.replace(/-\*/g, '')
@@ -2726,14 +2772,14 @@ class ArgumentParser extends _ActionsContainer
     # adapt from javascript version
 
     format_usage: () ->
-        formatter = @_getFormatter()
+        formatter = @_get_formatter()
         formatter.addUsage(@usage, @_actions, @_mutually_exclusive_groups)
         return formatter.formatHelp()
     #formatUsage: () -> @format_usage()
     formatUsage: @::format_usage
 
     format_help: () ->
-        formatter = @_getFormatter()
+        formatter = @_get_formatter()
         # usage
         formatter.addUsage(@usage, @_actions, @_mutually_exclusive_groups)
         formatter.addText(@description)
@@ -2747,7 +2793,7 @@ class ArgumentParser extends _ActionsContainer
     #formatHelp: () -> @format_help()
     formatHelp: @::format_help
 
-    _getFormatter: () ->
+    _get_formatter: () ->
         FormatterClass = @formatter_class
         formatter = new FormatterClass({prog: @prog})
 

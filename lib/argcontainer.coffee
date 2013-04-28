@@ -205,9 +205,9 @@ class _ActionsContainer
 
         # raise an error if the metavar does not match the type
         # if hasattr (this, "_get_formatter")
-        if @_get_formatter?
+        if @_getFormatter?
             try
-                @_get_formatter()._format_args(action, null)
+                @_getFormatter()._format_args(action, null)
             catch error
                 throw new Error("length of metavar tuple does not match nargs")
         DEBUG 'action', action
