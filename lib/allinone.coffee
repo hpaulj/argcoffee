@@ -2133,9 +2133,15 @@ class ArgumentParser extends _ActionsContainer
                             action = optionals_map[option_string]
                             explicit_arg = new_explicit_arg
                         else
-                            msg = "ignored explicit argument #{explicit_arg}"
-                            #@error(action.getName() + ': ' + msg)
-                            throw new ArgumentError(action, msg)
+                            if false
+                                msg = "ignored explicit argument #{explicit_arg}"
+                                #@error(action.getName() + ': ' + msg)
+                                throw new ArgumentError(action, msg)
+                            else
+                                # alt handling of unknown explicit_arg
+                                # http://bugs.python.org/issue16142
+                                extras.push(option_string)
+                                explicit_arg = new_explicit_arg
 
                     # if the action expect exactly one argument, we've
                     # successfully matched the option; exit the loop
