@@ -1060,6 +1060,8 @@ class _SubParsersAction extends Action
         options.dest = options.dest ? $$.SUPPRESS
         options.nargs = $$.PARSER
         options.choices = @_name_parser_map
+        # normal positional required test does not apply to subparsers
+        options.required = options.required ? true
         super(options)
         @debug = options.debug
 
@@ -1107,7 +1109,7 @@ class _SubParsersAction extends Action
         # select the parser
         parser = @_name_parser_map[parser_name] ? null
         if parser == null
-            choices = _.keys(@.name_parser.map).join(', ')
+            choices = _.keys(@_name_parser_map).join(', ')
             # we get an invalid choices error first
             msg = "unknown parser #{parse_name} (choices: #{choices})"
             # throw new Error(msg)
@@ -1122,6 +1124,18 @@ class _SubParsersAction extends Action
               namespace[$$._UNRECOGNIZED_ARGS_ATTR] = []
             for astring in arg_strings
               namespace[$$._UNRECOGNIZED_ARGS_ATTR].push(astring)
+    getName: () ->
+        # essentially the same as _get_action_name
+        # custom for subparser, list choices if other name not give
+        if @metavar != null and @metavar != $$.SUPPRESS
+            return @metavar
+        else if @dest? and @dest != $$.SUPPRESS
+            return @dest;
+        else
+            choices = _.keys(@_name_parser_map).join('/')
+            return "{#{choices}}"
+
+
 
 action = {}
 action.ActionHelp = _HelpAction
@@ -2266,10 +2280,12 @@ class ArgumentParser extends _ActionsContainer
 
         # if we didn't use all the Positional objects, there were too few
         # arg strings supplied.
-        if positionals.length>0
-            @error('too few arguments')
+        # removed in latest py: see http://bugs.python.org/issue9253
+        #if positionals.length>0
+        #    @error('too few arguments')
 
         # make sure all required actions were present
+        required_actions = []
         for action in @_actions
             ###
             if action.required
@@ -2279,8 +2295,9 @@ class ArgumentParser extends _ActionsContainer
             #DEBUG action.dest, _.pluck(seen_actions,'dest')
             if action not in seen_actions
                 if action.required
-                    @error("argument #{action.getName()} is required")
-                    # modification in dev python that can show multiple missing actions
+                    required_actions.push(action.getName())
+                    #@error("argument #{action.getName()} is required")
+                    ## modification in dev python that can show multiple missing actions
                 else
                     # Convert action default now instead of doing it before
                     # parsing arguments to avoid calling convert functions
@@ -2293,6 +2310,13 @@ class ArgumentParser extends _ActionsContainer
                             namespace[action.dest]? \
                             and action.defaultValue == namespace[action.dest]
                         namespace[action.dest] = @_get_value(action, action.defaultValue)
+
+        if required_actions.length>0
+            # py had problems with action names that are None
+            # also subparsers didn't return a meaningful name
+            required_actions = required_actions.join(',')
+            msg = "the following argument(s) are required: #{required_actions}"
+            @error(msg)
 
         # make sure all required groups had one option present
         action_used = false
@@ -3058,6 +3082,7 @@ if TEST
         parser.addArgument(['--onetwo'], {nargs: 2});
         testparse(['--onetwo', 'one', 'two']);
         testparse(['--onetwo', 'one', '-two'])
+        testparse(['--onetwo', 'one', '--', 'two'])
 
         parser = new ArgumentParser({debug:true, args_default_to_positional:true});
         parser.addArgument(['--one'],{nargs:1});

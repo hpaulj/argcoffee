@@ -69,7 +69,9 @@ describe('sub-commands', function () {
   it("should drop down with empty args ('too few arguments' error)", function () {
     assert.throws(
       function () {parser.parseArgs([]); },
-      /too few arguments/
+      // /too few arguments/
+      /the following argument\(s\) are required: subcommand_name/i
+      // more informative error message
     );
   });
 

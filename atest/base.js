@@ -70,7 +70,9 @@ describe('base', function () {
 
     assert.throws(
       function ()  {parser.parseArgs([]); },
-      /too few arguments/
+      // /too few arguments/
+      // change to more informative error message
+      /the following argument\(s\) are required: baz/i
     );
   });
 
