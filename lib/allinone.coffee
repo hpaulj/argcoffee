@@ -515,7 +515,8 @@ class HelpFormatter
         text = text.replace(/\[ *\]/g, ''); # remove empty groups
         text = text.replace(/\( *\)/g, '');
         text = text.replace(/\(([^|]*)\)/g, '$1'); # remove () from single action groups
-        text = _.str.strip(text);
+        # text = _.str.strip(text);
+        text = _.str.clean(text);  # rm duplicate spaces as well
         # return the text
         return text
 
@@ -1760,7 +1761,7 @@ class _MutuallyExclusiveGroup extends _ArgumentGroup
     _add_action: (action) ->
         if action.required
             msg = 'mutually exclusive arguments must be optional'
-            raise new Error(msg)
+            throw new Error(msg)
         # action = super(action)
         # super doesn't work here because an exclusive group is simply a
         # variation on group; an action can be in both an xgroup and a group
@@ -2204,6 +2205,20 @@ class ArgumentParser extends _ActionsContainer
             selected_pattern = arg_string_pattern[start_index...]
             DEBUG 'cp', selected_pattern
             arg_counts = match_partial(positionals, selected_pattern)
+
+            # issue 14191, intermixing optionals and positionals
+            # partial fix here, preventing a '*' from being consumed by 1st
+            # positional block of arguments
+
+            # lop off the last match if count is 0 and there's an 'O' in remaining pattern
+            # e.g.  'AOAA',[1,0],[null,'*']
+            if 'O' in arg_string_pattern[start_index..]
+                # if there is an optional after this, remove
+                # 'empty' positionals from the current match
+                while arg_counts.length>1 and arg_counts[arg_counts.length-1]==0
+                    console.log('mixed o&p:', arg_counts, arg_string_pattern)
+                    arg_counts.pop()
+                    # console.log('trimmed',[x[0].dest,x[1]] for x in _.zipShortest(positionals, arg_counts))
 
             # slice off the appropriate arg strings for each Positional
             # and add the Positional and its args to the list
