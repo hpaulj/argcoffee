@@ -1112,7 +1112,7 @@ class _SubParsersAction extends Action
         if parser == null
             choices = _.keys(@_name_parser_map).join(', ')
             # we get an invalid choices error first
-            msg = "unknown parser #{parse_name} (choices: #{choices})"
+            msg = "unknown parser #{parser_name} (choices: #{choices})"
             # throw new Error(msg)
             throw new ArgumentError(@, msg)
 
@@ -2216,9 +2216,8 @@ class ArgumentParser extends _ActionsContainer
                 # if there is an optional after this, remove
                 # 'empty' positionals from the current match
                 while arg_counts.length>1 and arg_counts[arg_counts.length-1]==0
-                    console.log('mixed o&p:', arg_counts, arg_string_pattern)
+                    DEBUG('mixed o&p:', arg_counts, arg_string_pattern)
                     arg_counts.pop()
-                    # console.log('trimmed',[x[0].dest,x[1]] for x in _.zipShortest(positionals, arg_counts))
 
             # slice off the appropriate arg strings for each Positional
             # and add the Positional and its args to the list
@@ -2773,40 +2772,6 @@ class ArgumentParser extends _ActionsContainer
             # @error(action.getName() + ': ' + msg)
             throw new ArgumentError(action, msg)
 
-    ###
-    # argument_parser.js has more elaborate checkvalue
-        ArgumentParser.prototype._checkValue = function (action, value) {
-      // converted value must be one of the choices (if specified)
-      var choices = action.choices;
-      if (!!choices) {
-        // choise for argument can by array or string
-        if ((_.isString(choices) || _.isArray(choices)) &&
-            choices.indexOf(value) !== -1) {
-          return;
-        }
-        // choise for subparsers can by only hash
-        if (_.isObject(choices) && !_.isArray(choices) && choices[value]) {
-          return;
-        }
-
-        if (_.isString(choices)) {
-          choices = choices.split('').join(', ');
-        }
-        else if (_.isArray(choices)) {
-          choices =  choices.join(', ');
-        }
-        else {
-          choices =  _.keys(choices).join(', ');
-        }
-        var message = _.str.sprintf(
-          'Invalid choice: %(value)s (choose from [%(choices)s])',
-          {value: value, choices: choices}
-        );
-        throw argumentError(action, message);
-      }
-    };
-    ###
-
     # ===============
     # Help formatting methods
     # ===============
@@ -2831,7 +2796,6 @@ class ArgumentParser extends _ActionsContainer
             formatter.endSection()
         formatter.addText(@epilog)
         return formatter.formatHelp()
-    #formatHelp: () -> @format_help()
     formatHelp: @::format_help
 
     _get_formatter: () ->
@@ -2840,11 +2804,9 @@ class ArgumentParser extends _ActionsContainer
 
     printUsage: () ->
         @_printMessage(@format_usage())
-    #print_usage: () -> @printUsage()
     print_usage: @::printUsage
     printHelp: () ->
         @_printMessage(@format_help())
-    # print_help: () -> @printHelp()
     print_help: @::printHelp
 
     #_printMessage: (message, stream) ->
