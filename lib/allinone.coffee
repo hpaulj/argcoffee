@@ -1644,7 +1644,8 @@ class _ActionsContainer
             if not dest
                 msg = "dest= is required for options like #{option_string}"
                 throw new Error(msg)
-            dest = dest.replace('-', '_')
+            # dest = dest.replace('-', '_')
+            dest = dest.replace(/-/g, '_');
 
         # return the updated keyword arguments
         # return dict(options, dest=dest, option_strings=option_strings)
