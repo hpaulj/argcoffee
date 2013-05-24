@@ -2081,7 +2081,6 @@ class ArgumentParser extends _ActionsContainer
                     option_string_indices[i] = option_tuple
                     pattern = 'O'
                 arg_string_pattern_parts.push(pattern)
-
         # join the pieces together to form the pattern
         arg_string_pattern = arg_string_pattern_parts.join('')
         DEBUG 'pattern:',arg_string_pattern, _.keys(option_string_indices)
@@ -2114,7 +2113,7 @@ class ArgumentParser extends _ActionsContainer
                 #DEBUG 'taken_action:',action.dest,namespace.repr()
                 #DEBUG '    ', argument_values, option_string
 
-        consume_optional = (start_index) =>
+        consume_optional = (start_index, no_action=false, penult=-1) =>
             # get the optional identified at this index
             option_tuple = option_string_indices[start_index]
             [action, option_string, explicit_arg] = option_tuple
@@ -2180,8 +2179,29 @@ class ArgumentParser extends _ActionsContainer
                     #DEBUG 'consume optional, push action tuple'
                     start = start_index + 1
                     selected_patterns = arg_string_pattern[start...]
-                    #DEBUG '    ', start, arg_string_pattern, action.dest
+                    DEBUG '    ', start, arg_string_pattern, action.dest
                     arg_count = match_argument(action, selected_patterns)
+
+                    # if action takes a variable number of arguments, see
+                    # if it needs to share any with remaining positionals
+                    DEBUG action.dest, arg_count, selected_patterns, _.str.count(selected_patterns, 'O')
+                    if @_is_nargs_variable(action)
+                        # variable range of args for this action
+                        slots = @_match_arguments_partial([action].concat(positionals), selected_patterns)
+                        DEBUG '    opt+pos slots',slots
+                        shared_count = slots[0]
+                    else
+                        shared_count = null
+
+                    # penult controls whether this uses this shared_count
+                    # the last optional (ultimate) usually can share
+                    # but earlier ones (penult) might also
+                    if shared_count? and _.str.count(selected_patterns,'O')<=penult
+                        DEBUG '    COUNTS:',arg_count, shared_count
+                        if arg_count>shared_count
+                            DEBUG "    changing arg_count #{arg_count} to shared_count #{shared_count}"
+                            arg_count = shared_count
+
                     stop = start + arg_count
                     args = arg_strings[start...stop]
                     action_tuples.push([action, args, option_string])
@@ -2192,6 +2212,8 @@ class ArgumentParser extends _ActionsContainer
             # assert action_tuples
             #for [action, args, option_string] in action_tuples
             #    take_action(action, args, option_string)
+            if no_action
+                return stop
             take_action(tuple...) for tuple in action_tuples
             return stop
 
@@ -2200,11 +2222,11 @@ class ArgumentParser extends _ActionsContainer
         positionals = @_get_positional_actions()
 
         # function to convert arg_strings into positional actions
-        consume_positionals = (start_index) =>
+        consume_positionals = (start_index, no_action=false) =>
             # match as many Positionals as possible
             match_partial = @_match_arguments_partial
             selected_pattern = arg_string_pattern[start_index...]
-            DEBUG 'cp', selected_pattern
+            #DEBUG 'cp', selected_pattern
             arg_counts = match_partial(positionals, selected_pattern)
 
             # issue 14191, intermixing optionals and positionals
@@ -2239,6 +2261,7 @@ class ArgumentParser extends _ActionsContainer
                         args[ii..ii] = []
                         DEBUG 'take action:',action.dest, args
                 start_index += arg_count
+                #if not no_action
                 take_action(action, args)
 
             # slice off the Positionals that we just parsed and return the
@@ -2246,52 +2269,71 @@ class ArgumentParser extends _ActionsContainer
             positionals[..] = positionals[arg_counts.length...]
             return start_index
 
-        # consume Positionals and Optionals alternately, until we have
-        # passed the last option string
-        extras = []
-        start_index = 0
-        index_keys = (+x for x in _.keys(option_string_indices))
-        if index_keys.length>0
-            max_option_string_index = Math.max(index_keys...)
+        consume_loop = (no_action=false, penult=-1) =>
+            # consume Positionals and Optionals alternately, until we have
+            # passed the last option string
+            start_index = 0
+            index_keys = (+x for x in _.keys(option_string_indices))
+            if index_keys.length>0
+                max_option_string_index = Math.max(index_keys...)
+            else
+                max_option_string_index = -1
+            foo = (start_index) ->
+                (index for index in index_keys when index >= start_index)
+            while start_index <= max_option_string_index
+                # consume any Positionals preceding the next option
+                #next_option_string_index = Math.min((index for index in index_keys when index >= start_index)...)
+                next_option_string_index = Math.min(foo(start_index)...)
+                if start_index != next_option_string_index
+                    positionals_end_index = consume_positionals(start_index, no_action)
+
+                    # only try to parse the next optional if we didn't consume
+                    # the option string during the positionals parsing
+                    if positionals_end_index > start_index
+                        start_index = positionals_end_index
+                        continue
+                    else
+                        start_index = positionals_end_index
+
+                # if we consumed all the positionals we could and we're not
+                # at the index of an option string, there were extra arguments
+                if start_index not in index_keys
+                    strings = arg_strings[start_index...next_option_string_index]
+                    extras.push(strings...)
+                    start_index = next_option_string_index
+
+                # consume the next optional and any arguments for it
+                start_index = consume_optional(start_index, no_action, penult)
+
+            # consume any positionals following the last Optional
+            stop_index = consume_positionals(start_index, no_action)
+
+            # if we didn't consume all the argument strings, there were extras
+            extras.push(arg_strings[stop_index..]...)
+            return extras
+
+        penult = _.str.count(arg_string_pattern, 'O') # # of 'O' in 'AOAA' patttern
+        opt_actions = [v[0] for k,v of option_string_indices when v[0]]
+        _cnt = 0
+        if @_is_nargs_variable(opt_actions) and positionals and penult>1
+            # if there are positionals and one or more 'variable' optionals
+            # do test loops to see when to start sharing
+            # test loops
+            for ii in [0...penult]
+                extras = []
+                positionals = @_get_positional_actions()
+                extras = consume_loop(true, ii)
+                _cnt += 1
+                if positionals.length==0
+                    break
+
         else
-            max_option_string_index = -1
-        #DEBUG 'index',_.keys(option_string_indices), max_option_string_index
-        foo = (start_index) ->
-            (index for index in index_keys when index >= start_index)
-        while start_index <= max_option_string_index
-
-            # consume any Positionals preceding the next option
-            #next_option_string_index = Math.min((index for index in index_keys when index >= start_index)...)
-            next_option_string_index = Math.min(foo(start_index)...)
-            if start_index != next_option_string_index
-                #DEBUG 'lp consume positional:',start_index
-                positionals_end_index = consume_positionals(start_index)
-
-                # only try to parse the next optional if we didn't consume
-                # the option string during the positionals parsing
-                if positionals_end_index > start_index
-                    start_index = positionals_end_index
-                    continue
-                else
-                    start_index = positionals_end_index
-
-            # if we consumed all the positionals we could and we're not
-            # at the index of an option string, there were extra arguments
-            if start_index not in index_keys
-                strings = arg_strings[start_index...next_option_string_index]
-                extras.push(strings...)
-                start_index = next_option_string_index
-
-            # consume the next optional and any arguments for it
-            #DEBUG 'consume optional',start_index
-            start_index = consume_optional(start_index)
-
-        # consume any positionals following the last Optional
-        #DEBUG 'consume positional',start_index
-        stop_index = consume_positionals(start_index)
-
-        # if we didn't consume all the argument strings, there were extras
-        extras.push(arg_strings[stop_index..]...)
+            # don't need a test run; but do use action+positionals parsing
+            ii = 0
+        # now the real parsing loop, that takes action
+        extras = []
+        positionals = @_get_positional_actions()
+        extras = consume_loop(false, ii)
 
         # if we didn't use all the Positional objects, there were too few
         # arg strings supplied.
@@ -2660,6 +2702,17 @@ class ArgumentParser extends _ActionsContainer
         # return the pattern
         #DEBUG nargs, nargs_pattern
         return nargs_pattern
+
+    _is_nargs_variable: (action) ->
+        # return true if action, or any action in a list, takes variable number of args
+        if _.isArray(action)
+            return _.any(@_is_nargs_variable(a) for a in action)
+        else
+            if action.nargs in [$$.OPTIONAL, $$.ZERO_OR_MORE, $$.ONE_OR_MORE, $$.REMAINDER, $$.PARSER]
+                return true
+            #if _is_mnrep(action.nargs):
+            #     return True
+            return false
 
     # ========================
     # Value conversion methods
