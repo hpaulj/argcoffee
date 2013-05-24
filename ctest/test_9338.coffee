@@ -15,7 +15,7 @@ run = (argv, ns=null) =>
         if ns
             assert.deepEqual(args,ns)
     catch e
-        print(e)
+        print(e.message)
 
 aa=[]
 parser = argparse.newParser()
@@ -148,4 +148,25 @@ parser.add_argument('need_one', {nargs:'+'})
 run('')
 # efrror: the following arguments are required: req_pos, -req_opt, need_one
 
-# skips subparsers and prefix_chars
+parser = argparse.newParser()
+parser.add_argument('-x', {nargs:'{2,4}'})
+parser.add_argument('y', {type:'int'})
+console.log parser.format_usage()
+run('-x 1') # error
+run('-x 1 2') # error
+run('-x 1 2 3', NS({x:['1','2'], y:3}))
+run('-x 1 2 3 4', NS({x:['1','2','3'], y:4}))
+run('-x 1 2 3 -- 4', NS({x:['1','2','3'], y:4}))
+run('4 -x 1 2 3', NS({x:['1','2','3'], y:4}))
+
+parser = argparse.newParser()
+parser.add_argument('-x', {nargs:[1,3]})
+parser.add_argument('y', {type:'int', nargs:'{2,}'})
+console.log parser.format_usage()
+run('-x 1') # error
+run('-x 1 2') # error
+run('-x 1 2 3', NS({x:['1'], y:[2,3]}))
+run('-x 1 2 3 4 5 6', NS({x:['1','2','3'], y:[4,5,6]}))
+
+
+

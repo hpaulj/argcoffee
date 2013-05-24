@@ -117,6 +117,48 @@ __repr__ = (obj, arglist = null) ->
     return "#{type_name} {#{ arg_strings.join(', ')}}"
 
 
+# basic methods in Python, used to access Namespace
+# with these do we need a special Namespace class?
+getattr = (obj, key, defaultValue) ->
+    obj[key] ? defaultValue
+setattr = (obj, key, value) ->
+    obj[key] = value
+hasattr = (obj, key) ->
+    obj[key]?
+
+_ensure_value = (namespace, name, value) ->
+    if getattr(namespace, name, null) is null
+        setattr(namespace, name, value)
+    return getattr(namespace, name)
+
+
+_is_mnrep = (nargs) ->
+    # test for re like stirng, {m,n}
+    # return valid nargs or false if not valid
+    # also convers a [m,n] array to equivalent
+    # looks like {2,} works, but not {,2}
+    # mostly depends on builtin RegExp for functionality
+    if not nargs?
+        return false
+    if not isNaN(nargs) # int
+        return false
+    if _.isArray(nargs)
+        if nargs.length==2
+            nargs = "{#{nargs[0]},#{nargs[1]}}"
+            nargs = nargs.replace('null','')
+        else
+            throw new Error('nargs array requires 2 arguments')
+    m = nargs.match(/{(\d*),(\d*)}/)
+    if m
+        try
+            new RegExp("[-A]"+nargs)
+            return nargs
+        catch e
+            # syntaxError: Invalid regular expression
+            throw new Error(e)
+    else
+        return false
+
 # ===============
 # Formatting Help
 # ===============
@@ -645,6 +687,8 @@ class HelpFormatter
             result = '...'
         else if nargs == $$.PARSER
             result = pformat('%s ...', get_metavar(1))
+        else if _is_mnrep(nargs)
+            result = pformat('%s%s', [get_metavar(1),nargs])
         else
             if not isFinite(nargs)  # other integer test?, '1' passes
               throw new Error("nargs '#{nargs}' not a valid string or integer")
@@ -1287,20 +1331,6 @@ fileType = (options={flags:'r'}) ->
 # ===========================
 # Optional and Positional Parsing
 # ===========================
-
-# basic methods in Python, used to access Namespace
-# with these do we need a special Namespace class?
-getattr = (obj, key, defaultValue) ->
-    obj[key] ? defaultValue
-setattr = (obj, key, value) ->
-    obj[key] = value
-hasattr = (obj, key) ->
-    obj[key]?
-
-_ensure_value = (namespace, name, value) ->
-    if getattr(namespace, name, null) is null
-        setattr(namespace, name, value)
-    return getattr(namespace, name)
 
 if true
   # in effect, a name change
@@ -1970,6 +2000,14 @@ class ArgumentParser extends _ActionsContainer
         # focus on the arguments that the parent container does not know about
         # check nargs and metavar tuple
         # use 'bind' so a group can use its container's method
+
+        # test for {m,n} rep; conver an array [m,n] to {}
+        try
+            nargs = _is_mnrep(action.nargs)
+            if nargs
+                action.nargs = nargs
+        catch error
+            throw new ArgumentError(action, error.message)
         try
             @_get_formatter()._format_args(action, null)
         catch error
@@ -2688,6 +2726,9 @@ class ArgumentParser extends _ActionsContainer
         else if nargs == $$.PARSER
             nargs_pattern = '(-*A[-AO]*)'
 
+        else if _is_mnrep(nargs)
+            nargs_pattern = "([-A]#{nargs})"
+
         # all others should be integers
         else
             # nargs_pattern = '(-*%s-*)' % '-*'.join('A' * nargs)
@@ -2710,8 +2751,8 @@ class ArgumentParser extends _ActionsContainer
         else
             if action.nargs in [$$.OPTIONAL, $$.ZERO_OR_MORE, $$.ONE_OR_MORE, $$.REMAINDER, $$.PARSER]
                 return true
-            #if _is_mnrep(action.nargs):
-            #     return True
+            if _is_mnrep(action.nargs)
+                return true
             return false
 
     # ========================
