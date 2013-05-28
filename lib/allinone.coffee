@@ -687,6 +687,8 @@ class HelpFormatter
             result = '...'
         else if nargs == $$.PARSER
             result = pformat('%s ...', get_metavar(1))
+        else if nargs == $$.SUPPRESS
+            result = ''
         else if _is_mnrep(nargs)
             result = pformat('%s%s', [get_metavar(1),nargs])
         else
@@ -2726,6 +2728,10 @@ class ArgumentParser extends _ActionsContainer
         else if nargs == $$.PARSER
             nargs_pattern = '(-*A[-AO]*)'
 
+        # suppress action, like nargs=0
+        else if nargs == $$.SUPPRESS
+            nargs_pattern = '(-*-*)'
+
         else if _is_mnrep(nargs)
             nargs_pattern = "([-A]#{nargs})"
 
@@ -2754,6 +2760,98 @@ class ArgumentParser extends _ActionsContainer
             if _is_mnrep(action.nargs)
                 return true
             return false
+
+    # ========================
+    # Alt command line argument parsing, allowing free intermix
+    # ========================
+
+    parse_intermixed_args: (args=null, namespace=null) ->
+        [args, argv] = @parse_known_intermixed_args(args, namespace)
+        if argv.length>0
+            msg = "unrecognized arguments: #{argv.join(' ')}"
+            @error(msg)
+        return args
+
+    parse_known_intermixed_args: (args=null, namespace=null, _fallback=null)->
+        # args, namespace - as used by parse_known_args
+        # returns a namespace and list of extras
+
+        # positional can be freely intermixed with optionals
+        # optionals are first parsed with all positional arguments deactivated
+        # the 'extras' are then parsed
+        # positionals are 'deactivated' by setting nargs=0
+
+        positionals = @_get_positional_actions()
+
+        a =  (action for action in positionals when action.nargs in [$$.PARSER, $$.REMAINDER])
+        if _.any(a)
+            if _fallback?
+                return _fallback(args, namespace)
+            else
+                a = a[0]
+                err = new ArgumentError(a, "parse_intermixed_args: positional arg with nargs=#{a.nargs}")
+                @error(err)
+
+        a = (action.dest for action in group._group_actions when action in positionals \
+            for group in @_mutually_exclusive_groups)
+        if _.any(_.flatten(a))
+            if _fallback?
+                return _fallback(args, namespace)
+            else
+                @error('parse_intermixed_args: positional in mutuallyExclusiveGroup')
+
+        save_usage = @usage
+        try
+            if @usage is null
+                # capture the full usage for use in error messages
+                @usage = @format_usage()[7..]
+
+            for action in positionals
+                action.save_nargs = action.nargs
+                if false
+                    action.nargs = 0
+                else
+                    # alt method of deactivating positionals
+                    action.nargs = $$.SUPPRESS
+                    action.save_default = action.defaultValue
+                    action.defaultValue = $$.SUPPRESS
+            try
+                args = @parse_known_args(args, namespace)
+                namespace = args[0]
+                remaining_args = args[1]
+                for action in positionals
+                    if action.nargs == 0
+                        # remove [] values from namespace
+                        delete namespace[action.dest]
+                    else
+                        if namespace[action.dest]?
+                            # don't expect such an element
+                            @error("did not expect a suppressed action value")
+            finally
+                for action in positionals
+                    action.nargs = action.save_nargs
+                    if true
+                        action.defaultValue = action.save_default
+            # parse positionals
+            # optionals aren't normally required, but just in case, turn that off
+            optionals = @_get_optional_actions()
+            for action in optionals
+                action.save_required = action.required
+                action.required = false
+            for group in @_mutually_exclusive_groups
+                group.save_required = group.required
+                group.required = false
+            try
+                [namespace, extras] = @parse_known_args(remaining_args, namespace)
+            finally
+                for action in optionals
+                    action.required = action.save_required
+                for group in @_mutually_exclusive_groups
+                    group.required = group.save_required
+        finally
+            @usage = save_usage
+        return [namespace, extras]
+
 
     # ========================
     # Value conversion methods
@@ -2813,6 +2911,10 @@ class ArgumentParser extends _ActionsContainer
             value = (@_get_value(action, v) for v in arg_strings)
             #DEBUG 'value from subparse', value
             @_check_value(action, value[0])
+
+        # SUPPRESS argument does not put anything in the namespace
+        else if action.nargs == $$.SUPPRESS
+            value = $$.SUPPRESS
 
         # all other types of nargs produce a list
         else
@@ -2963,7 +3065,8 @@ class ArgumentParser extends _ActionsContainer
             args.push(options)
             options = {}
           @addArgument(args, options)
-
+    parseIntermixedArgs: @::parse_intermixed_args
+    parseKnownIntermixedArgs: @::parse_known_intermixed_args
 
 ###
 values py exports

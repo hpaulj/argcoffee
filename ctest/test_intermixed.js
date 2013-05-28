@@ -26,16 +26,16 @@ describe('Intermixed:', function () {
     parser = new ArgumentParser({debug: true});
     parser.addArgument(['cmd']);
     parser.addArgument(['-f', '--foo']);
-    parser.addArgument(['rest'], {nargs: '*'});
+    parser.addArgument(['rest'], {nargs: '*', type:'int'});
     failures = ['',  // the following arguments are required: cmd, rest
                 'cmd 1 -f1 2', // unrecognized arguments: 2
                 'cmd 1 --foo 1 2',
                 ];
     successes = [
-        ['-f1 cmd 1 2', {cmd: 'cmd', foo: '1', rest: ['1', '2']}],
-        ['cmd -f1 1 2', {cmd: 'cmd', foo: '1', rest: ['1', '2']}], // error
-        ['cmd 1 2 --foo 1', {cmd: 'cmd', foo: '1', rest: ['1', '2']}],
-        ['cmd --foo 1 1 2',{cmd: 'cmd', foo: '1', rest: ['1', '2']}]
+        ['-f1 cmd 1 2', {cmd: 'cmd', foo: '1', rest: [1, 2]}],
+        ['cmd -f1 1 2', {cmd: 'cmd', foo: '1', rest: [1, 2]}], // error
+        ['cmd 1 2 --foo 1', {cmd: 'cmd', foo: '1', rest: [1, 2]}],
+        ['cmd --foo 1 1 2',{cmd: 'cmd', foo: '1', rest: [1, 2]}]
     ];
     for (var ii=0;ii<failures.length;ii++) {
       assert.throws(

@@ -1,5 +1,6 @@
 argparse = require('argcoffee')
-{PARSER, REMAINDER} = argparse.Const
+{PARSER, REMAINDER, SUPPRESS} = argparse.Const
+$$ = argparse.Const
 {ArgumentParser} = argparse
 {ArgumentError} = argparse
 assert = require('assert')
@@ -15,8 +16,6 @@ parse_intermixed_args = (args=null, namespace=null) ->
         @error(msg)
     return args
 
-ArgumentParser::parse_intermixed_args = parse_intermixed_args
-
 parse_known_intermixed_args = (args=null, namespace=null, _fallback=null)->
     # args, namespace - as used by parse_known_args
     # returns a namespace and list of extras
@@ -28,7 +27,7 @@ parse_known_intermixed_args = (args=null, namespace=null, _fallback=null)->
 
     positionals = @_get_positional_actions()
 
-    a =  (action for action in positionals when action.nargs in [PARSER, REMAINDER])
+    a =  (action for action in positionals when action.nargs in [$$.PARSER, $$.REMAINDER])
     if _.any(a)
         if _fallback?
             return _fallback(args, namespace)
@@ -37,8 +36,10 @@ parse_known_intermixed_args = (args=null, namespace=null, _fallback=null)->
             err = new ArgumentError(a, "parse_intermixed_args: positional arg with nargs=#{a.nargs}")
             @error(err)
 
-    if _.any((action.dest for action in group._group_actions when action in positionals) \
+    a = (action.dest for action in group._group_actions when action in positionals \
             for group in @_mutually_exclusive_groups)
+    a = _.flatten(a)
+    if _.any(a)
         if _fallback?
             return _fallback(args, namespace)
         else
@@ -47,25 +48,35 @@ parse_known_intermixed_args = (args=null, namespace=null, _fallback=null)->
     save_usage = @usage
     try
         if @usage is null
-            # capture the full usage (could restore to null at end)
+            # capture the full usage for use in error messages
             @usage = @format_usage()[7..]
 
         for action in positionals
             action.save_nargs = action.nargs
-            action.nargs = 0
+            if true
+                action.nargs = 0
+            else
+                # alt method of deactivating positionals
+                action.nargs = $$.SUPPRESS
+                action.save_default = action.defaultValue
+                action.defaultValue = $$.SUPPRESS
         try
             args = @parse_known_args(args, namespace)
             namespace = args[0]
             remaining_args = args[1]
             for action in positionals
-                delete namespace[action.dest] # remove [] values from namespace
-        catch error
-            warn('error from 1st parse_known_args')
-            throw error
+                if action.nargs == 0
+                    delete namespace[action.dest] # remove [] values from namespace
+                else
+                    if namespace[action.dest]?
+                        # don't expect such an element
+                        warn("removing #{action.dest}=#{namespace[action.dest]}")
+                        delete namespace[action.dest]
         finally
             for action in positionals
                 action.nargs = action.save_nargs
-        #warn("1st:", namespace, remaining_args)
+                if true
+                    action.defaultValue = action.save_default
         # parse positionals
         # optionals aren't normally required, but just in case, turn that off
         optionals = @_get_optional_actions()
@@ -77,8 +88,6 @@ parse_known_intermixed_args = (args=null, namespace=null, _fallback=null)->
             group.required = false
         try
             [namespace, extras] = @parse_known_args(remaining_args, namespace)
-        catch error
-            throw error
         finally
             for action in optionals
                 action.required = action.save_required
@@ -88,9 +97,12 @@ parse_known_intermixed_args = (args=null, namespace=null, _fallback=null)->
         @usage = save_usage
     return [namespace, extras]
 
-ArgumentParser::parse_known_intermixed_args = parse_known_intermixed_args
+if true #not ArgumentParser:: parse_intermixed_args?
+    ArgumentParser::parse_intermixed_args = parse_intermixed_args
+    ArgumentParser::parse_known_intermixed_args = parse_known_intermixed_args
 
 parse_fallback_args = (args=null, namespace=null) ->
+    # use the fallback option
     fallback = (args...) =>
         warn('fallingback to parse_known_args')
         return @parse_known_args(args...)
@@ -99,6 +111,28 @@ parse_fallback_args = (args=null, namespace=null) ->
         msg = "unrecognized arguments: #{argv.join(' ')}"
         @error(msg)
     return args
+
+parse_fallback_args = (args=null, namespace=null) ->
+    # alternative, using error catching
+    # this argparse has a debug option, so no need to define a different error method
+    # just temporarily ensure that debug is set to true
+    try
+        save_debug = @debug
+        @debug = true
+        [args1, argv] = @parse_known_intermixed_args(args, namespace)
+    catch error
+        if error.message.search('parse_intermixed_args')>-1
+            warn('fallbacking on parse_known_args')
+            @debug = save_debug # assuming finally acts later
+            [args1, argv] = @parse_known_args(args, namespace)
+        else
+            throw error
+    finally
+        @debug = save_debug
+    if argv.length>0
+        msg = "unrecognized arguments: #{argv.join(' ')}"
+        @error(msg)
+    return args1
 
 ArgumentParser::parse_fallback_args = parse_fallback_args
 exports.ArgumentParser = ArgumentParser
@@ -131,7 +165,7 @@ if TEST
               'cmd1 --foo x 1 2 --bar y 3',
               'cmd1 --foo x 1 --bar y 2 --error 3',
               'cmd1 --foo x 1 --error 2 --bar y 3',
-              'cmd1 1 2',
+              'cmd1 1 2', #  the following argument(s) are required: --foo
               'cmd1',
               '--foo 1', # error: the following arguments are required: cmd, rest
               '--foo',  # error: argument --foo: expected one argument
@@ -176,7 +210,7 @@ if TEST
     # ================
     header('\nsubparsers case')
     # skip the 2 step
-    p = argparse.newParser()
+    p = argparse.newParser();
     sp = p.add_subparsers()
     spp = sp.add_parser('cmd')
     spp.add_argument('foo')
@@ -207,6 +241,8 @@ if TEST
     group.add_argument('--bar', {help:'bar help'})
     group.add_argument('--baz', {nargs:'?', constant:'Z', help:'baz help'})
 
+    print parser.parse_args(split('--bar X'))
+    print parser.parse_intermixed_args(split('--bar X'))
     print parser.parse_fallback_args(split('--bar X'))
 
     header('\nmutually exclusive case, both')
@@ -220,7 +256,6 @@ if TEST
     try
         print parser.parse_intermixed_args([])
         # error: parse_intermixed_args: positional in mutuallyExclusiveGroup
-
     catch error
         print ""+error
     try
@@ -230,11 +265,3 @@ if TEST
         print ""+error
     print parser.parse_fallback_args(split('--spam 1'))
 
-"""
-when parse_intermixed_args is used parse_args, test_argparse.py gives
-errors in :
-TestActionUserDefined
-
-fail in:
-TestMessageContentError
-"""
