@@ -97,7 +97,7 @@ parse_known_intermixed_args = (args=null, namespace=null, _fallback=null)->
         @usage = save_usage
     return [namespace, extras]
 
-if true #not ArgumentParser:: parse_intermixed_args?
+if not ArgumentParser:: parse_intermixed_args?
     ArgumentParser::parse_intermixed_args = parse_intermixed_args
     ArgumentParser::parse_known_intermixed_args = parse_known_intermixed_args
 
@@ -129,6 +129,23 @@ parse_fallback_args = (args=null, namespace=null) ->
             throw error
     finally
         @debug = save_debug
+    if argv.length>0
+        msg = "unrecognized arguments: #{argv.join(' ')}"
+        @error(msg)
+    return args1
+
+parse_fallback_args = (args=null, namespace=null) ->
+    # alternative, using error catching
+    # this argparse has a debug option, so no need to define a different error method
+    # just temporarily ensure that debug is set to true
+    try
+        [args1, argv] = @parse_known_intermixed_args(args, namespace)
+    catch error
+        if error instanceof TypeError
+            warn('fallbacking on parse_known_args')
+            [args1, argv] = @parse_known_args(args, namespace)
+        else
+            throw error
     if argv.length>0
         msg = "unrecognized arguments: #{argv.join(' ')}"
         @error(msg)
@@ -202,10 +219,7 @@ if TEST
 
     argv = split('X A B -z Z'); print argv
     print parser.parse_known_args(argv)
-    try
-        print parser.parse_fallback_args(argv)
-    catch error
-        print ""+error
+    print parser.parse_fallback_args(argv)
 
     # ================
     header('\nsubparsers case')
@@ -231,6 +245,10 @@ if TEST
     try
         print(p.parse_intermixed_args([]))
         # warns only about -req_opt (in 1st parse step)
+    catch error
+        print ""+error
+    try
+        print(p.parse_fallback_args([]))
     catch error
         print ""+error
 

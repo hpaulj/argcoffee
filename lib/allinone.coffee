@@ -2772,33 +2772,25 @@ class ArgumentParser extends _ActionsContainer
             @error(msg)
         return args
 
-    parse_known_intermixed_args: (args=null, namespace=null, _fallback=null)->
+    parse_known_intermixed_args: (args=null, namespace=null)->
         # args, namespace - as used by parse_known_args
         # returns a namespace and list of extras
 
         # positional can be freely intermixed with optionals
         # optionals are first parsed with all positional arguments deactivated
         # the 'extras' are then parsed
-        # positionals are 'deactivated' by setting nargs=0
+        # positionals are 'deactivated' by setting nargs and defaultValue to SUPPRESS
 
         positionals = @_get_positional_actions()
 
         a =  (action for action in positionals when action.nargs in [$$.PARSER, $$.REMAINDER])
         if _.any(a)
-            if _fallback?
-                return _fallback(args, namespace)
-            else
-                a = a[0]
-                err = new ArgumentError(a, "parse_intermixed_args: positional arg with nargs=#{a.nargs}")
-                @error(err)
+            throw new TypeError("parse_intermixed_args: positional arg with nargs=#{a[0].nargs}")
 
         a = (action.dest for action in group._group_actions when action in positionals \
             for group in @_mutually_exclusive_groups)
         if _.any(_.flatten(a))
-            if _fallback?
-                return _fallback(args, namespace)
-            else
-                @error('parse_intermixed_args: positional in mutuallyExclusiveGroup')
+            throw new TypeError('parse_intermixed_args: positional in mutuallyExclusiveGroup')
 
         save_usage = @usage
         try
@@ -2808,13 +2800,9 @@ class ArgumentParser extends _ActionsContainer
 
             for action in positionals
                 action.save_nargs = action.nargs
-                if false
-                    action.nargs = 0
-                else
-                    # alt method of deactivating positionals
-                    action.nargs = $$.SUPPRESS
-                    action.save_default = action.defaultValue
-                    action.defaultValue = $$.SUPPRESS
+                action.nargs = $$.SUPPRESS
+                action.save_default = action.defaultValue
+                action.defaultValue = $$.SUPPRESS
             try
                 args = @parse_known_args(args, namespace)
                 namespace = args[0]
