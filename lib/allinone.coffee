@@ -2882,7 +2882,13 @@ class ArgumentParser extends _ActionsContainer
             else
                 value = arg_strings
                 #DEBUG value
-            @_check_value(action, value)
+            # @_check_value(action, value)
+            if _.isArray(value)
+              for avalue in value
+                @_check_value(action, avalue)
+            else
+              @_check_value(action, value)
+
 
         # single argument or optional argument produces a single value
         else if arg_strings.length == 1 and action.nargs in [null, $$.OPTIONAL]
