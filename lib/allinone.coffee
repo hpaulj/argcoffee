@@ -159,6 +159,41 @@ _is_mnrep = (nargs) ->
     else
         return false
 
+_format_choices = (choices, expand=false) ->
+    # consolidate the choices formatting in one place
+    # use formatting as before
+    # unless choices is not iterable
+    # in which case the repr()
+    # could make this an Action method
+    # another thing to use is the metavar
+    rep = (""+choices).replace(' ', '') # try any default formatting
+    # in py3 range(0,20) is like this
+    try
+        choice_strs = (""+choice for choice in choices)
+        if expand
+            result = choice_strs.join(', ')
+        else
+            result = choice_strs.join(',')
+            result "{#result}"
+    catch
+        result = rep
+    # potentially pick the shorter of rep or result
+    return result
+
+_expand_choices = (choices) ->
+    # copy from ArgumentParser._check_value
+    if _.isString(choices)
+        choices = choices.split(/\W+/) # 'white space' separators
+    if choices.length==1
+        choices = choices[0].split('') # individual letters
+    else if _.isArray(choices)
+        # pass
+    else if _.isObject(choices)
+        choices = _.keys(choices)
+    else
+        throw new Error('bad choices variable')
+    return choices
+
 # ===============
 # Formatting Help
 # ===============
@@ -556,7 +591,9 @@ class HelpFormatter
         text = text.replace(/\ ([\])])/g,'$1');
         text = text.replace(/\[ *\]/g, ''); # remove empty groups
         text = text.replace(/\( *\)/g, '');
-        text = text.replace(/\(([^|]*)\)/g, '$1'); # remove () from single action groups
+        # text = text.replace(/\(([^|]*)\)/g, '$1'); # remove () from single action groups
+        text = text.replace(/( )\(([^|]*)\)/g, '$1$2'); # remove () from single action groups
+        # but not from metavars like 'range(20)'
         # text = _.str.strip(text);
         text = _.str.clean(text);  # rm duplicate spaces as well
         # return the text
@@ -643,22 +680,9 @@ class HelpFormatter
         if action.metavar?
             result = action.metavar
         else if action.choices?
-          # copy from ArgumentParser._check_value
-          if _.isString(action.choices)
-            choices = action.choices
-            choices = choices.split(/\W+/) # 'white space' separators
-            if choices.length==1
-              choices = choices[0].split('') # individual letters
-          else if _.isArray(action.choices)
-            choices = action.choices
-          else if _.isObject(action.choices)
-            choices = _.keys(action.choices)
-          else
-            throw new Error('bad choices variable')
-          result = "{#{choices.join(',')}}"
+            result = "{#{_expand_choices(action.choices).join(',')}}"
         else
             result = default_metavar
-
         #format = (tuple_size) ->
         #    return (result for i in [0...tuple_size])
 
@@ -719,7 +743,8 @@ class HelpFormatter
             # python specific; e.g. fns have a __name__
             params[name] = params[name].__name__
         if params.choices?
-            choices_str = (''+c for c in params.choices).join(', ')
+            # choices_str = (''+c for c in params.choices).join(', ')
+            choices_str = _expand_choices(params.choices).join(', ')
             params.choices = choices_str
         return pnformat(@_get_help_string(action), params)
 
@@ -2949,16 +2974,11 @@ class ArgumentParser extends _ActionsContainer
         # converted value must be one of the choices (if specified)
         # py test for 'value not in choices', which works for string, list, dict keys
         if action.choices?
-          if _.isString(action.choices)
-            choices = action.choices
-            choices = choices.split(/\W+/) # 'white space' separators
-            if choices.length==1
-              choices = choices[0].split('') # individual letters
-          else if _.isArray(action.choices)
-            choices = action.choices
-          else if _.isObject(action.choices)
-            choices = _.keys(action.choices)
+          choices = _expand_choices(action.choices)
           if value not in choices
+            if action.metavar?
+                # try to allow for alt display
+                choices = action.metavar
             msg = "invalid choice: #{value} (choose from #{choices})"
             # @error(action.getName() + ': ' + msg)
             throw new ArgumentError(action, msg)
