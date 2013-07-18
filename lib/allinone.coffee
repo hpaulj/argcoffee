@@ -424,20 +424,15 @@ class HelpFormatter
 
             # build full usage string
             format = @_format_actions_usage
-            action_usage = format([].concat(optionals, positionals), groups)
-            usage = (s for s in [prog, action_usage] when s).join(' ')
+            action_parts = format([].concat(optionals, positionals), groups)
+            usage = (s for s in [].concat([prog], action_parts) when s).join(' ')
 
             # wrap the usage parts if it's too long
             text_width = @_width - @_current_indent
             if prefix.length + usage.length > text_width
+                opt_parts = format(optionals, groups)
+                pos_parts = format(positionals, groups)
 
-                # break usage into wrappable parts
-                part_regexp = /\(.*?\)+|\[.*?\]+|\S+/g
-                opt_usage = format(optionals, groups)
-                pos_usage = format(positionals, groups)
-
-                opt_parts = opt_usage.match(part_regexp) ? []
-                pos_parts = pos_usage.match(part_regexp) ? []
                 # helper for wrapping lines
                 get_lines = (parts, indent, prefix=null) ->
                     lines = []
@@ -447,7 +442,7 @@ class HelpFormatter
                     else
                         line_len = indent.length - 1
                     for part in parts
-                        if line_len + 1 + part.length > text_width
+                        if line.length and line_len + 1 + part.length > text_width
                             lines.push(indent + line.join(' '))
                             line = []
                             line_len = indent.length - 1
@@ -494,60 +489,72 @@ class HelpFormatter
         return prefix + usage + "\n\n"
 
     _format_actions_usage: (actions, groups) =>
-        # find group indices and identify actions in groups
-        group_actions = []
-        # set() in python; could use {}, but using action as key is awkward
-        inserts = {}
-        for group in groups
-            #try
-            start = actions.indexOf(group._group_actions[0])
-            #catch ValueError
-            #    continue
-            #else
-            # looks like it expects group actions to be defined in sequence
-            end = start + group._group_actions.length
-            if _.isEqual(actions[start...end], group._group_actions)
-                for action in group._group_actions
-                    group_actions.push(action)
-                if not group.required
-                    if start of inserts
-                        inserts[start] += ' ['
-                    else
-                        inserts[start] = '['
-                    inserts[end] = ']'
-                else
-                    if start of inserts
-                        inserts[start] += ' ('
-                    else
-                        inserts[start] = '('
-                    inserts[end] = ')'
-                for i in [start + 1...end]
-                    inserts[i] = '|'
-        # collect all actions format strings
         parts = []
-        # i = -1
-        for action, i in actions
-            # i++
-            # suppressed arguments are marked with null
-            # remove | separators for suppressed arguments
-            if action.help is $$.SUPPRESS
-                parts.push(null)
-                if inserts[i] == '|'
-                    delete inserts[i]
-                else if inserts[i + 1] == '|'
-                    delete inserts[i + 1]
+        i = 0
+        while i<actions.length
+            start = end = i
+            action = actions[i]
+            group_part = null
+            for group in groups
+                if group.no_usage? and group.no_usage
+                    continue
+                if group._group_actions and action == group._group_actions[0]
+                    end = start + group._group_actions.length
+                    if _.isEqual(actions[start...end], group._group_actions)
+                        group_part = @_format_group_usage(group)
+                        if group_part.length
+                            parts.push(group_part)
+                            console.log(parts)
+                        i = end
+                    break
+            if not group_part?
+                part = @_format_just_actions_usage([action])
+                if part.length
+                    parts = parts.concat(part)
+                i = i + 1
+        return parts
 
+    _format_group_usage: (group) =>
+        actions = group._group_actions
+        parts = []
+        if group.required
+            parts.push('(')
+        else
+            parts.push('[')
+        for action in actions
+            part = @_format_just_actions_usage([action])
+            if part.length==1
+                #if part[0] == '[' and _.last(part) == ']'
+                #    part = part.slice(1, part.length-1)
+                part = part[0].replace(/^\[(.*)\]$/g, '$1')
+                parts.push(part)
+                parts.push(' | ')
+            else if part.length>1
+                console.log('undexected parts length', part)
+        if parts.length > 1
+            if group.required
+                parts[parts.length-1] = ')'
+            else
+                parts[parts.length-1] = ']'
+        else
+            # nothing added
+            parts = []
+        arg_parts = parts.join('')
+        arg_parts = arg_parts.replace(/^\(([^|]*)\)$/g, '$1')
+        arg_parts = [arg_parts]
+        arg_parts = (a for a in arg_parts when a)
+        console.log('group parts', arg_parts)
+        return arg_parts
+
+    _format_just_actions_usage: (actions) =>
+        #
+        parts = []
+        for action, i in actions
+            if action.help is $$.SUPPRESS
+                # pass
             # produce all arg strings
             else if action.isPositional()
                 part = @_format_args(action, action.dest)
-
-                # if it's in a group, strip the outer []
-                if action in group_actions
-                    if part[0] == '[' and _.last(part) == ']'
-                        # part = _.initial(_.rest(part)).join('') # part[1...-1]
-                        # part.match(/\[(.*)\]/)[1]
-                        part = part.slice(1, part.length-1)
-
                 # add the action string to the list
                 parts.push(part)
 
@@ -568,36 +575,12 @@ class HelpFormatter
                     part = "#{option_string} #{args_string}"
 
                 # make it look optional if it's not required or in a group
-                if not action.required and action not in group_actions
+                if not action.required
                     part = "[#{part}]"
 
                 # add the action string to the list
                 parts.push(part)
-        # insert things at the necessary indices
-        #for i in sorted(inserts, reverse=true)
-        #    parts[i...i] = [inserts[i]]
-        pairs = _.pairs(inserts)
-        if pairs.length>0
-          for i in [pairs.length-1..0]
-            [k,v] = pairs[i]
-            if v?
-              parts.splice(k,0,v)
-        # join all the action items with spaces
-        text = (item for item in parts when item?).join(' ')
-
-        # clean up separators for mutually exclusive groups
-        # coffeescript is having problems parsing / ([\])])/g
-        text = text.replace(/([\[(]) /g,'$1'); # remove spaces
-        text = text.replace(/\ ([\])])/g,'$1');
-        text = text.replace(/\[ *\]/g, ''); # remove empty groups
-        text = text.replace(/\( *\)/g, '');
-        # text = text.replace(/\(([^|]*)\)/g, '$1'); # remove () from single action groups
-        text = text.replace(/( )\(([^|]*)\)/g, '$1$2'); # remove () from single action groups
-        # but not from metavars like 'range(20)'
-        # text = _.str.strip(text);
-        text = _.str.clean(text);  # rm duplicate spaces as well
-        # return the text
-        return text
+        return parts
 
     _format_text: (text) =>
         text = text.replace(@_prog_matcher, @_prog)
