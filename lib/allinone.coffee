@@ -437,10 +437,7 @@ class HelpFormatter
                 get_lines = (parts, indent, prefix=null) ->
                     lines = []
                     line = []
-                    if prefix?
-                        line_len = prefix.length - 1
-                    else
-                        line_len = indent.length - 1
+                    line_len = (if prefix? then prefix.length else indent.length) - 1
                     for part in parts
                         if line.length and line_len + 1 + part.length > text_width
                             lines.push(indent + line.join(' '))
@@ -461,8 +458,6 @@ class HelpFormatter
                         lines = [prog].concat(opt_parts)
                         lines = get_lines(lines, indent, prefix)
                         lines = lines.concat(get_lines(pos_parts, indent))
-                        #lines = [lines.join(' ')]
-                        #lines = [lines, indent + pos_parts.join(' ')]
                     else if pos_parts.length>0
                         lines = [prog].concat(pos_parts)
                         lines = get_lines(lines, indent, prefix)
@@ -489,6 +484,8 @@ class HelpFormatter
         return prefix + usage + "\n\n"
 
     _format_actions_usage: (actions, groups) =>
+        # step through actions, formatting groups if they fit
+        # otherwise format each action; return list
         parts = []
         i = 0
         while i<actions.length
@@ -504,7 +501,6 @@ class HelpFormatter
                         group_part = @_format_group_usage(group)
                         if group_part.length
                             parts.push(group_part)
-                            console.log(parts)
                         i = end
                     break
             if not group_part?
@@ -515,35 +511,28 @@ class HelpFormatter
         return parts
 
     _format_group_usage: (group) =>
+        # format one group
+        # no inserts as before, with less to cleanup
         actions = group._group_actions
         parts = []
-        if group.required
-            parts.push('(')
-        else
-            parts.push('[')
+        parts.push(if group.required then '(' else '[')
         for action in actions
             part = @_format_just_actions_usage([action])
-            if part.length==1
-                #if part[0] == '[' and _.last(part) == ']'
-                #    part = part.slice(1, part.length-1)
+            if part.length
+                assert(part.length==1)
                 part = part[0].replace(/^\[(.*)\]$/g, '$1')
                 parts.push(part)
                 parts.push(' | ')
-            else if part.length>1
-                console.log('undexected parts length', part)
+
         if parts.length > 1
-            if group.required
-                parts[parts.length-1] = ')'
-            else
-                parts[parts.length-1] = ']'
+            parts[parts.length-1] = if group.required then ')' else ']'
         else
             # nothing added
             parts = []
         arg_parts = parts.join('')
+        # remove unnessesary ()
         arg_parts = arg_parts.replace(/^\(([^|]*)\)$/g, '$1')
-        arg_parts = [arg_parts]
-        arg_parts = (a for a in arg_parts when a)
-        console.log('group parts', arg_parts)
+        arg_parts = if arg_parts.length then [arg_parts] else []
         return arg_parts
 
     _format_just_actions_usage: (actions) =>
@@ -552,10 +541,8 @@ class HelpFormatter
         for action, i in actions
             if action.help is $$.SUPPRESS
                 # pass
-            # produce all arg strings
             else if action.isPositional()
                 part = @_format_args(action, action.dest)
-                # add the action string to the list
                 parts.push(part)
 
             # produce the first way to invoke the option in brackets

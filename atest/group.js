@@ -184,4 +184,32 @@ describe('group', function () {
     // changed by py issue 17890
     assert.equal(usage, 'usage: PROG [-h] --xxx XXX\n');
   });
+  
+  it('long usage with special metavars', function () {
+    // adapted from test_argparse.py http://bugs.python.org/issue11874
+    // tests usage wrapping, and special chars in metavar
+    var usage;
+    var longA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    var longD = 'dddddddddddddddddddddddddddddddddddddddddddddddddd';
+    parser = new ArgumentParser({prog: 'PROG', debug: true});
+    parser.addArgument(['--a'], {metavar: longA});
+    parser.addArgument(['--b'], {metavar: '[innerpart]outerpart'});
+    parser.addArgument(['--c']);
+    parser.addArgument(['d'], {metavar: longD});
+    parser.addArgument(['e'], {metavar: 'range(0, 20)'});
+    parser.addArgument(['foo'], {nargs: '*'});
+    usage = parser.formatUsage();
+    console.log('\n'+usage);
+    assert.equal(usage.split('\n').length,5,'wrong number of lines');
+    assert.ok(usage.match(/\[--b \[innerpart\]outerpart\] \[--c C\]/gm),'splitting on []')
+    assert.ok(usage.match(/range\(0, 20\)/gm),'removing ()')
+  });
 });
+
+/*
+usage: PROG [-h] [--a aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]
+            [--b [innerpart]outerpart] [--c C]
+            dddddddddddddddddddddddddddddddddddddddddddddddddd range(0, 20)
+            [foo [foo ...]]
+
+*/
