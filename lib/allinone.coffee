@@ -61,6 +61,7 @@ The module contains the following public classes:
         not to change the formatting for help text, and
         ArgumentDefaultsHelpFormatter adds information about argument defaults
         to the help.
+        MultiGroupHelpFormatter gives groups priority when formatting usage.
 
 All other classes in this module are considered implementation details.
 (Also note that HelpFormatter and RawDescriptionHelpFormatter are only
@@ -802,6 +803,168 @@ class ArgumentDefaultsHelpFormatter extends HelpFormatter
                     help += ' (default: %(defaultValue)s)'
         return help
 
+class MultiGroupHelpFormatter extends HelpFormatter
+    ###
+    Help message formatter which retains any formatting in descriptions.
+
+    Only the name of this class is considered a public API. All the methods
+    provided by the class are considered an implementation detail.
+
+    This formats all the groups, even if they share actions, or the actions
+    do not occur in the other in which they were defined (in parse._actions)
+    Thus an action may appear in more than one group
+    Groups are presented in an order that preserves the order of positionals
+    ###
+
+    _format_usage: (usage, actions, groups, prefix) =>
+        if prefix is null
+            prefix = 'usage: '
+
+        # if usage is specified, use that
+        if usage?
+            #  usage = usage % dict(prog=@_prog)
+            usage = usage.replace(@_prog_matcher, @_prog)
+
+        # if no optionals or positionals are available, usage is just prog
+        else if not usage? and actions.length==0
+            # usage = '%(prog)s' % dict(prog=@_prog)
+            usage = @_prog
+
+        # if optionals and positionals are available, calculate usage
+        else if not usage?
+            #prog = '%(prog)s' % dict(prog=@_prog)
+            prog = @_prog
+            # split optionals from positionals
+            optionals = []
+            positionals = []
+            for action in actions
+                if action.isOptional()
+                    optionals.push(action)
+                else
+                    positionals.push(action)
+
+            # build full usage string
+            format = @_format_actions_usage
+            [opt_parts, pos_parts] = format([].concat(optionals, positionals), groups)
+            usage = (s for s in [].concat([prog], opt_parts, pos_parts) when s).join(' ')
+
+            # wrap the usage parts if it's too long
+            text_width = @_width - @_current_indent
+            if prefix.length + usage.length > text_width
+                #opt_parts = format(optionals, groups)
+                #pos_parts = format(positionals, groups)
+
+                # helper for wrapping lines
+                get_lines = (parts, indent, prefix=null) ->
+                    lines = []
+                    line = []
+                    line_len = (if prefix? then prefix.length else indent.length) - 1
+                    for part in parts
+                        if line.length and line_len + 1 + part.length > text_width
+                            lines.push(indent + line.join(' '))
+                            line = []
+                            line_len = indent.length - 1
+                        line.push(part)
+                        line_len += part.length + 1
+                    if line.length>0
+                        lines.push(indent + line.join(' '))
+                    if prefix?
+                        lines[0] = lines[0][indent.length...]
+                    return lines
+
+                # if prog is short, follow it with optionals or positionals
+                if prefix.length + prog.length <= 0.75 * text_width
+                    indent = fmtwindent('',[prefix.length + prog.length + 1])
+                    if opt_parts.length>0
+                        lines = [prog].concat(opt_parts)
+                        lines = get_lines(lines, indent, prefix)
+                        lines = lines.concat(get_lines(pos_parts, indent))
+                    else if pos_parts.length>0
+                        lines = [prog].concat(pos_parts)
+                        lines = get_lines(lines, indent, prefix)
+                    else
+                        lines = [prog]
+
+                # if prog is long, put it on its own line
+                else
+                    indent = fmtwindent('',[prefix.length])
+                    opt_parts.concat(pos_parts)
+                    parts = opt_parts
+                    lines = get_lines(parts, indent)
+                    if lines.length > 1
+                        lines = []
+                        lines.concat(get_lines(opt_parts, indent))
+                        lines.concat(get_lines(pos_parts, indent))
+                    # lines = [prog] + lines
+                    lines.unshift(prog)
+
+                # join lines into usage
+                usage = lines.join('\n')
+
+        # prefix with 'usage:'
+        return prefix + usage + "\n\n"
+
+    _format_actions_usage: (actions, groups) =>
+        # usage will list
+        # optionals that are not in a group
+        # actions in groups, with possible repetitions
+        # positionals that not in a group
+        # It orders groups with positionals to preserved the parsing order
+
+        groups = @_group_sort(actions, groups)
+        group_actions = []
+        arg_parts = []
+        for group in groups
+            gactions = group._group_actions
+            if not _.isEmpty(_.difference(gactions, actions))  # subset
+                continue
+            group_actions = _.union(group_actions, gactions)
+            group_parts = @_format_group_usage(group)
+            # expect 1 element, or 0 if all suppressed
+            # or more elements if group cannot be formatted - get actions instead
+            # maybe add check for empty
+            arg_parts = arg_parts.concat(group_parts)
+
+        # now format all remaining actions
+        actions = _.without(actions, group_actions...)
+        # find optionals and positionals in the remaining actions list
+        # i.e. ones that are not in any group
+        optionals = (action for action in actions when action.isOptional())
+        positionals = (action for action in actions when action.isPositional())
+
+        parts = @_format_just_actions_usage(optionals)
+        arg_parts = parts.concat(arg_parts)
+        parts = @_format_just_actions_usage(positionals)
+        return [arg_parts, parts]
+
+    _group_sort: (actions, groups) =>
+        # sort groups by order of positionals that they contain (if any)
+        # a group should include at mose one positional, though no code enforces it
+        # positionals not in groups are put into their own groups
+        if groups.length == 0
+            return groups
+        # optionals = (action for action in actions when action.isOptional())
+        positionals = (action for action in actions when action.isPositional())
+        posdex = (-1 for g in groups)
+        notInGroups = positionals[..]
+        for group, i in groups
+            for action in group._group_actions
+                posdex[i] = positionals.indexOf(action)
+                j = notInGroups.indexOf(action)
+                if j>-1 then notInGroups[j..j] = []
+        sortGroups = groups[..]
+        samplegroup = group
+        for action in notInGroups
+            g = _.clone(samplegroup)
+            g.required = action.required
+            g._group_actions = [action]
+            sortGroups.push(g)
+            posdex.push(positionals.indexOf(action))
+        sortGroups = _.zip(sortGroups, posdex)
+        sortGroups = _.sortBy(sortGroups, (a)->a[1])
+        sortGroups = (i[0] for i in sortGroups)
+        return sortGroups
+
 # =====================
 # Options and Arguments
 # =====================
@@ -1515,9 +1678,12 @@ class _ActionsContainer
         return group
   addArgumentGroup: (options) -> @add_argument_group(options)
 
-  add_mutually_exclusive_group: (options={}) ->
+  add_mutually_exclusive_group: (options={}, args=[]) ->
         group = new _MutuallyExclusiveGroup(this, options)
         @_mutually_exclusive_groups.push(group)
+        for action in args
+            group._group_actions.push(action)
+            group.no_usage = true
         return group
   addMutuallyExclusiveGroup: (options) -> @add_mutually_exclusive_group(options)
 
@@ -3063,6 +3229,7 @@ __all__ = [
     'ArgumentDefaultsHelpFormatter',
     'RawDescriptionHelpFormatter',
     'RawTextHelpFormatter',
+    'MultiGroupHelpFormatter',
     'Namespace',
     'Action',
     'ONE_OR_MORE',
@@ -3082,6 +3249,7 @@ exports.HelpFormatter = HelpFormatter
 exports.ArgumentDefaultsHelpFormatter = ArgumentDefaultsHelpFormatter
 exports.RawDescriptionHelpFormatter = RawDescriptionHelpFormatter
 exports.RawTextHelpFormatter = RawTextHelpFormatter
+exports.MultiGroupHelpFormatter = MultiGroupHelpFormatter
 exports.Namespace = Namespace
 exports.Action = Action
 exports.Const = $$

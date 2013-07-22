@@ -5,8 +5,12 @@
 
 var assert = require('assert');
 
-var ArgumentParser = require('argcoffee').ArgumentParser;
-var ArgumentError = require('argcoffee').ArgumentError;
+var argparse = require('argcoffee');
+var ArgumentParser = argparse.ArgumentParser;
+var ArgumentError = argparse.ArgumentError;
+
+
+
 
 describe('group', function () {
   var parser;
@@ -184,7 +188,7 @@ describe('group', function () {
     // changed by py issue 17890
     assert.equal(usage, 'usage: PROG [-h] --xxx XXX\n');
   });
-  
+
   it('long usage with special metavars', function () {
     // adapted from test_argparse.py http://bugs.python.org/issue11874
     // tests usage wrapping, and special chars in metavar
@@ -203,6 +207,93 @@ describe('group', function () {
     assert.equal(usage.split('\n').length,5,'wrong number of lines');
     assert.ok(usage.match(/\[--b \[innerpart\]outerpart\] \[--c C\]/gm),'splitting on []')
     assert.ok(usage.match(/range\(0, 20\)/gm),'removing ()')
+  });
+
+  it('mutually exclusive optionals mixed', function () {
+    // adapted from test_argparse.py
+    // cannot format group with default formatter
+    var usage, group;
+    parser = new ArgumentParser({prog: 'PROG', debug: true});
+        parser.addArgument(['-x'], {action:'storeTrue', help:'x help'});
+        group = parser.addMutuallyExclusiveGroup({required:true});
+        group.addArgument(['-a'], {action:'storeTrue', help:'a help'});
+        group.addArgument(['-b'], {action:'storeTrue', help:'b help'});
+        parser.addArgument(['-y'], {action:'storeTrue', help:'y help'});
+        group.addArgument(['-c'], {action:'storeTrue', help:'c help'});
+    usage = parser.formatUsage();
+    assert.equal(usage, 'usage: PROG [-h] [-x] [-a] [-b] [-y] [-c]\n');
+    // console.log(parser.formatter_class);
+    parser.formatter_class = argparse.MultiGroupHelpFormatter;
+    parser.addArgument(['foo']);
+    usage = parser.formatUsage();
+    assert.equal(usage, 'usage: PROG [-h] [-x] [-y] (-a | -b | -c) foo\n');
+  });
+
+  it('mutually exclusive optionals mixed long', function () {
+    // adapted from test_argparse.py
+    // cannot format group with default formatter
+    var usage, group1, group2;
+    parser = new ArgumentParser({prog: 'PROG', debug: true});
+        parser.addArgument(['-A'], {action:'storeTrue'});
+        group1 = parser.addMutuallyExclusiveGroup({required:true});
+        group2 = parser.addMutuallyExclusiveGroup({required:false});
+        group2.addArgument(['x'], {nargs: '?'});
+        group1.addArgument(['-a'],{action:'storeTrue', help:'a help'});
+        group1.addArgument(['-b'], {action:'storeTrue', help:'b help'});
+        parser.addArgument(['foo']);
+        group1.addArgument(['y'], {nargs: '?'});
+        group2.addArgument(['-c'], {action:'storeTrue', help:'c help'});
+    usage = parser.formatUsage();
+    assert.equal(usage, 'usage: PROG [-h] [-A] [-a] [-b] [-c] [x] foo [y]\n');
+    // console.log(parser.formatter_class);
+    parser.formatter_class = argparse.MultiGroupHelpFormatter;
+    usage = parser.formatUsage();
+    // x foo y are not in correct parsing order
+    // assert.equal(usage, 'usage: PROG [-h] [-A] (-a | -b | y) [x | -c] foo\n');
+    assert.equal(usage, 'usage: PROG [-h] [-A] [x | -c] foo (-a | -b | y)\n');
+    ['-b X FOO', 'X FOO Y', 'FOO -b -c'].forEach(function(astr) {
+        args = parser.parseArgs(astr.split(' '));
+        assert.equal(args.foo, 'FOO');
+        console.log(args);
+    });
+  });
+
+  it('mutually exclusive optionals with existing actions', function () {
+    // adapted from test_argparse.py
+    // can add existing actions to a group
+    // actions may occur in more than one group
+    var usage, a_action, b_action, c_action, d_action;
+    var x_action, foo_action, y_action;
+    parser = new ArgumentParser({prog: 'PROG', debug: true});
+
+    a_action = parser.add_argument('-a', {help:'a help'});
+    b_action = parser.add_argument('-b', {help:'b help'});
+    c_action = parser.add_argument('-c', {help:'c help'});
+    d_action = parser.add_argument('-d', {help:'d help'});
+    x_action = parser.add_argument('x', {nargs:'?', help:'x help'});
+    foo_action = parser.add_argument('foo', {help:'foo help'});
+    y_action = parser.add_argument('y', {nargs:'?', help:'y help'});
+    parser.add_mutually_exclusive_group({}, [a_action, c_action]);
+    parser.add_mutually_exclusive_group({}, [a_action, d_action]);
+    parser.add_mutually_exclusive_group({}, [a_action, b_action]);
+    parser.add_mutually_exclusive_group({}, [b_action, d_action]);
+    parser.add_mutually_exclusive_group({}, [b_action, y_action]);
+    parser.add_mutually_exclusive_group({}, [d_action, x_action]);
+    usage = parser.formatUsage();
+    assert.equal(usage,
+        'usage: PROG [-h] [-a A] [-b B] [-c C] [-d D] [x] foo [y]\n');
+    // console.log(parser.formatter_class);
+    parser.formatter_class = argparse.MultiGroupHelpFormatter;
+    usage = parser.formatUsage();
+    var expected = '\
+usage: PROG [-h] [-a A | -c C] [-a A | -d D] [-a A | -b B] [-b B | -d D]\n\
+            [-d D | x] foo [-b B | y]\n';
+    assert.equal(usage, expected);
+    ['-b B X FOO', 'X FOO Y', 'FOO -b B -c C'].forEach(function(astr) {
+        args = parser.parseArgs(astr.split(' '));
+        assert.equal(args.foo, 'FOO');
+        console.log(args);
+    });
   });
 });
 
