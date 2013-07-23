@@ -511,32 +511,29 @@ class HelpFormatter
                 i = i + 1
         return parts
 
-    _format_group_usage: (group) =>
+    _format_group_usage: (group) ->
         # format one group
         # no inserts as before, with less to cleanup
         actions = group._group_actions
         parts = []
-        parts.push(if group.required then '(' else '[')
         for action in actions
             part = @_format_just_actions_usage([action])
             if part.length
                 assert(part.length==1)
+                # remove action []
                 part = part[0].replace(/^\[(.*)\]$/g, '$1')
                 parts.push(part)
-                parts.push(' | ')
 
-        if parts.length > 1
-            parts[parts.length-1] = if group.required then ')' else ']'
-        else
-            # nothing added
+        if parts.length>1
+            text = parts.join(' | ')
+            text = if group.required then "(#{text})" else "[#{text}]"
+            parts = [text]
+        else if parts.length==0
             parts = []
-        arg_parts = parts.join('')
-        # remove unnessesary ()
-        arg_parts = arg_parts.replace(/^\(([^|]*)\)$/g, '$1')
-        arg_parts = if arg_parts.length then [arg_parts] else []
-        return arg_parts
+        # length 1, return without change
+        return parts
 
-    _format_just_actions_usage: (actions) =>
+    _format_just_actions_usage: (actions) ->
         #
         parts = []
         for action, i in actions
@@ -835,24 +832,17 @@ class MultiGroupHelpFormatter extends HelpFormatter
             #prog = '%(prog)s' % dict(prog=@_prog)
             prog = @_prog
             # split optionals from positionals
-            optionals = []
-            positionals = []
-            for action in actions
-                if action.isOptional()
-                    optionals.push(action)
-                else
-                    positionals.push(action)
+            optionals = _.filter(actions, (a)->a.isOptional())
+            positionals = _.filter(actions, (a)->a.isPositional())
 
             # build full usage string
             format = @_format_actions_usage
             [opt_parts, pos_parts] = format([].concat(optionals, positionals), groups)
-            usage = (s for s in [].concat([prog], opt_parts, pos_parts) when s).join(' ')
+            usage = _.compact(_.flatten([prog, opt_parts, pos_parts])).join(' ')
 
             # wrap the usage parts if it's too long
             text_width = @_width - @_current_indent
             if prefix.length + usage.length > text_width
-                #opt_parts = format(optionals, groups)
-                #pos_parts = format(positionals, groups)
 
                 # helper for wrapping lines
                 get_lines = (parts, indent, prefix=null) ->
@@ -904,7 +894,7 @@ class MultiGroupHelpFormatter extends HelpFormatter
         # prefix with 'usage:'
         return prefix + usage + "\n\n"
 
-    _format_actions_usage: (actions, groups) =>
+    _format_actions_usage: (actions, groups) ->
         # usage will list
         # optionals that are not in a group
         # actions in groups, with possible repetitions
@@ -912,57 +902,59 @@ class MultiGroupHelpFormatter extends HelpFormatter
         # It orders groups with positionals to preserved the parsing order
 
         groups = @_group_sort(actions, groups)
-        group_actions = []
+        group_actions = [] # collect actions that appear in a group
         arg_parts = []
         for group in groups
             gactions = group._group_actions
-            if not _.isEmpty(_.difference(gactions, actions))  # subset
-                continue
-            group_actions = _.union(group_actions, gactions)
-            group_parts = @_format_group_usage(group)
-            # expect 1 element, or 0 if all suppressed
-            # or more elements if group cannot be formatted - get actions instead
-            # maybe add check for empty
-            arg_parts = arg_parts.concat(group_parts)
+            if _.difference(gactions, actions).length==0
+                # gactions is a subset of actions
+                group_actions = _.union(group_actions, gactions)
+                group_parts = @_format_group_usage(group)
+                # expect 1 element, or 0 if all suppressed
+                # or more elements if group cannot be formatted - get actions instead
+                # maybe add check for empty
+                arg_parts = arg_parts.concat(group_parts)
 
         # now format all remaining actions
-        actions = _.without(actions, group_actions...)
-        # find optionals and positionals in the remaining actions list
-        # i.e. ones that are not in any group
-        optionals = (action for action in actions when action.isOptional())
-        positionals = (action for action in actions when action.isPositional())
-
+        # place optionals before groups
+        actions = _.difference(actions, group_actions)
+        optionals = _.filter(actions, (a)->a.isOptional())
         parts = @_format_just_actions_usage(optionals)
         arg_parts = parts.concat(arg_parts)
+
+        # positionals are in separate list
+        # this list may be empty due to the sorting method
+        positionals = _.filter(actions, (a)->a.isPositional())
         parts = @_format_just_actions_usage(positionals)
         return [arg_parts, parts]
 
-    _group_sort: (actions, groups) =>
+    _group_sort: (actions, groups) ->
         # sort groups by order of positionals that they contain (if any)
         # a group should include at mose one positional, though no code enforces it
         # positionals not in groups are put into their own groups
         if groups.length == 0
             return groups
-        # optionals = (action for action in actions when action.isOptional())
-        positionals = (action for action in actions when action.isPositional())
-        posdex = (-1 for g in groups)
+        positionals = _.filter(actions, (a)->a.isPositional())
         notInGroups = positionals[..]
-        for group, i in groups
+        for group in groups
             for action in group._group_actions
-                posdex[i] = positionals.indexOf(action)
-                j = notInGroups.indexOf(action)
-                if j>-1 then notInGroups[j..j] = []
+                if action in positionals
+                    notInGroups = _.without(notInGroups, action)
+
         sortGroups = groups[..]
-        samplegroup = group
-        for action in notInGroups
-            g = _.clone(samplegroup)
+        pgroup = (action) ->
+            # psuedo group consisting of just one action
+            g = _.clone(group)
             g.required = action.required
             g._group_actions = [action]
-            sortGroups.push(g)
-            posdex.push(positionals.indexOf(action))
-        sortGroups = _.zip(sortGroups, posdex)
-        sortGroups = _.sortBy(sortGroups, (a)->a[1])
-        sortGroups = (i[0] for i in sortGroups)
+            g
+        for action in notInGroups
+            sortGroups.push(pgroup(action))
+        pos_order = (group) ->
+            # rank of group based on place of positional in actions list
+            _.reduce(group._group_actions, ((prev, a)->
+                x=Math.max(prev, positionals.indexOf(a))), -1)
+        sortGroups = _.sortBy(sortGroups, pos_order)
         return sortGroups
 
 # =====================

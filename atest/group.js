@@ -278,7 +278,7 @@ describe('group', function () {
     parser.add_mutually_exclusive_group({}, [a_action, b_action]);
     parser.add_mutually_exclusive_group({}, [b_action, d_action]);
     parser.add_mutually_exclusive_group({}, [b_action, y_action]);
-    parser.add_mutually_exclusive_group({}, [d_action, x_action]);
+    parser.add_mutually_exclusive_group({}, [x_action, d_action]);
     usage = parser.formatUsage();
     assert.equal(usage,
         'usage: PROG [-h] [-a A] [-b B] [-c C] [-d D] [x] foo [y]\n');
@@ -287,7 +287,7 @@ describe('group', function () {
     usage = parser.formatUsage();
     var expected = '\
 usage: PROG [-h] [-a A | -c C] [-a A | -d D] [-a A | -b B] [-b B | -d D]\n\
-            [-d D | x] foo [-b B | y]\n';
+            [x | -d D] foo [-b B | y]\n';
     assert.equal(usage, expected);
     ['-b B X FOO', 'X FOO Y', 'FOO -b B -c C'].forEach(function(astr) {
         args = parser.parseArgs(astr.split(' '));
