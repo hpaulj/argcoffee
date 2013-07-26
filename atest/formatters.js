@@ -256,4 +256,56 @@ optional arguments:
   -z [Z1]           z
 */
   });
+  it('should handle positional metavar as an array', function () {
+    parser = new argparse.ArgumentParser({
+      prog: 'PROG'
+    });
+
+    parser.addArgument(['w'], {
+      help: 'w',
+      nargs: '+',
+      metavar: ['W1', 'W2']
+    });
+
+    parser.addArgument(['x'], {
+      help: 'x',
+      nargs: '*',
+      metavar: ['X1', 'X2']
+    });
+
+    parser.addArgument(['y'], {
+      help: 'y',
+      nargs: 3,
+      metavar: ['Y1', 'Y2', 'Y3']
+    });
+
+    parser.addArgument(['z'], {
+      help: 'z',
+      nargs: '?',
+      metavar: ['Z1']
+    });
+
+    helptext = parser.formatHelp();
+    console.log(helptext)
+    var ustring = 'PROG [-h] W1 [W2 ...] [X1 [X2 ...]] Y1 Y2 Y3 [Z1]';
+    ustring = ustring.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
+    // have to escape all of those brackets
+    assert(helptext.match(new RegExp(ustring)));
+    assert(helptext.match(/Y1\|Y2\|Y3    y/g));
+
+
+/*
+usage: PROG [-h] W1 [W2 ...] [X1 [X2 ...]] Y1 Y2 Y3 [Z1]
+
+positional arguments:
+  W1|W2       w
+  X1|X2       x
+  Y1|Y2|Y3    y
+  Z1          z
+optional arguments:
+  -h, --help  show this help message and exit
+
+*/
+  });
+
 });

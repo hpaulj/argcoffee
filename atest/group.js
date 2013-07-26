@@ -175,7 +175,7 @@ describe('group', function () {
 
   it('suppressed and single action groups', function () {
     // adapted from test_argparse.py
-    var usage, group1, group2;
+    var usage, group1, group2, group3;
     parser = new ArgumentParser({prog: 'PROG', debug: true});
     group1 = parser.addMutuallyExclusiveGroup();
     group1.addArgument(['--sup'], {help: '==SUPPRESS=='});
@@ -183,12 +183,30 @@ describe('group', function () {
     group2 = parser.addMutuallyExclusiveGroup({required: true});
     group2.addArgument(['--xxx'], {});
     // single entry in a required group, remove group ()
+    // empty group; not normal, but should be accepted
+    group3 = parser.addMutuallyExclusiveGroup();
     usage = parser.formatUsage();
     // assert.equal(usage, 'usage: PROG [-h]  --xxx XXX\n');
     // changed by py issue 17890
     assert.equal(usage, 'usage: PROG [-h] --xxx XXX\n');
   });
 
+  it('TestMutuallyExclusiveFirstSuppressed', function () {
+    // adapted from test_argparse.py
+    var usage, group;
+    parser = new ArgumentParser({prog: 'PROG', debug: true});
+    group = parser.addMutuallyExclusiveGroup();
+    group.addArgument(['-x'], {help: '==SUPPRESS=='});
+    group.addArgument(['-y'], {help: 'y help', action: 'storeFalse'});
+    group.required = false;
+    usage = parser.formatUsage();
+    assert.equal(usage, 'usage: PROG [-h] [-y]\n');
+    assert.deepEqual(parser.parseArgs('-x X -x Y'.split(' ')), {x: 'Y', y: true});
+    assert.deepEqual(parser.parseArgs('-y'.split(' ')), {x: null, y: false});
+    group.required = true;
+    usage = parser.formatUsage();
+    assert.equal(usage, 'usage: PROG [-h] -y\n');
+  });
   it('long usage with special metavars', function () {
     // adapted from test_argparse.py http://bugs.python.org/issue11874
     // tests usage wrapping, and special chars in metavar

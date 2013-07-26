@@ -415,18 +415,15 @@ class HelpFormatter
             #prog = '%(prog)s' % dict(prog=@_prog)
             prog = @_prog
             # split optionals from positionals
-            optionals = []
-            positionals = []
-            for action in actions
-                if action.isOptional()
-                    optionals.push(action)
-                else
-                    positionals.push(action)
+            optionals = _.filter(actions, (a)->a.isOptional())
+            positionals = _.filter(actions, (a)->a.isPositional())
 
             # build full usage string
             format = @_format_actions_usage
             action_parts = format([].concat(optionals, positionals), groups)
-            usage = (s for s in [].concat([prog], action_parts) when s).join(' ')
+            assert(_.all(s.length>0 for s in action_parts)) # no blank parts
+            # usage = (s for s in [].concat([prog], action_parts) when s).join(' ')
+            usage = [prog].concat(action_parts).join(' ')
 
             # wrap the usage parts if it's too long
             text_width = @_width - @_current_indent
@@ -488,32 +485,31 @@ class HelpFormatter
         # step through actions, formatting groups if they fit
         # otherwise format each action; return list
         parts = []
-        i = 0
-        while i<actions.length
-            start = end = i
-            action = actions[i]
+        start = 0
+        while start<actions.length
+            end = start
+            action = actions[start]
             group_part = null
             for group in groups
                 if group.no_usage? and group.no_usage
                     continue
-                if group._group_actions and action == group._group_actions[0]
+                if action == group._group_actions[0]
                     end = start + group._group_actions.length
                     if _.isEqual(actions[start...end], group._group_actions)
                         group_part = @_format_group_usage(group)
-                        if group_part.length
-                            parts.push(group_part)
-                        i = end
+                        parts = parts.concat(group_part)
+                        start = end
                     break
             if not group_part?
                 part = @_format_just_actions_usage([action])
-                if part.length
-                    parts = parts.concat(part)
-                i = i + 1
+                parts = parts.concat(part)
+                start += 1
         return parts
 
     _format_group_usage: (group) ->
         # format one group
         # no inserts as before, with less to cleanup
+        # return list with 1 or 0 items
         actions = group._group_actions
         parts = []
         for action in actions
@@ -530,7 +526,8 @@ class HelpFormatter
             parts = [text]
         else if parts.length==0
             parts = []
-        # length 1, return without change
+        else # length 1
+            parts = if group.required then parts else ["[#{parts[0]}]"]
         return parts
 
     _format_just_actions_usage: (actions) ->
@@ -625,7 +622,8 @@ class HelpFormatter
 
     _format_action_invocation: (action) =>
         if action.isPositional()
-            metavar = @_metavar_formatter(action, action.dest)(1)[0]
+            metavar = @_metavar_formatter(action, action.dest)(1)
+            metavar = metavar.join('|')
             return metavar
         else
             parts = []
