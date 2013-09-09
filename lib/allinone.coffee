@@ -2282,12 +2282,14 @@ class ArgumentParser extends _ActionsContainer
 
         take_action = (action, argument_strings, option_string=null) =>
             seen_actions.push(action)
-            argument_values = @_get_values(action, argument_strings)
+            # argument_values = @_get_values(action, argument_strings)
+            [argument_values, using_default] = @_get_values(action, argument_strings)
             #DEBUG 'take_action, _get values:', argument_strings, argument_values
             # error if this argument is not allowed with other previously
             # seen arguments, assuming that actions that use the default
             # value don't really count as "present"
-            if argument_values != action.defaultValue
+            # if argument_values != action.defaultValue
+            if not using_default
                 seen_non_default_actions.push(action)
                 key = actionHash(action)
                 if actionConflicts[key]?
@@ -2998,6 +3000,7 @@ class ArgumentParser extends _ActionsContainer
     _get_values: (action, arg_strings) ->
         # for everything but PARSER args, strip out '--'
         #DEBUG '_get_values:'
+        using_default = false
         if action.nargs not in [$$.PARSER, $$.REMAINDER]
             switch 'none'
                 when 'all'
@@ -3020,6 +3023,7 @@ class ArgumentParser extends _ActionsContainer
                 value = action.constant
             else
                 value = action.defaultValue
+                using_default = true
             if _.isString(value)
                 value = @_get_value(action, value)
                 @_check_value(action, value)
@@ -3030,6 +3034,7 @@ class ArgumentParser extends _ActionsContainer
             #DEBUG 'doing *'
             if action.defaultValue?
                 value = action.defaultValue
+                using_default = true
             else
                 value = arg_strings
                 #DEBUG value
@@ -3068,7 +3073,7 @@ class ArgumentParser extends _ActionsContainer
                 @_check_value(action, v)
 
         # return the converted value
-        return value
+        return [value, using_default]
 
     _get_value: (action, arg_string) ->
         type_func = @_registryGet('type', action.type, action.type)
